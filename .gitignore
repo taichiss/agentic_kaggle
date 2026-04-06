@@ -1,0 +1,9 @@
+kaggle.json
+.env
+.venv/
+*.zip
+
+data/*
+!data/input/
+data/input/*
+!data/input/.gitkeep
