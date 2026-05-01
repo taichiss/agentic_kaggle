@@ -1,0 +1,68 @@
+Skip to content Kaggle
+Create Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2023
+8th Place Solution: Implementing Multimodal Data Augmentation Methods (last updated 05/28)
+3rd place solution: SED with attention on Mel frequency bands
+5th place solution
+9th Place Solution: 7 CNN Models Ensemble
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to content Kaggle 8th Place Solution: Implementing Multimodal Data Augmentation Methods (last updated 05/28) — BirdCLEF 2023 8th Place Solution: Implementing Multimodal Data Augmentation Methods (last updated 05/28)
+BirdCLEF 2023
+Solution Writeup · 8th place · May 28, 2023
+Congratulations to all the winners! Our gratitude extends to Kaggle and the Cornell Lab of Ornithology for their exceptional efforts in organizing this intriguing competition. In particular, I was able to contribute to the improvement of accuracy with highly original methods, so I was able to enjoy the competition very much. Allow me to give a succinct overview of my solution. I’ll provide a more detailed update on the solution in the following days.
+Summary In my solution, only one type of backbone is used, and multimodal data augmentation techniques such as object detection, recommendation systems, and NLP are used to increase diversity and improve model accuracy.
+Preprocess Pipeline Summary We built a preprocessing pipeline that prevents overfitting by devising preprocessing so that the combinations that are actually possible while maintaining the diversity of the data. In particular, in preprocessing for Sound Object Detection, weighting the signal density of the spectrum made it easier to pick out the areas where the contribution of secondary labels is included. Thanks to that, the training accuracy has improved even when the value of the secondary labels is large.
+Training Pipeline In order to grasp the features of bird calls with various periodicities, build a pipeline that first learns with a long spectrum input, then lowers the time axis direction for each epoch, and finally learns local features. Did. Preprocessing by SOD prevents noise-like offsets from being selected even for local spectra, so training is stable.
+code detail: https://www.kaggle.com/code/kunihikofurugori/8th-solution-down-scaling-detail/notebook?scriptVersionId=131297676
+MultiModal Data Augments Part(in Detailed) Code detail: https://www.kaggle.com/code/kunihikofurugori/8th-solution-notebook/notebook
+・Time Segment DownScaling Augmentation (Global to Local) Regarding the mini-batch method represented by the 2nd place solution of birdclef2021, we trained to learn local features while pre-learning global features by training to evolve the number of mini-batches from 15 to 1 at each epoch.
+By first learning the global features and then learning the local features, it becomes possible to predict the local features after understanding the global features.
+・Weak to Strong Preprocessing by YOLOv8 (Sound Object Detection) I use the data pointed out by the competition host to train the yolov8 object detection model, and select an offset that will increase the number of object detections as much as possible. Also, by minimizing the bounding box and reliability-weighted IoU for the frequency masking, Frequency Masking effectively hides noise.
+Sample Inference Inferece Sample Sound Object Detection
+Reference Notebook [1]https://www.kaggle.com/code/kunihikofurugori/sound-object-detection-prepare-annot-data/notebook [2]https://www.kaggle.com/code/kunihikofurugori/birdclef2023-soundobjectdetectiontrain/notebook [3]https://www.kaggle.com/code/kunihikofurugori/sound-object-detection-batch-predict/notebook [4]https://www.kaggle.com/code/kunihikofurugori/birdclef2023-soundobjectdetectionanalysis/notebook
+・Various Mixup Strategy By using various mix-up methods, we tried to make it impossible to choose unnatural pairs. Details of the method are described below.
+・Geometrical Mixup Assuming that geographically close samples should have similar background noise, we created a model that mixes up geographically close samples without learning the background noise.
+If the distance matrix is properly constructed, the amount of calculation will be O(n^2), so the code is written so that the parts that match up to the second decimal place of the longitude and latitude are treated as the same group.
+・Resonance Mixup (Inspired by collaborative filtering) Choosing a pair that resonates easily as a mixup destination is important for creating a more natural sound. Implemented a mixup that preferentially selects bird samples that are likely to resonate based on the collaborative filtering idea of the recommender system.
+・Inner mixup for geometrical clustering space Groups that are geographically close and have the same label do not change the label characteristics even if they share inputs and mixup. Therefore, we clustered such groups and made it possible to perform Inputmixup freely.
+Models My models are based on the BirdCLEF 2021 2nd place solution using backbone, eca_nfnet_l0.
+Dataset Bird CLEF 2023 Bird CLEF 2022/2021/2020 (Pretraining) ff1010bird_nocall Zendo data (YOLOv8) CV setup I thought it would be difficult to create a multifold model and check the LB due to resource limitations, so I did a simple test-train split instead of out-of-fold.
+For the test data, we built validation by splitting 30 seconds into 5 second intervals and bootstrap sampling to the same size as the LB dataset size (8400 samples).
+Furthermore, we found that using only the data with the primary label showed behavior similar to LB, so we excluded the data with the secondary label from the validation and calculated.
+Inference Kernel: https://www.kaggle.com/code/kunihikofurugori/8th-place-solution-inference-kernel Github link: https://github.com/furu-kaggle/birdclef2023
+Result commit_id single inference kernel LB PB tag 4a57a984d1f4101b9f470095e6a6fae0a6cc5af2 link 0.82628 0.73777 ecanfnet_nmel128_best1 55557aea59976c5befc11cbcd077f22c1d8289c0 link 0.82475 0.73301 ecanfnet_nmel128_best3 ccc435294a9f5f9989f5865def93da0817c3b030 link 0.82786 0.73341 ecanfnet_nmel128_best2 c9e077c172368c31c2d1974e0288554ebd014b2f link 0.82279 0.72918 ecanfnet_nmel64_best2 a3791c561544adcc37507d5c27ec98e9d1c603a7 link 0.82172 0.73223 ecanfnet_nmel64_best1 ea70ecc95de1625212465b8e0148bc996e0237f9 link 0.82149 0.72850 ecanfnet_nmel64_best3 ecanfnet_nmel128_best13(300 stride pred) + ecanfnet_nmel64_best13 ensemble link 0.83616 0.75285 best_submission Author furu-nag kunihikofurugori
+Share
+React 2 Comments Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve! This comment will be made public once posted.
+Post Comment Donghui Zhang Posted 3 years ago
+· 531st in this Competition
+Congratulations on winning the eighth place in the competition and winning a gold medal! Your plan has benefited me a lot. By the way, in your Github, what do the 6 folders represent? I would like to reproduce it according to your report. Let me show you the structure of the experiment so that I can understand your thinking more deeply.
+Reply
+React furu-nag Topic Author Posted 3 years ago
+· 8th in this Competition
+@gentlezdh Thank you for your appreciation. github 6 folders are linked to commit_id of Result. For example, 4a57a98…script represents the training script for 4a57a984d1f4101b9f470095e6a6fae0a6cc5af2. Please ask again if you have any questions.
+Reply
+React Donghui Zhang Posted 3 years ago
+· 531st in this Competition
+Thank you for your answer. I am looking forward to discussing your plan with you by email or just asking here. This is really helpful for an undergraduate.
+Reply
+React

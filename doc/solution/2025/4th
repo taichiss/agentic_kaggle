@@ -1,0 +1,132 @@
+貼り付けたテキスト
+ソースガイド
+このテキストは、BirdCLEF 2025コンペティションにおいて第4位を獲得したディラン・リウ氏による解法レポートであり、音声データから鳥の種類を特定するための革新的なアプローチを詳述しています。筆者は、モデルの評価指標を直接学習に反映させる独自のSoft AUC Lossを開発し、これが過学習を防ぎつつリーダーボードの順位を劇的に押し上げる鍵となったと説明しています。構成としては、半教師あり学習や多様なEfficientNetモデルのアンサンブルといった技術的詳細に加え、あえて採用しなかった手法についても触れることで、実戦的な知見を共有しています。最終的に、特定の損失関数とデータ拡張の組み合わせが、ノイズの多い野生動物の音声認識においていかに有効であるかを示唆する、非常に教育的な内容となっています。
+
+
+
+
+
+
+
+
+
+
+
+Skip to content Kaggle
+Create Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF+ 2025
+4th place solution
+6th place solution
+3rd Place Solution
+10th Solution
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to content Kaggle 4th place solution — BirdCLEF+ 2025 4th place solution
+BirdCLEF+ 2025
+Solution Writeup · 4th place · Jun 12, 2025
+First of all, this is my first time to reach the prize on kaggle, much thanks to the organizers and all the participants.
+My solution is a SED solution inspired by birdclef2023 2nd place solution, combined with a custom soft AUC loss and semi-supervised learning.
+Main concept: soft AUC loss
+I always thought that the best loss should be the metric itself, so I tried to find an AUC loss and found:
+class AUCLoss(nn.Module): def init(self, margin=1.0, pos_weight=1.0, neg_weight=1.0): super().init() self.margin = margin self.pos_weight = pos_weight self.neg_weight = neg_weight
+def forward(self, preds, labels, sample_weights=None):
+    pos_preds = preds[labels == 1]
+    neg_preds = preds[labels == 0]
+
+    if len(pos_preds) == 0 or len(neg_preds) == 0:
+        return torch.tensor(0.0, device=preds.device)
+
+    if sample_weights is not None:
+        sample_weights = torch.stack([sample_weights]*labels.shape[1], dim=1)
+        pos_weights = sample_weights[labels == 1]  # [N_pos]
+        neg_weights = sample_weights[labels == 0]  # [N_neg]
+    else:
+        pos_weights = torch.ones_like(pos_preds) * self.pos_weight
+        neg_weights = torch.ones_like(neg_preds) * self.neg_weight
+
+    diff = pos_preds.unsqueeze(1) - neg_preds.unsqueeze(0)  # [N_pos, N_neg]
+    loss_matrix = torch.log(1 + torch.exp(-diff * self.margin))  # [N_pos, N_neg]
+
+    weighted_loss = loss_matrix * pos_weights.unsqueeze(1) * neg_weights.unsqueeze(0)
+
+    return weighted_loss.mean()
+This AUC loss seems to be very resistant to overfitting. In all experiments, the cv scores of the models trained with the cross entropy loss were significantly better than those trained with the soft AUC loss, but the lb scores were significantly worse. There is a problem with this AUC loss: it does not support soft labels like cross entropy loss. For both knowledge distillation and semi-supervised learning, I need a loss that supports soft labels, so I made some changes to the above AUC loss:
+class SoftAUCLoss(nn.Module): def init(self, margin=1.0, pos_weight=1.0, neg_weight=1.0): super().init() self.margin = margin self.pos_weight = pos_weight self.neg_weight = neg_weight
+def forward(self, preds, labels, sample_weights=None): pos_preds = preds[labels>0.5] neg_preds = preds[labels<0.5] pos_labels = labels[labels>0.5] neg_labels = labels[labels<0.5]
+    if len(pos_preds) == 0 or len(neg_preds) == 0:
+        return torch.tensor(0.0, device=preds.device)
+
+    pos_weights = torch.ones_like(pos_preds) * self.pos_weight * (pos_labels-0.5)
+    neg_weights = torch.ones_like(neg_preds) * self.neg_weight * (0.5-neg_labels)
+    if sample_weights is not None:
+        sample_weights = torch.stack([sample_weights]*labels.shape[1], dim=1)
+        pos_weights = pos_weights * sample_weights
+        neg_weights = neg_weights * sample_weights
+
+    diff = pos_preds.unsqueeze(1) - neg_preds.unsqueeze(0)  # [N_pos, N_neg]
+    loss_matrix = torch.log(1 + torch.exp(-diff * self.margin))  # [N_pos, N_neg]
+
+    weighted_loss = loss_matrix * pos_weights.unsqueeze(1) * neg_weights.unsqueeze(0)
+
+    return weighted_loss.mean()
+This soft AUC loss + semi-supervised learning improved my single tf_efficientnetv2_b0 model's lb score from 0.850 to 0.901. More importantly, my improvement from 11th to 4th on private lb is probably due to the use of this loss.
+Other things that helped Semi-supervised learning. The labeling model is 10 SED models of efficientnet_b0-b4, efficientnetv2_b0-b3 and efficientnetv2_s trained wiht first 10s audio data. Smaller hop_length (64) and larger n_mels (256). Audio mixup augmentation (which is to add two audios as the new audio and take the maximum value of their labels as the new label). This augmentation did not directly improve my model, but in order to increase the diversity of the final solution, I still added this to the training of some models.
+Things that didn't help or make it worse Any kind of pretraining. Knowledge distillation. Models other than efficientnet. Data normalizitions other than 2D batch normalizition.
+Final models 16models of efficientnet_lite0-4, efficientnet_b2-3, efficientnetv2_b2-3 and efficientnetv2_s. 17-25 epochs, learning rate 5e-4. 3 types of mel spectrogram parameters. 2 types of data augmentation. First 10s data and random 10s data.
+Code https://github.com/dylanliu2/BirdCLEF2025-4th-place-solution
+Author Dylan Liu dylanliuofficial
+Share
+1 3 Comments Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve! This comment will be made public once posted.
+Post Comment I2nfinit3y Posted a year ago
+· 9th in this Competition
+Nice sharing ! By the way, you can use ``` to edit your code block. Just like:
+class SoftAUCLoss(nn.Module): def init(self, margin=1.0, pos_weight=1.0, neg_weight=1.0): super().init() self.margin = margin self.pos_weight = pos_weight self.neg_weight = neg_weight
+def forward(self, preds, labels, sample_weights=None):
+    pos_preds = preds[labels>0.5]
+    neg_preds = preds[labels<0.5] pos_labels = labels[labels>0.5]
+    neg_labels = labels[labels<0.5]
+    if len(pos_preds) == 0 or len(neg_preds) == 0:
+        return torch.tensor(0.0, device=preds.device)
+
+    pos_weights = torch.ones_like(pos_preds) * self.pos_weight * (pos_labels-0.5)
+    neg_weights = torch.ones_like(neg_preds) * self.neg_weight * (0.5-neg_labels)
+    if sample_weights is not None:
+        sample_weights = torch.stack([sample_weights]*labels.shape[1], dim=1)
+        pos_weights = pos_weights * sample_weights
+        neg_weights = neg_weights * sample_weights
+
+    diff = pos_preds.unsqueeze(1) - neg_preds.unsqueeze(0)  # [N_pos, N_neg]
+    loss_matrix = torch.log(1 + torch.exp(-diff * self.margin))  # [N_pos, N_neg]
+
+    weighted_loss = loss_matrix * pos_weights.unsqueeze(1) * neg_weights.unsqueeze(0)
+
+    return weighted_loss.mean()
+Reply
+React Dylan Liu Topic Author Posted a year ago
+· 4th in this Competition
+Ok, thanks
+Reply
+React Tom Denton Competition Host Posted 10 months ago
+Cool, thanks!
+BTW, the loss matrix computation can be more numerically stable by using the softplus operation - which computes log(1+exp(x)) using numerically stable ops - otherwise you might suffer from under/overflow issues.
+Reply
+React

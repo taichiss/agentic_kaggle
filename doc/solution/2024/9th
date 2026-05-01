@@ -1,0 +1,143 @@
+この文書は、機械学習コンペティション「BirdCLEF 2024」で9位に入賞した参加者による、技術的なソリューション解説（リキャップ）です。主な目的は、訓練データとテストデータの差異を克服するために、Contrastive Adversarial Domain (CAD) という手法を用いたドメイン適応の有効性と、その具体的な実装プロセスを共有することにあります。著者は、交差検証（CV）よりもパブリックリーダーボードを重視する戦略や、モデルの表現を凝縮するためのボトルネック層の導入、さらには精度を微調整するためのデータ拡張の選択について詳細に述べています。最終的に、単純な手法が強力な結果を生むというドメイン汎化の難しさを指摘しており、他の参加者との対話を通じて、理論と実践のギャップを埋めるための貴重な洞察を提供しています。
+
+Skip to
+content
+Kaggle
+Create
+Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2024
+9th place recap
+6th Place Solution
+2nd place solution
+7th Place Solution for the BirdCLEF 2024 Competition
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to
+content
+Kaggle
+9th place recap — BirdCLEF 2024
+9th place recap
+BirdCLEF 2024
+Solution Writeup · 9th place · Jun 11, 2024
+Share some personal experiences in this competition.
+CV strategy
+No CV, only public leaderboard. It just works.
+At early stage, I tried to build CV and even wasted lots of submissions to do leaderboard probing. Then I realized that CV is just waste of time. I just assume unlabeled soundscapes, public test set and private test set share similar data distribution later on.
+Data Augmentation
+Only cutmix and mixup. Only one model with time & freq mask and it overfits.
+Traditional data augmentation tends to overfit the train data, because it teaches the model to output the same representation for data from single audio clip (single domain knowledge). While things like mixup have some cross domain knowledge, because data comes from different audio clips. (not really sure, just guessing)
+nice pic from OPTIMAL REPRESENTATIONS FOR COVARIATE SHIFT
+Some Model Design
+Almost last year's model. Add a bottleneck layer to let the representation more compact.
+self.bottleneck_layer = nn.Sequential( nn.Linear(backbone_out, cfg.bottleneck_dim), nn.BatchNorm1d(cfg.bottleneck_dim), nn.ReLU())
+bottleneck_dim=1024(actually 512 is better). This can improve score a little(less than 0.01).
+With eca_nfnet_l0 as backbone and above tips, my baseline public score is 0.65(close to 0.66).
+Contrastive Adversarial Domain (CAD) bottleneck
+from the paper OPTIMAL REPRESENTATIONS FOR COVARIATE SHIFT.
+model
+Honestly, I don't understand the math behind that(read the paper if you are interest). Practically, it use data domains as labels (in our case, train data: 0, unlabeled_soundscapes: 1), and bottleneck_layer's output as features to do SupCon learning. The total loss is traditional BCE loss + weight*SupCon loss. The weight and the temperature in SupCon loss is tuned base on public leaderboard.
+weight Public Private
+1e-2 0.56 0.57
+1e-3 0.66 0.63
+1e-4 0.68 0.66
+1e-5 0.65 0.64
+temperature Public Private
+0.07 0.62 0.62
+0.09 0.65 0.65
+0.10 0.68 0.66
+0.11 0.65 0.66
+supcon loss
+At the early stage, BCE loss dominates, then SupCon loss starts to kick in.
+Post-process trick
+Average prediction with previous and next window. Improvement depends(0.01~0.02).
+Model ensemble and selection
+My best ensemble is actually two eca_nfnet_l0s with different data split and SupCon loss weight, it scores 0.68 in private, but I didn't select it.
+I further ensemble these two with a tf_efficientnetv2_b0(public 0.65, private 0.62, with time & freq mask) and rexnet_100(public 0.63, private 0.64). Don't have enough time to finetune these two, maybe they can improve.
+Things didn't work(overfitting mostly)
+pretrain (on 22&23 data, maybe I should try pretrain on unlabeled_soundscapes)
+knowledge distillation (only try train data, maybe I should try knowledge distillation on unlabeled_soundscapes)
+Entmin (definitely useless)
+DANN (no improvement)
+focal loss (it actually works solely, but no improvement with CAD)
+Final thought
+This competition is very hard. On domain adaptation/generalization leaderboard Domainbed, simple baseline is hard to beat. In practice, no current methods for learning representation uniformly outperform the baseline. I think that's reason for the big shakeup, and why public notebooks outperform carefully trained models.
+Author
+Aphysict
+aphysict
+Share
+4
+6 Comments
+Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+Post Comment
+Tom Denton
+Competition Host
+Posted 2 years ago
+Cool approach! Really nice to see someone try a domain adaptation method in the competition context.
+Reply
+React
+Aphysict
+Topic Author
+Posted 2 years ago
+· 9th in this Competition
+Thanks! Glad you like it.
+Reply
+React
+Eiichi Okumura
+Posted 2 years ago
+· 403rd in this Competition
+Congratulations on your achievement! Thank you for your detailed explanation with diagrams.
+This was my first time participating in a Kaggle competition, and through the experience, I developed a strong interest in domain adaptation. You mentioned that you successfully used CAD to address domain shift, while DANN was not as effective. How do you approach the selection of methods for domain adaptation?
+I have tried three domain adaptation methods: Cycle GAN, DANN, and M2D. The top private scores in my submissions were achieved using Cycle GAN, suggesting some level of effectiveness, but DANN did not perform well.
+Despite the significant shake-up at the end, I am determined to learn and improve. Thank you for your time and insights.
+Reply
+React
+Aphysict
+Topic Author
+Posted 2 years ago
+· 9th in this Competition
+I can recommend a reading material which leads me to the CAD paper. As for method selection, just trial and error. Like I said, no current methods uniformly outperform the baseline. The downside of DANN is, ''(i) it
+maximizes an upper bound on the desired term;
+(ii) it requires adversarial training, which is challenging in practice'', quoted from CAD paper. You should also try DomainBed which contain lots of domain adaptation tricks.
+Reply
+React
+Eiichi Okumura
+Posted 2 years ago
+· 403rd in this Competition
+Thank you for your response and the recommendation of reading material that led you to the CAD paper. I will definitely look into it.
+As for the method selection, I appreciate your insight about trial and error. It's reassuring to know that even experienced practitioners face challenges with adversarial training. I found the quote from the CAD paper about the downsides of DANN particularly enlightening.
+I will also explore DomainBed as you suggested. It's good to know that it contains various domain adaptation tricks that could be useful for my future projects.
+Thank you once again for your guidance and recommendations. Your insights are incredibly valuable to someone new to these methods.
+Reply
+React
+Aaditya Porwal
+Posted 2 years ago
+· 25th in this Competition
+Congratsss!!!
+Reply
+React
+C R Suthikshn Kumar
+Posted 2 years ago
+· 27th in this Competition
+Congratulations on achieving 9th place in this competition. Thanks for sharing your insights.
+Reply
+React

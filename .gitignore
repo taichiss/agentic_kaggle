@@ -2,6 +2,12 @@ kaggle.json
 .env
 .venv/
 *.zip
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.pre-commit-cache/
 
 data/*
 !data/input/

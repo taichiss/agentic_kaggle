@@ -1,0 +1,319 @@
+貼り付けたテキスト
+ソースガイド
+このテキストは、機械学習コンペティション「BirdCLEF+ 2025」において第5位に入賞したチームの解法を詳細に解説した技術記事です。鳥の鳴き声を識別するこの課題に対し、著者らは未ラベルの音声データを補完するための反復的な自己蒸留（Self-Distillation）を核とした戦略を採用し、モデルの精度を段階的に向上させました。主な構造として、人間の声を除去するなどの入念なデータクリーニング、SEDモデルを用いた3段階のトレーニング工程、そしてOpenVINOを活用した効率的な推論手法が体系的にまとめられています。全体を通して、手作業によるデータ分析から得られた洞察を高度なアルゴリズムで解決する、実践的なAI構築のアプローチが示されています。
+
+
+
+
+
+
+
+
+
+
+
+Skip to
+content
+Kaggle
+Create
+Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF+ 2025
+5th place solution: Self-Distillation is All You Need
+1st Place Solution: Multi-Iterative Noisy Student Is All You Need
+BirdCLEF 2021 Solutions
+BirdCLEF 2022
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to
+content
+Kaggle
+5th place solution: Self-Distillation is All You Need — BirdCLEF+ 2025
+5th place solution: Self-Distillation is All You Need
+BirdCLEF+ 2025
+Solution Writeup · 5th place · Jun 16, 2025
+We would like to thank Kaggle, the organizers, our teammates, and all participants. It was a great experience to take part in this competition. Below is a brief overview of our solution.
+Data
+We used only the 2025 dataset.
+First, we used Silero VAD to detect audio files that contain human voices from the train_audio set. Next, using a Streamlit tool developed by @zuoliao11 , we manually listened to those files and removed the segments with human voices.
+For underrepresented classes (n < ~30), we manually selected segments that contained bird calls.
+For cleaned files, we used the first 60 seconds; for the others, we used the first 30 seconds. To balance the dataset, we duplicated files in classes with fewer than 20 samples.
+Model
+We used a Sound Event Detection (SED) model.
+Backbones:
+• 4x tf_efficientnetv2_s
+• 3x tf_efficientnetv2_b3
+• 4x tf_efficient_b3_ns
+• 2x tf_efficient_b0_ns
+Training
+We trained our models in three stages.
+Input features:
+• Random 10-second segments
+• Mel spectrogram:
+sample_rate: 32000
+mel_bins: 192
+fmin: 20
+fmax: 15000
+window_size: 2048
+hop_size: 768
+We convert the mel-spectrogram to a logarithmic scale by computing log(melspec+1e-6).
+• Augmentations:
+　　• Resampling
+　　• Gain
+　　• FilterAugment
+　　• FrequencyMasking, TimeMasking
+　　• Sumix on mel domain
+• Optimizer: Adam + Cosine Annealing with warmup
+• Loss: FocalLoss (gamma=2)
+• Epochs: 10
+• Target labels: Both primary and secondary labels
+1st Stage:
+We trained 5-fold models using only train_audio.
+2nd Stage - Self-distillation with train_audio only:
+While listening to the audio as described in the Data section, we found that many bird calls were present in the training data even though they were not labeled. This was expected, as the recorders were mainly focused on their target species, so other bird calls were often left unlabeled.
+From this observation, we believed that the core challenge of the competition was accurately assigning secondary labels. To address this, we used self-distillation to enrich train_audio with more secondary labels. We used predictions from a model trained in the 1st stage as teacher labels and mixed them with the original labels. The teacher model’s predictions may have included true secondary labels that were missing from the original annotations.
+We repeated self-distillation 4–5 times. From the 2nd round onward, we used the previously distilled model as the new teacher in an iterative manner. The model’s weights are re-initialized each time. This approach closely resembles the method proposed in this paper.
+3rd Stage - Self-distillation with train_audio + train_soundscapes:
+We added data from train_soundscapes to the training set and continued self-distillation two more times. We mixed train_audio and train_soundscapes at a 1:1 ratio in each batch (no folds). We further trained several models using different random seeds.
+LB Score (Public) 1st ~3rd stage（Ensemble of 5 models）
+Model Stage 1 Stage 2 (Distill x2) Distill x4 Distill x5 Stage 3 (Distill x1) Distill x2
+tf_efficientnetv2_s 0.839 0.863 0.880 0.884 0.915 0.921
+tf_efficientnetv2_b3 0.842 N/A 0.872 - N/A 0.918
+tf_efficient_b3_ns N/A N/A N/A - N/A 0.921
+tf_efficient_b0_ns 0.836 0.871 0.879 0.883 0.905 0.912
+*N/A = not submitted to LB
+The following figure shows the results of self-distillation across various models.
+Inference
+We divided the stage 3 models into two groups, assigning different random seeds to each group when possible.
+Model Group A:
+4x tf_efficientnetv2_s (seed= 0, 1, 2, 3)
+3x tf_efficientnetv2_b3 (seed= 2, 3, 4)
+4x tf_efficient_b3_ns (seed= 0, 1, 2, 3)
+2x tf_efficient_b0_ns (seed= 0, 1)
+Model Group B:
+4x tf_efficientnetv2_s (seed= 1, 2, 3, 4)
+3x tf_efficientnetv2_b3 (seed=0, 1, 2)
+4x tf_efficient_b3_ns (seed= 0, 1, 2, 3) *By mistakes, we ended up using the same seed as Group A.
+2x tf_efficient_b0_ns (seed= 2, 3)
+Post-Proccesing/TTA
+Inference is done with 2.5-second overlap.
+Scores are weighted and combined (similar to the 4th place solution from last year).
+Alpha = 0.5
+Smoothing:
+We applied smoothing using neighboring frames with a window of [0.1, 0.8, 0.1].
+Power Adjustment for Low-Ranked Classes:
+The post-processing method shared in our public notebook improved the LB score, but we eventually decided not to use it due to the risk of overfitting.
+Speed-up:
+• OpenVINO
+• Concurrent.futures.ThreadPoolExecutor
+Final Ensemble LB Scores
+Setting Raw Score (Group A only) 2.5-second overlap Smoothing + overlap
+Public LB 0.919 0.928 0.928
+Private LB 0.917 0.924 0.924
+What didn’t work
+CNN-based models.
+1D models.
+Too many data augmentations.
+Training, Inference Notebooks & Model Dataset
+Training code
+Github
+Models
+PyTorch
+OpenVINO
+Inference Notebooks
+Convert PyTorch models to OpenVINO
+Inference
+Authors
+Zuoli
+zuoliao11
+MYSO
+myso1987
+youknow
+yuukiyuno
+Share
+6
+22 Comments
+2 appreciation comments
+Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+Post Comment
+Ova
+Posted a year ago
+Congrats!
+Would you explain how many hours it take to train 1st, 2nd and 3rd stage, respectively?
+What GPU did you use? Do you own it or rent?
+If own how much did you buy it? Did you put the GPU inside your computer by yourself or from maker?
+If rent where do you rent? How much it cost?
+Thank you.
+Reply
+React
+MYSO
+Topic Author
+Posted a year ago
+· 5th in this Competition
+We used an RTX 3090. Depending on the model architecture, one epoch took approximately 5–10 minutes in stage 1, 7–15 minutes in stage 2, and 12–18 minutes in stage 3.
+The GPU was included in a pre-built PC from the manufacturer.
+Since GPU prices fluctuate a lot, we recommend checking with the manufacturer for current pricing.
+Reply
+React
+vineet dairashri
+Posted 10 months ago
+· 231st in this Competition
+Hello MYSO,
+Thanks for sharing this incredible project insights. Can you also share little bit about the training of the model that you didn’t use which is low power adjustment ecanet model?
+Thanks alot!
+Best,
+Vineet
+Reply
+React
+MYSO
+Topic Author
+Posted 10 months ago
+· 5th in this Competition
+The EcaNet model in the public notebook was trained with essentially the same pipeline as our other models. I’ve posted the full training code on GitHub—please feel free to check it out and put it to use!
+Reply
+React
+pensukesan
+Posted a year ago
+· 293rd in this Competition
+Thank you for sharing your solution.
+I have two questions regarding self-distillation:
+In the first stage, the model is trained using 5-fold cross-validation. In the second and third stages, are you also training using 5-fold models? If so, how are the teacher models from the first stage assigned to each fold?
+How are the pseudo labels and original labels mixed?
+Reply
+React
+MYSO
+Topic Author
+Posted a year ago
+· 5th in this Competition
+In the second stage, we trained using 5-fold cross-validation. In the third stage, we trained without folds, using different random seeds instead.
+For self-distillation, we used the five models from the previous stage and averaged their predictions to create the teacher labels.
+As for mixing pseudo labels with the original labels, we generally used the following approach:
+alpha=0.7
+pseudo_labels = pseudo_labels * (pseudo_labels > 0.3) + pseudo_labels**2
+pseudo_labels = torch.clamp(pseudo_labels, min=-0.0, max=1.0)
+labels = alpha*pseudo_labels + (1-alpha)*labels
+Reply
+1
+Ty-Yuki
+Posted a year ago
+· 757th in this Competition
+Thanks for sharing your 5th place solution, especially the iterative self-distillation!
+I'm curious about the manual audio cleaning. How much data did you manually process, and how critical do you think this step was for your final score?
+Reply
+React
+MYSO
+Topic Author
+Posted a year ago
+· 5th in this Competition
+Thank you! We manually cleaned about 2,000 audio files.
+Sorry, we haven't specifically measured how much this step affected the final score.
+But doing it early allowed us to focus more on model building and self-distillation, so we believe it was an important step.
+Reply
+1
+EMMANUEL OKELLO
+Posted a year ago
+· 1727th in this Competition
+Congrats.on making it 5th and thanks for sharing your solution. I have learned a lot from it and hope to try it out on my other model trainings.
+Reply
+React
+MYSO
+Topic Author
+Posted a year ago
+· 5th in this Competition
+Thanks a lot!
+Happy to hear it was helpful. Good luck with your next training — hope it goes well!
+Reply
+1
+Benchan
+Posted a year ago
+· 1357th in this Competition
+Congratulations on achieving fifth place, and thank you sincerely for sharing the details of your work.
+"While listening to the audio as described in the Data section, we found that many bird calls were present in the training data even though they were not labelled."
+I had suspected that many of the provided recordings contained unlabeled secondary bird calls, but your diligent and meticulous manual screening brought this issue to light. I believe this insight significantly contributed to your impressive result.
+Your openness in sharing your approach has been immensely instructive. I am truly grateful.
+Reply
+React
+MYSO
+Topic Author
+Posted a year ago
+· 5th in this Competition
+I truly appreciate your encouragement.
+Reply
+React
+AK
+Posted a year ago
+· 570th in this Competition
+congrats on the 5th place . I have one question about the self distillation did you use the same model for teacher & student and repeat the process n times , with different data for teacher but with constant data for student or the student data changes as the distillation progresses
+Reply
+React
+MYSO
+Topic Author
+Posted a year ago
+· 5th in this Competition
+Thank you! We used the same model for both teacher and student every time, and the data stayed the same throughout the self-distillation process.
+Reply
+React
+AK
+Posted a year ago
+· 570th in this Competition
+thanks for the reply 😄
+Reply
+1
+Rose Beltran
+Posted a year ago
+Manually listening to and editing the files shows incredible dedication. Nice to see that the effort was rewarded with insight about self-distillation, leading to this exceptional result. Thank you for sharing your solution and congratulations!
+Reply
+React
+MYSO
+Topic Author
+Posted a year ago
+· 5th in this Competition
+Thanks a lot! We really appreciate your comment.
+Reply
+React
+thacrobatheskis
+Posted a year ago
+· 713th in this Competition
+Thanks for sharing! The distillation technique you used sounds quite interesting. Did you use the fine or coarse grain outputs from the SED teacher model to train the student? Also, was the teacher given the augmented training data, or only the student? I’m looking forward to checking out your train notebook when it’s available!
+Reply
+React
+MYSO
+Topic Author
+Posted a year ago
+· 5th in this Competition
+We also used the augmented data for the teacher model, which produced coarse-grain outputs.
+Reply
+React
+Tarun Pahade222
+Posted a year ago
+Really intresting
+Reply
+1
+This comment has been deleted.
+Appreciation (2)
+Athar Sayed
+Posted a year ago
+· 567th in this Competition
+Amazing solution thanks for sharing
+Sarah Arshad
+Posted a year ago
+thanks alot….

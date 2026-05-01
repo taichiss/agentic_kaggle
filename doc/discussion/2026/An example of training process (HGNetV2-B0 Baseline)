@@ -1,0 +1,528 @@
+Skip to
+content
+Kaggle
+
+Create
+Home
+
+Competitions
+
+Benchmarks
+
+Game Arena
+
+Data Hub
+
+More
+
+Your Work
+
+Viewed
+
+
+BirdCLEF+ 2026
+
+
+AI Mathematical Olympiad - Progress Prize 3
+
+
+BirdCLEF+ 26 | Two-Pass SSM + Advanced PP
+
+
+BirdCLEF+ 2026 Iter-Pseudo Perch+SED LB 0.935 ft
+
+
+[placeholder] Claude-Code Results for BirdClef2026
+
+Edited
+
+
+Home Credit Risk (0417LGBM)＿RFE_STUDYlASSO
+
+
+notebook
+
+
+BirdCLEF+ 26 | Two-Pass SSM + Advanced PP
+
+
+birdclef2026-v177a-cluster-aware-add
+
+
+ViT_Dino3 models inference
+
+Bookmarks
+
+
+metric
+
+
+Jane Street Real-Time Market Data Forecasting
+
+
+Child Mind Institute — Problematic Internet Use
+
+
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+
+
+NeurIPS - Ariel Data Challenge 2024
+
+
+View Active Events
+
+Search
+
+Cornell Lab of Ornithology · Research Code Competition · a month to go
+
+Submit Prediction
+BirdCLEF+ 2026
+Acoustic Species Identification in the Pantanal, South America
+
+
+Tawara · 1585th in this Competition · Posted a month ago
+An example of training process (HGNetV2-B0 Baseline)
+【UPDATE at 2026-03-24】 I added AttnetionSEDHead and CustomLoss for it.
+【UPDATE at 2026-03-28】 I Incorporated logit-LSE into Loss, commented by @mathisdw and @hengck23
+【UPDATE at 2026-03-29】 I replaced the classifier head with LSEHead and used BCEWithLogitsLoss, commented by @hengck23
+【UPDATE at 2026-03-31】 I added a 2.5-second shifted prediction TTA, referring to last year's 5th-place solution.
+
+Since there seems few simple training notebooks in this competition, I've decided to share one example.
+
+I trained HGNetV2-B0 by 4-fold cross validation (no distillation yet).
+Each fold took about 30 minutes, therefore the entire training process completed in about 2 hours.
+
+training notebook:
+https://www.kaggle.com/code/ttahara/birdclef-2026-hgnetv2-b0-baseline-training
+
+inference notebook:
+https://www.kaggle.com/code/ttahara/birdclef-2026-hgnetv2-b0-baseline-inference
+
+score
+ver	code	head	Loss	oof CV score	Public LB Score
+1	training, inference	Linear	BCEWithLogitsLoss on logits	0.9574	0.856(fold avg)
+2	training, inference	AttnSED	0.5 * (BCEWLL on logits) + 0.5 * (BCEWLL on timeaxis-max(timewise logits))	0.9626	0.859(fold avg)
+3	training, inference	AttnSED	0.5 * (BCEWLL on logits) + 0.5 * (BCEWLL on timeaxis-LSE(timewise logits))	0.9634	0.863(fold avg)
+4	training, inference, inference(TTA)	LSE	BCEWithLogitsLoss on logits	0.9624	0.884(fold avg), 0.888(TTA->fold avg)
+settings
+data
+input : train_audio and train_soundscapes
+target: primary_label and secondary_labels
+CV split:
+Multi-Label Stratifiled Group K-Fold(K=4)
+using file ids as group ids
+LogMelSpectrogram:
+    mel_spectrogram_params = dict(
+        sample_rate= 32_000,
+        n_fft      = 2048,
+        win_length = 626,
+        hop_length = 313,
+        f_min      = 20,
+        n_mels     = 256,
+        power      = 2.0,
+        center     = True,
+        pad_mode   = "reflect",
+        norm       = "slaney",
+        mel_scale  = 'htk',
+    )
+    top_db = 80
+    lms_shape = (256, 256)
+model
+backbone: hgnetv2_b0.ssld_stage2_ft_in1k from timm
+head : linear(ver1) -> AttnSEDHead(ver2, ver3) -> LSEHead(ver4)
+training
+max_epoch : 20
+batch_size: 64
+optimizer: AdamW(lr=5e-4, weight_decay=1e-4)
+scheduler: OneCosineLR(max_lr=5e-4, min_lr=5e-6, warmup_epoch=5)
+data augmentation: MixUp(alpha=1.0, theta=0.8)
+use amp training: True
+loss: BCEWithLogitsLoss (ver1) -> CustomBCEWithLogitsLoss for SED (ver2, ver3) -> BCEWithLogitsLoss (ver4)
+tips for faster training
+Most of the public training notebooks loads entire an .egg file by librosa and slicing it.
+But this process is very slow and the speed of audio loading is the bottleneck for training.
+
+For faster audio loading, I converted .ogg files into .wav( dataset-00, dataset-01, dataset-02, dataset-03 ) in advance.
+Then, during training, I load not entire the wav file but only the necessary parts(5 sec) of it using soundfile library. 　
+　
+　
+I hope this example is helpful :)
+
+Deep Learning
+Audio
+Audio Classification
+Audio Event Classification
+Animals
+
+5
+22 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+just my results:
+
+5fold tf_efficientnetv2_s (not tuned)
+
+lb 0.835 (train=clip + soundscape)
+
+lb 0.751 (train=clip, fold-one only)
+
+perch direct prob = sigmoid(logit) : 0.835 (for 203 +3 class)
+since zero submission is roc-auc =0.5, we can deduce that "effective lb" is 0.88 for (for 203 +3 class)
+
+
+Reply
+
+1
+D.M.
+Posted a month ago
+
+· 1758th in this Competition
+
+Thank you for this. I was having trouble getting any kind of reasonable score, so I tried your model and training settings, added a logit-LSE followed by BCE, and got .875. I finally feel like I'm in the ballpark now.
+
+
+Reply
+
+1
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+.875 is very good score. Is it for sed model or non sed model
+
+
+Reply
+
+React
+D.M.
+Posted a month ago
+
+· 1758th in this Competition
+
+It's a SED model. You get frame_logits of shape [B,T,C] then do
+
+clip_logits = (torch.logsumexp(self.alpha * frame_logits, dim=1) - math.log(T)) / self.alpha # I used alpha=1
+
+Then BCE on the clip_logits.
+
+
+Reply
+
+1
+Tawara
+Topic Author
+Posted a month ago
+
+· 1585th in this Competition
+
+I'm glad to my notebook is helpful for you😃
+
+And Thanks for sharing your experiment result. I don't know logit-LSE followed by BCE. I'll try it.
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+according the perchv2 paper:
+
+
+
+mixup label are not weighted. maybe you can try
+
+
+Reply
+
+1
+Arunodhayan
+Posted a month ago
+
+· 126th in this Competition
+
+@hengck23 i tried reduced the LB by 0.003
+
+
+Reply
+
+1
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+all experiments are trained under the same setting with HGNetV2-B0 by 4-fold cross:
+1) imagenet GAP head : lb 0.860 (an earlier experiment with different fold and lr gives 0.863)
+2) LSE head: lb0.876 (EMA gives 0.874)
+3) time gated SED: lb 0.851 (EMA gives 0.855)
+
+LSE is a method for MIL (multiple instead learning. you can google for more)
+in terms of local CV, time gated SED is the best (much better), followed by LSE, GAP.
+
+my LSE head:
+
+def lse_pool(x, dim=1, r=10.0):
+    T = x.size(dim)
+    return torch.logsumexp(r * x, dim=dim) / r - math.log(T) / r
+
+def forward(self, ...):
+        ...
+        last = self.backbone(spec) #torch.Size([32, 2048, 8, 8])
+        last = last.mean(dim=2)      # (B, 2048, T)
+        last = last.transpose(1, 2)   # (B, T, 2048) 
+        time_logit = self.head(last)         # (B, T, 234)
+        logit = lse_pool(time_logit, dim=1)  # (B, 234) to BCE loss
+
+Reply
+
+1
+Tawara
+Topic Author
+Posted a month ago
+
+· 1585th in this Competition
+
+Thanks! I also tried LSE but obtained a poor result.
+
+Unfortunately, my GPU quota is currently full, so I’ll try again tomorrow after the limit resets 👍
+
+
+Reply
+
+React
+
+3 more replies
+Profile picture for hengck23
+Profile picture for Youssef Ouertani
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+i take your model and spect mixup nn.modules.
+i use my own dataset and training code.
+
+-lb 0.848: for train soundscape, i use dvision of 12 5sec intervals
+-lb 0.859: for train soundscape, follow your methods to cut into intervals of smae labels and then random crop from there. empty interval not used
+
+
+Reply
+
+1
+Tawara
+Topic Author
+Posted a month ago
+
+· 1585th in this Competition
+
+follow your methods to cut into intervals of smae labels and then random crop from there
+
+That is good news. I'm glad to know the method is useful.
+
+Are your lb scores achieved by single fold?
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+0.859 is 4 average folds same as you. I did submit for one fold ( my folding split ) which is 0.822 ( 12 5sec ) and 0.832 ( crop from interval )
+
+
+Reply
+
+1
+Aic
+Posted a month ago
+
+· 405th in this Competition
+
+How much inference acceleration can be achieved by following this pipeline: .pth → ONNX → OpenVINO IR (.xml/.bin) → CPU compile_model → AsyncInferQueue?
+
+
+Reply
+
+React
+yukiZ
+Posted 24 days ago
+
+· 129th in this Competition
+
+In my case, when I converted a PyTorch model to OpenVINO using ov.convert_model() without using ONNX (no distillation), the inference time was sped up from 22 minutes to 17 minutes.
+
+As a side note, the biggest speed-up trick of OpenVINO is the ability to fuse convolution and batch normalization into a single computational block, but this doesn't work with all BBs. For example, eca_nfnet_l0 achieves very high accuracy with a single model, but NFNet (Normalization-Free Network), as the name suggests, is an architecture that completely eliminates batch normalization, so it's not sped up when converted to OV. Therefore, it seems that a lot of experimentation is needed to choose the model that offers the best balance of accuracy and computational cost in BB.
+
+
+Reply
+
+2
+Tawara
+Topic Author
+Posted 24 days ago
+
+· 1585th in this Competition
+
+@gunianxue
+
+I tried comparing inference speed of HGNetV2-B0 on Torch, Torch-jit-trace, OpenVINO.
+https://www.kaggle.com/competitions/birdclef-2026/discussion/689012
+
+The result shows us that OpenVINO is about twice faster than Torch.
+
+
+Reply
+
+2
+
+1
+Aic
+Posted 24 days ago
+
+· 405th in this Competition
+
+Yes! My results are largely consistent with that.
+
+
+Reply
+
+1
+yanqiangmiffy
+Posted a month ago
+
+· 24th in this Competition
+
+"Hi @ttahara, thank you for sharing these wav datasets! Would it be possible for you to share the script or the command you used to convert the original .ogg files to .wav? It would be very helpful for reproducing the preprocessing pipeline. Thanks!"
+
+Because I download very slowly
+
+
+Reply
+
+1
+Tawara
+Topic Author
+Posted a month ago
+
+· 1585th in this Competition
+
+Sure. Simply put, the conversion function is as follows.
+
+from pathlib import Path
+import soundfile
+
+def convert_ogg_to_wav(ogg_path: Path, output_dir: Path):
+    """"""
+    wave, sr = soundfile.read(ogg_path, dtype="float32")
+    wav_path = output_dir / f"{ogg_path.stem}.wav"
+    soundfile.write(wav_path, wave, samplerate=sr, format="wav", subtype="FLOAT")
+
+Reply
+
+React
+FGPC
+Posted an hour ago
+
+thanks for code snippet. I tried to convert all files in train_soundscapes. Unfortunately, I encountered an error LibsndfileError: System error. Did you also encountered the same error during conversion?
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+0.5 * (BCEWLL on logits) + 0.5 * (BCEWLL on timeaxis-LSE(timewise logits))
+
+I think it is not very correct. Just apply one log loss after lse pooling. Lse is essentially a clipwise loss
+
+
+Reply
+
+1
+Tawara
+Topic Author
+Posted a month ago
+
+· 1585th in this Competition
+
+@hengck23
+
+I updated the result.
+
+LSEHead with BCEWithLogitsLoss achieved 0.9624 on Local CV(slightly lower than AttnSEDHead) but 0.884 on Public LB🎉
+
+
+Reply
+
+1
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+Local cv is no longer a correlation with lb. But you can break it down class by class or use other proxy metrics
+
+
+Reply
+
+1
+D.M.
+Posted a month ago
+
+· 1758th in this Competition
+
+If I'm reading your training script right, this is just a pretrained vision model that you give a 2-way mixed spectrogram image as input, and give it 234 outputs. It outputs logits, and you train it on target labels with binary_cross_entropy_with_logits. And that gives you .856 on the LB. Is that right?
+
+
+Reply
+
+React
+Tawara
+Topic Author
+Posted a month ago
+
+· 1585th in this Competition
+
+you give a 2-way mixed spectrogram image as input
+
+I cannot understand this expression, you mean mixup ?
+
+just a pretrained vision model give it 234 outputs. It outputs logits, and you train it on target labels with binary_cross_entropy_with_logits And that gives you .856 on the LB.
+
+these are right 🦢
+
+
+Reply
+
+React
+D.M.
+Posted a month ago
+
+· 1758th in this Competition
+
+Yes I meant mixup, and I think I see that in the code. Thank you
+
+
+Reply
+
+2

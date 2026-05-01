@@ -1,0 +1,23 @@
+Export your models to serialized formats for deployment in bioacoustics apps!
+Hello BirdCLEF participants!
+
+tl;dr: Export your models to TorchScript (PyTorch), SavedModel (TensorFlow), or ONNX to make them deployable to the apps that ecologists are using to conduct PAM studies!
+
+Longer version: Have you ever wondered what happens to all the amazing models you work on after the BirdCLEF competition is over? Jupyter notebooks are great for development, but they have limitations when it comes to deploying models over terabytes of data or in remote locations like the Pantanal with no internet access. And for ecologists in the field, writing custom Python to use a new model can be a major barrier to entry.
+
+One solution is Raven Intelligence, an app that integrates classifiers into a no-code workflow for bioacoustics practitioners. Raven Intelligence is part of Raven Workbench, a suite of apps for bioacoustics data visualization, annotation, analysis, and detection that is developed by the K. Lisa Yang Center for Conservation Bioacoustics at the Cornell Lab of Ornithology.
+
+We would love to incorporate your models into Raven Intelligence. To do so, models must be saved in one of the following serialized formats:
+
+SavedModel (TensorFlow)
+TorchScript (PyTorch)
+ONNX
+Please consider exporting your model to one of these formats, sharing it via the Kaggle Model Hub, Huggingface, or another sharing platform, and providing the link in your submission. Doing so will help us put your models directly in the hands of ecologists in the Pantanal and around the world where they can make a real conservation impact.
+
+Feel free to reach me with any questions at k.reed@cornell.edu.
+
+Thank you!
+
+-- Kate Reed, Raven Software Team
+
+

@@ -4,14 +4,61 @@
 - 本プロジェクトは特定コンペ専用ではなく、複数の Kaggle コンペへ流用する前提の作業用ワークスペースである。
 - コンペが切り替わったら、まず現在対象のコンペ名、評価指標、提出形式、制約、利用可能データを確認し、古いコンペ前提を引きずらない。
 - 公式情報、配布データ、Discussion / Kernel 由来の知見、ローカル実験結果は分けて管理する。
+- ルート `AGENTS.md` は短いポインタ文書として保ち、詳細ルールはこのファイルやスクリプト側に逃がす。
 
 ## ディレクトリ運用
 - 競技データは `data/input/` に配置する。必要に応じて `data/input/<competition-slug>/` のようにコンペ別に整理する。
 - 公式ルール、評価指標、提出仕様、データ説明の要約は `doc/overview/` に保存する。
 - 現行コンペや過去コンペの Discussion 由来の知見は `doc/discussion/` に保存する。
 - 現行コンペや過去コンペの Notebook / Kernel 由来の知見は `doc/kernel/` に保存する。
+- 過去コンペの上位解法まとめは `doc/solution/` に年別で保存する。
 - その時点の実行戦略、仮説、優先順位、実験計画、判断履歴は `strategy/` に保存・更新する。
 - `.codex/strategy/` は過去の名残として扱い、新規の戦略文書は `strategy/` を正本とする。
+
+## `doc/` の現状構成
+- `doc/overview/`: 現時点では `.gitkeep` のみ。今後、公式情報の要約を置く場所。
+- `doc/discussion/`: `2025/`, `2026/` ディレクトリはあるが、現時点では実データ未格納で `.gitkeep` のみ。
+- `doc/kernel/2026/`: BirdCLEF 2026 向けの参考 Notebook がある。`perch-v2-starter-train-infer.ipynb` や `pantanal-distill-birdclef2026-improvement*.ipynb` をここで管理する。
+- `doc/solution/`: 過去コンペの上位 solution を年別 (`2023/`, `2024/`, `2025/`) に整理している。
+
+## `doc/solution/` の読み方
+- 各年ディレクトリには `summary.md` があり、その年の上位解法の横断要約を読む入口として使う。
+- 各年ディレクトリには `*.csv` もあり、上位解法の比較表・要点整理を表形式で確認できる。
+- `1th` から `10th` のような順位名ファイルは、各順位の solution writeup の生データ置き場として使う。
+- 順位ファイルは拡張子なしだが、実体は UTF-8 のテキスト / Markdown ライクな内容で、`sed`, `less`, `rg` で直接読める。
+- 年によっては未収集順位があり、`2024` は `5th`, `7th`, `10th` がなく、`2025` は `3th`, `8th` がない。欠番は未整理データとして扱う。
+- `2025/image.png` は 2025 solution 関連の補助画像。
+
+## `doc/` の確認方法
+- 全体構成の確認: `find doc -maxdepth 3 -type d | sort`
+- 全ファイル一覧の確認: `find doc -maxdepth 3 -type f | sort`
+- `solution` 年別の格納物確認: `find doc/solution -maxdepth 2 -mindepth 2 -type f | sort`
+- 要約の確認: `sed -n '1,120p' doc/solution/2025/summary.md`
+- 順位別 raw データの確認: `sed -n '1,120p' doc/solution/2025/1th`
+- ファイル種別の確認: `file doc/solution/2023/1th doc/solution/2024/1th doc/solution/2025/1th`
+
+## `doc/solution/` の運用ルール
+- まず `summary.md` と `*.csv` を見て年ごとの全体傾向を掴み、その後に順位別 raw データを読む。
+- 順位別 raw データから再利用する知見は、そのまま使わず `strategy/` や別メモに要約して転記する。
+- 新しい順位データを追加する場合も、`summary.md` と `*.csv` の更新有無を合わせて確認する。
+
+## 品質ハーネス
+- 最速フィードバックは `PostToolUse` フックで取り、`bash .codex/hooks/post-tool-use.sh` から `uv run python scripts/quality_gate.py format` を呼ぶ。
+- 速いフィードバックは pre-commit で取り、`.pre-commit-config.yaml` から `lint`, `typecheck`, `arch` を実行する。
+- 遅いフィードバックは CI で取り、`.github/workflows/ci.yml` から `uv run python scripts/quality_gate.py all` を実行する。
+- 人間レビューはフォーマットや単純違反の発見ではなく、仮説、設計、リーク、CV 設計、再現性の確認に集中させる。
+
+## アーキテクチャガード
+- Python コードは原則 `src/` 配下に置き、レイヤーは `core`, `providers`, `data`, `features`, `models`, `training`, `inference` を使う。
+- 外部I/O、Kaggle API、ロギング、テレメトリ、feature flag のような横断的関心事は `providers/` 経由で注入する。
+- レイヤー依存の検証は `scripts/archgate.py` を正本とし、import 方向を機械的にチェックする。
+- ルールを変える場合は口頭で済ませず、`scripts/archgate.py` と `AGENTS.md` / `.codex/codex.md` を同時に更新する。
+
+## AGENTS / 計画運用
+- ルート `AGENTS.md` は 50 行以下を目安に、最低限のコマンド、禁止事項、参照先だけを書く。
+- 現状説明、技術スタック解説、冗長なスタイルガイドは `AGENTS.md` に書かない。コード、設定、テスト、リンターを真実のソースとする。
+- 実装前に短い計画を先に確定し、1回の変更では 1 機能または 1 論点だけを進める。
+- 完了を宣言する前に、`format`, `lint`, `typecheck`, `arch`, `test` のどこまで実行したかを明示する。
 
 ## 知識蓄積ルール
 - Discussion / Kernel の内容は丸写しせず、再利用しやすい要約に落とし込む。

@@ -1,0 +1,82 @@
+Skip to content Kaggle
+Create Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2023
+10th place solution
+top 7th solution - sumix augmentation did all the work
+4th Place Solution: Knowledge Distillation Is All You Need
+2nd place solution: SED + CNN with 7 models ensemble
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to content Kaggle 10th place solution — BirdCLEF 2023 10th place solution
+BirdCLEF 2023
+Solution Writeup · 10th place · Mar 5, 2024
+Training Data I use 2023 competition data only, but 3 of my models have pre-train weights on 2022 data.
+Model Architecture I use SED architecture, almost the same as this notebook with very minor modifications (e.g., emb_size, num_layers).
+I tried 8 backbones in total, including 3 large and 5 small: large backbones: efficientnetv2_m, eca_nfnet_l0, seresnext50 small backbones: efficientnet_v0, mnasnet_100, spnasnet_100, mobilenetv2_100, resnet34
+As seresnext50 and resnet34 perform not well based on my cv, so I dropped them in the final ensemble.
+I got the information of mnasnet_100, spnasnet_100, and mobilenetv2_100 by asking ChatGPT: What are small models offered by timm and ChatGPT replied with these models with the number of parameters, which is very helpful.
+Code One of my inference notebooks can be found here
+Training Strategy all models are trained on 5s clip.
+soft label: in the one-hot gt, I give the primary label with "1" and the secondary label with "0.3".
+data augmentation: add GaussianNoise, Background noise, PinkNoise, adjust Gain, use cut mix and mix up (very helpful).
+Progressive pretraining: the hardest part of this competition is to find a good set of parameters when applying melspectrum, especially the n_fft, hop_length, and n_mels, which affect the input image (melspectrum) size. I tried many different params, and surprisingly, I found that if you have a model trained on params set A, then you load the model as a pre-trained model (except the first and last layer), and then train it on params set B, the model will perform much better than directly training on params set B, and this is the key idea of my solution. All of my models were trained on many different parameters and finally finetuned on n_mels=128, n_fft=1024, and hop_length=320 to make it the same size, so that can be ensemble efficiently.
+loss function: BCEWithLogits + BCEFocal2WayLoss, same as previous years.
+cv strategy: I use 5fold stratified cross-validation and select the best 1 or 2 fold according to cv.
+ensemble strategy: each model has 1/2 fold for ensemble, and I have 6/7 models in total, with 6 different backbones as mentioned before. The reason I didn't use all folds is because of the computational limitation asked by the host.
+cpu acceleration: I use ThreadPoolExecutor as I have mentioned here, and I also convert models to onnx which utilizes the model quantization technique and shows faster inference time.
+Others more than 70 of my submissions encountered timeout error, and I therefore highly request the function that if more information can be released for the submission, for example, the running time @herbison . I suffered from it a lot, and many almost the same submissions sometimes pass but sometimes not, even with the identical code. I previously made a request regarding the submission time function, as mentioned here, when @ammarali32 and @jaafarmahmoud1 found 10 PM to 6 AM EST is a good time to make submissions. The reason behind this recommendation is that 10 PM EST is considered late for the American region, while it corresponds to 4 AM in Europe and 10 AM in Asia, which might be too early for many participants. Consequently, this particular timeframe becomes somewhat magical, as very few people tend to make submissions during this period. Therefore, if one chooses to make a submission during this time, they could potentially benefit from it.
+based on my experiments, I believe the model params have an impact on inference time when using CPU, i.e., with the same model architecture and the number of params, but different models, some may be fast some may not. @chrisqiu 's post verifies this situation. As the host is trying to build apps that can be deployed in the real world using the CPU, I think this issue is worth mentioning @stefankahl.
+I found that both my CV and lb vary based on the different folds, which indicates a good data split may have a great impact on the result, and some luck is needed when setting the random seed for the data split.
+Acknowledgement I appreciate @stefankahl for hosting this amazing competition, @herbison for answering my questions regarding the submission timeout error, and thanks to the Kaggle community for sharing their insights, ideas, and thoughts. This is a wonderful learning experience and I hope everyone enjoys it!
+Author Leon leonshangguan
+Share
+2 8 Comments Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve! This comment will be made public once posted.
+Post Comment Maximiliano Diaz Battan Posted 3 years ago
+· 75th in this Competition
+I'm really glad you could reach a gold medal, your ensemble notebook help us a lot, was one of the reasons why we reach a medal. Thanks for sharing your solution, we also thought Onnx could improve the inference time but sadly we couldn't make it work, thanks for sharing the inference code also, surely can help a lot of kagglers (including us) in future competitions.
+Reply
+React Muhammad Bilal Hussain Posted 3 years ago
+@leonshangguan thanks for sharing with us your 10th place solution 🙌🏼🙌🏼
+Reply
+React atfujita Posted 3 years ago
+· 4th in this Competition
+Congratulations and thanks for sharing (include inference code)!
+Reply
+React Leon Topic Author Posted 3 years ago
+· 10th in this Competition
+Thanks and congrats for winning the Prize!
+Reply
+React Nooruddin Hyderabadwalla, CFA Posted 3 years ago
+Thanks for sharing your solution @leonshangguan. The discussion title is misleading in a way because it suggests you somehow had ChatGPT work for you, but you actually intelligently used it to an extent and still worked hard on this as can be seen by 70 submissions being timed out comment of yours. I'm getting to learn so much from so many people here, it's amazing! God bless!
+Reply
+React Gaurav Srivastava Posted 3 years ago
+· 233rd in this Competition
+Wow Crazy ! Thanks for sharing and Congratulations🎉
+Reply
+React jionie Posted 3 years ago
+Congrats for your first solo gold! 💯
+Reply
+React Leon Topic Author Posted 3 years ago
+· 10th in this Competition
+Thank you!!!
+Reply
+React

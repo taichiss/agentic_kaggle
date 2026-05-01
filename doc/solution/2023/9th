@@ -1,0 +1,77 @@
+このテキストは、データ分析コンペティション「BirdCLEF 2023」において第9位に入賞したチームの技術的な解法をまとめた報告書です。著者たちは、複数の異なるCNNモデルを組み合わせたアンサンブル手法を採用し、過去のデータを用いた複数段階の学習や、精度向上のための擬似ラベル（Pseudo Labels）の活用など、多角的なアプローチを詳細に記述しています。特に、推論速度を向上させるためにOpenVinoを用いたモデル変換やバッチ処理の工夫を行っており、制限時間内に高度な予測を行うための実戦的な戦略が強調されています。最終的に、モデルの多様性と安定性を重視した意思決定プロセスが示されており、競技者にとっての実践的な知見と学習の記録としての役割を果たしています。
+
+ Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2023
+9th Place Solution: 7 CNN Models Ensemble
+6th place solution: BirdNET embedding + CNN
+10th place solution
+top 7th solution - sumix augmentation did all the work
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to content Kaggle 9th Place Solution: 7 CNN Models Ensemble — BirdCLEF 2023 9th Place Solution: 7 CNN Models Ensemble
+BirdCLEF 2023
+Solution Writeup · 9th place
+Thanks to the organizers for hosting BirdClef 2023 again this year and giving us a learning experience.
+Heartfelt Congratulations to the winners and everyone who got to learn and experience.
+I would also like to express my gratitude to my talented teammates @ivanaerlic and @nischaydnk
+Training We used efficientnet_b0, eca_nfnet_l0 and convnext_tiny architectures in our final submission.
+The training was done in multiple rounds using datasets from all previous years. All models were trained on 5s clips
+For eca_nfnet_l0 and convnext_tiny Hop size 320, n_mels 64, image_size = 64x501 For efficientnet_b0 Hop size 320, n_mels 64, image_size (Bilinear image size increase) = 128x1002
+The training was done in multiple rounds:
+Round 1:
+Hop size 512, n_mels 64, image_size = 64x313 (Bilinear image size increase) = 128x636
+Models : Eca nfnet l0 (128x636), convnext tiny (128x636).
+Training data: 2022 & 2023
+Augmentations: HFlip, Random Cutout, Pink Noise, Gaussian Noise, Noise Injection, Random Volume
+Type of Training: Competition Labels
+CV: ~.79 (Low)
+Round 2:
+Hop size 320, n_mels 64, image_size = 64x501
+Models : Efficientnet B0 (128x1002 Bilinear increase), Eca nfnet l0 (64x501), convnext tiny (64x501).
+Augmentations: HFlip, Random Cutout, Pink Noise, Gaussian Noise, Noise Injection, Random Volume
+Training data: 2022 & 2023
+Type of Training: Distillation
+CV: ~.79 (Slight increase)
+Round 3:
+Hop size 320, n_mels 64, image_size = 64x501
+Models : Efficientnet B0 (128x1002 Bilinear increase), Eca nfnet l0 (64x501), convnext tiny (64x501).
+Training data: 2021 & 2022 & 2023
+Extra methods: AWP, SWA, Attention Head
+Augmentations: HFlip, Random Cutout, Pixel Dropout
+Type of Training: Competition Labels
+CV: ~.8
+Round 4:
+Hop size 320, n_mels 64, image_size = 64x501
+Models : Efficientnet B0 (128x1002 Bilinear increase), Eca nfnet l0 (64x501), convnext tiny (64x501).
+Training data: 2023
+Augmentations: HFlip, Random Cutout, Pixel Dropout, Pink Noise, Gaussian Noise, Noise Injection, Random Volume
+Extra methods: SWA, Attention Head
+Type of Training: Pseudo Labels
+CV: ~.81 (mild leak)
+Our CV was the first 5 seconds of the clips, this CV although was not always consistent with LB, gave us a good enough idea of what we could expect.
+Pseudo labeling improved our score a lot. We used pseudo-labels to make new secondary labels and gave them a hard probability 0.5
+For convnext model, it was first fine tuned to increase the score on the targets where secondary label exists, although this sacrificed the primary label score, this adds diversity to our ensembles
+Inference We used OpenVino to increase the inference speed of our models
+We also saw that loading an audio and giving it in batches, the first batch of inference is especially slower than the rest, so we made it so that it loads 8 audios at once, makes a data loader for all 8 audios and then forward pass the model, doing this we increased the inference speed further by 20%.
+So we were able to submit 7 models, 2 of efficientnet_b0 + 2 of eca_nfnet_l0 + 3 of convnext_tiny
+We also noticed that sigmoid after weight averaging was more effective than sigmoid before weight averaging, also we were using softmax activation which gave a better score than sigmoid up until we reached top of .82 (public LB), after that sigmoid started to work better.
+BirdNet Our best private submission turned out to be when we ensembled our models with BirdNet, although it was like our top 10 submissions of public and did give us a lot of variance, we did not select this because we were a little afraid of it being a dice roll on private LB.
+Post Processing Looking at the last year’s competition, we tried out increasing the confidence of a class by a factor of 1.5 if any prediction of that class in the audio file is more than .96
+This did work on a lot of submissions and was in fact amongst our top subs, but in the end, it did not play well on private LB and we did not select it because of the risk of overfitting the public LB.
+What did not work SED models Q-Transform More than 5s training Rolling Mean with last and next 5s segment
+More than 60 submissions of ours had timeout errors and on the last second day of the competition, 4 of 5 submissions had encountered timeout error while before that the chance of getting a timeout was only 20-30% in the same notebook.

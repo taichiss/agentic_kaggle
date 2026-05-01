@@ -1,0 +1,9 @@
+順位,チーム名/作成者,CV戦略,モデル構成・バックボーン,データ拡張・前処理,疑似ラベル/蒸留の使用,後処理技術,ソース
+1位,"Kirill Chemrov, Arseny Poyda",Fold 0のみ使用、信号強度統計に基づくフィルタリング,"EfficientNet_B0, RegNetY_008","XY masking, horizontal cutmix, 10秒チャンク入力, サイクリックパディング",Google classifierによるラベル修正・追加、unlabeled_soundscapesへの疑似ラベル付与,アンサンブル（minリダクション）、チャンク平均化、シグモイド使用,1
+2位,adsr (mariotsaberlin),初期は2023年手法のCV、後にモデルスープ/チェックポイントスープによる安定化,"EfficientNet B0 (tf_efficientnet_b0_ns), eca_nfnet_l0","最初の5秒のみ使用、Mixup, タイム/周波数ストレッチ, 5層のドロップアウト",ターゲットドメイン（unlabeled）からの疑似ラベル使用。3サイクルの反復改善,予測値の平均、隣接ウィンドウとの加算（係数0.5）,2
+3位,"Team NVBird (CPMP, Christof Henkel, Theo Viel)",5分割CV（ただしLBと相関せず）、最終的に全データ+5シードで学習,"EfficientViT (b0, b1, m3), CNNs (EfficientNet, MobileNet, MixNet), SEDモデル","タイムシフト, Mixup, 2次ラベルによる損失マスク, スペクトログラム(224x224, 288x288)",unlabeled soundscapesを用いた疑似ラベル化とモデル蒸留,"移動平均 0.1, 0.2, 0.4, 0.2, 0.1、サウンドスケープ内の最大確率に基づく補正",3
+4位,Team Cerberus,authorグループ化5分割CV、合成データによる検証戦略,"rexnet_150, seresnext26ts, inception-next-nano, tf_efficientnet_b0_ns (Raw signal)","背景ノイズ追加, Gain, Noise Injection, Mixup, Cutmix, 2.5秒シフトTTA",試行したが最終的に機能せず（不採用）,移動平均、カットオフ（自信度0.10以下を半減）、近傍最大値、OpenVINO+INT8量子化,4
+5位,coolz (cooolz),LBを用いた性能確認、ローカルCVは未確立,"HGNet-B0 (Raw signal), EfficientNet-B0 (Spectrum), 混合モデル","XY cut out, Random sample 5s, Mixup (p=1), 信号を2chにリシェイプ",情報なし,アンサンブル（重み 0.5:0.4:0.1）、OpenVINOによる推論,5
+6位,penguin46 (ryotayoshinobu),CVは機能せず、パブリックLBのみを確認,"ResNet18d, ResNet34d, EfficientNetV2-S","32kHzダウンサンプリング, RMSサンプリング, 前処理済みデータのディスク保存",複数5秒セグメントの同時入力、ハードラベル不使用、ソフトラベルでの損失計算,"重み付き移動平均 0.1, 0.2, 0.4, 0.2, 0.1、グローバル平均の加算（0.2倍）",6
+8位,kapenon,信頼できるCV未確立、LBに依存、最高CVスコアのモデルを疑似ラベルに使用,"SED (eca_nfnet_l0), tf_efficientnet_b0, Simple 2D CNN","NoiseInjection, Freq/Time Masking, sumix, Google分類器によるフィルタリング",Google分類器でフィルタリングした2024年データで疑似ラベル化、unlabeled使用,ロジットアンサンブル、OpenVINOによる推論時間短縮,7
+9位,Aphysict,CVなし、パブリックLBのみを使用,"eca_nfnet_l0, tf_efficientnetv2_b0, rexnet_100","Cutmix, Mixupのみ。ボトルネック層（CAD）の追加",知識蒸留は試したが失敗。CADボトルネックを用いた対照学習（SupCon）,前後ウィンドウとの平均化（0.01~0.02向上）,8

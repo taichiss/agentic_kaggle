@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: local
+    hooks:
+      - id: codex-lint
+        name: codex-lint
+        entry: uv run python scripts/quality_gate.py lint
+        language: system
+        pass_filenames: false
+      - id: codex-typecheck
+        name: codex-typecheck
+        entry: uv run python scripts/quality_gate.py typecheck
+        language: system
+        pass_filenames: false
+      - id: codex-arch
+        name: codex-arch
+        entry: uv run python scripts/quality_gate.py arch
+        language: system
+        pass_filenames: false

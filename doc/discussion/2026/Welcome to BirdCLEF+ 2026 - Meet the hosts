@@ -1,0 +1,280 @@
+
+Stefan Kahl · Posted 2 months ago
+·
+Competition Host
+Welcome to BirdCLEF+ 2026 - Meet the hosts
+BirdCLEF+ offers an exciting opportunity to showcase your skills while contributing to global conservation efforts. This year’s challenge is especially relevant for conservation initiatives in the Pantanal, where climate change and habitat loss continue to threaten biodiversity.
+
+As your competition hosts, we’re here to support you as much as possible—while also keeping the integrity of the test data intact. So while we’re happy to answer questions, we won’t be revealing any secrets about the dataset! 😉
+
+Now, let’s introduce the team:
+
+@stefankahl – I’m a research associate at the K. Lisa Yang Center for Conservation Bioacoustics (Cornell Lab of Ornithology) and Chemnitz University of Technology. My work focuses on developing machine learning models to detect and identify bird species in large-scale audio datasets. I also serve as the technology lead for the BirdNET project and have been organizing the BirdCLEF Challenge since 2018. Feel free to ask me about deep learning for bioacoustics or working note submissions.
+
+@tomdenton – A research software engineer at Google and long-time co-host of the BirdCLEF Kaggle competitions. His team works on organizing natural soundscapes in ways that support conservation—essentially tackling key ML challenges so ecologists can focus on scientific questions rather than annotating data and training classifiers. You can explore some of his past work on birdsong audio separation and source-free domain adaptation. Tom is happy to help with questions about cutting-edge ML research.
+
+@larissasugai – An ecologist passionate about using acoustic monitoring to understand biodiversity changes across space and time. Her research has focused on signaling assemblages in South America, particularly frogs. At the Cornell Lab, Larissa works with the K. Lisa Yang Center for Conservation Bioacoustics as part of the capacity building team. She can help answer questions about the Pantanal and its ecological challenges.
+
+@holgerklinck – Director of the K. Lisa Yang Center for Conservation Bioacoustics at the Cornell Lab of Ornithology. Holger leads efforts to develop and apply innovative conservation technologies to record and analyze sounds in nature at ecologically meaningful scales. He can provide insights on bioacoustic monitoring and conservation technology.
+
+@ryanholbrook & @ashleyoldacre – Representing the Kaggle team, Ashley & Ryan are here to assist with competition rules, platform-related issues, and anything Kaggle-specific.
+
+We’re excited to see what you’ll build—happy Kaggling! 🚀
+
+
+9
+18 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+D.M.
+Posted 20 days ago
+
+· 1758th in this Competition
+
+Question: After the competition is over, do you plan to make available the Public and Private leaderboard datasets? This data is a fascinating example of domain-shift, and it would be great to see after the fact what exactly was going on.
+
+Also, just having a large set of labeled soundscapes would be great for those of us interested in training bioacoustic models going forward, competition or not. Thanks.
+
+
+Reply
+
+React
+Cody_Null
+Posted 2 months ago
+
+Looking at data and some of the CV/LB this year it looks really good guys, thank you for your efforts this year!
+
+
+Reply
+
+2
+BNBU Anpeng Yuan
+Posted 4 days ago
+
+· 22nd in this Competition
+
+Hi @stefankahl, thanks for bringing BirdCLEF back to Kaggle!!! Here is my question regarding the soundscapes dataset. I found the three labeled filenames below are nearly identical in site, date and time, with only the file names differing. BC2026_Train_0003_S08_20250607_070007.ogg BC2026_Train_0004_S08_20250607_070007.ogg BC2026_Train_0005_S08_20250607_070007.ogg
+
+
+Reply
+
+React
+Stefan Kahl
+Competition Host
+Posted 2 days ago
+
+I believe these were extracted from a single, longer file from the same site and date.
+
+
+Reply
+
+React
+Tom
+Posted 24 days ago
+
+· 13th in this Competition
+
+Hi @stefankahl, I’d like to ask when I can submit the working notes and how to submit it? Just click submit a paper in the CLEF 2026 website? I already have one ready to submit now.
+
+
+Reply
+
+React
+Stefan Kahl
+Competition Host
+Posted 21 days ago
+
+We'll share detailed information soon. The submission process goes through EasyChair, a conference tool CLEF uses. There you can upload, manage and see reviews. Submission workflow will be very similar to last year.
+
+
+Reply
+
+2
+Mattia Angeli
+Posted a month ago
+
+· 42nd in this Competition
+
+Hi @stefankahl, @tomdenton, @larissasugai — is there any official mapping from the SXX site codes in train_soundscapes / test_soundscapes to recorder latitude/longitude, or at least approximate coordinates?
+
+I can parse the site code and UTC time from filenames, but I haven’t found a metadata file linking S01, S05, etc. to (lat, lon).
+
+Thanks!
+
+
+Reply
+
+React
+Stefan Kahl
+Competition Host
+Posted 18 days ago
+
+Yes and no, we do know exact site locations but didn't include those in the dataset, mostly to protect recording sites in case of rare species detections. Sites SXX should be acoustically similar, though (e.g., species composition) - at least that's our assumption and why we provide site names this year.
+
+
+Reply
+
+React
+Игорь Щукин
+Posted a month ago
+
+· 1246th in this Competition
+
+map
+
+Hi! In my EDA, the latitude/longitude values for samples labeled as Pantala seem to include locations outside the expected Pantala range. Is this normal in this dataset (i.e., coordinates represent recording location metadata rather than species-specific range)? For modeling, should I keep all coordinates as provided, or is it better to filter coordinates for Pantala-related samples?
+
+
+Reply
+
+React
+Tom Denton
+Competition Host
+Posted a month ago
+
+These locations are likely from the training data. The training data is from Xeno-Canto, and many examples of vocalizations from the target species for the competition are from outside the Pantanal region.
+
+
+Reply
+
+React
+Jack
+Posted a month ago
+
+· 129th in this Competition
+
+Hey Tom, does the recording_location.txt file represent the recording locations for test and train soundscapes?
+
+
+Reply
+
+React
+Tom Denton
+Competition Host
+Posted a month ago
+
+Yes - the test and train soundscapes are all from the same overall deployment in the Pantanal, described in recording_location.txt. However, there are recordings locations in test that are not in the train soundscapes.
+
+
+Reply
+
+React
+Lokendra Singh
+Posted a month ago
+
+Have been looking forward to this! Good Luck everyone! :)
+
+
+Reply
+
+React
+Uday Bhatia
+Posted a month ago
+
+· 434th in this Competition
+
+Hey Stefan, I know it was probably a stupid question and you cannot answer this, but I was just trying to optimize my run time. I would prefer if I could get to know a rough ballpark of how many test soundscapes are present?
+
+@stefankahl
+
+
+Reply
+
+React
+Stefan Kahl
+Competition Host
+Posted a month ago
+
+Around 600; there's more detail on this in the data description.
+
+
+Reply
+
+React
+Uday Bhatia
+Posted a month ago
+
+· 434th in this Competition
+
+Ah F, did not spot that Thank you so much
+
+
+Reply
+
+React
+Ashwani Gupta
+Posted a month ago
+
+Total 600 recordings and each recording is one minute long. Submission expect prediction for 5-sec recording that mean's the shape of submission output will be 1200 (600x12 segments) x234 (classes), is my understanding correct?
+
+
+Reply
+
+React
+Tom Denton
+Competition Host
+Posted a month ago
+
+Around 600, not necessarily exactly 600. And there's 12 5-second segments in one minute.
+
+We strongly recommend starting from the sample submission to minimize pain getting your initial submission working: https://www.kaggle.com/code/stefankahl/birdclef-2026-sample-submission
+
+
+Reply
+
+React
+AC
+Posted 2 months ago
+
+Have been looking forward to this! Good Luck everyone! :)
+
+
+Reply
+
+React
+BNBU Anpeng Yuan
+Posted 2 months ago
+
+· 22nd in this Competition
+
+Hi Stefan Kahl, may I ask when the medal will be published eventually?
+
+
+Reply
+
+React
+Stefan Kahl
+Competition Host
+Posted 2 months ago
+
+Not sure actually; that's probably @ashleyoldacre question.
+
+
+Reply
+
+React
+Simon Beck
+Posted 2 months ago
+
+Thx, i will try my best to get gold model solution.
+
+
+Reply
+
+React
+Ayhm Dalila
+Posted 2 months ago
+
+· 1747th in this Competition
+
+Hey Stefan, would love your assistance here: https://www.kaggle.com/competitions/birdclef-2026/discussion/680949
+
+
+Reply
+
+React

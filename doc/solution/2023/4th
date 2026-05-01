@@ -1,0 +1,307 @@
+このソースは、Kaggleで開催された「BirdCLEF 2023」という鳥類の鳴き声識別コンペティションにおいて、第4位入賞者が自身の解法（ソリューション）を詳細に解説した報告書です。最大の核となる戦略は、Googleが公開した強力な既存モデルから知識を抽出して自らの軽量なモデルに継承させる知識蒸留（Knowledge Distillation）という手法にあります。さらに、過去の大会データや外部音源を用いた大規模な事前学習とデータ拡張を組み合わせることで、精度の向上と推論速度の効率化を両立させています。このテキストは、データセットの構成からモデルのアーキテクチャ、さらには試行錯誤の末に失敗した手法までを網羅しており、機械学習の実践的な知見を共有することを目的としています。
+
+Skip to
+content
+Kaggle
+Create
+Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2023
+4th Place Solution: Knowledge Distillation Is All You Need
+2nd place solution: SED + CNN with 7 models ensemble
+1st place solution: Correct Data is All You Need
+BirdCLEF 2024
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to
+content
+Kaggle
+4th Place Solution: Knowledge Distillation Is All You Need — BirdCLEF 2023
+4th Place Solution: Knowledge Distillation Is All You Need
+BirdCLEF 2023
+Solution Writeup · 4th place · Jun 6, 2023
+First of all, thanks to Kaggle and Cornell Lab of Ornithology for hosting this interesting competition. And I would like to emphasize the thanks to the bird sound recordists who provided their data through xeno-canto.
+Solution Summary
+Knowledge Distillation is all you need.
+Adding no-call data, xeno-canto data, and background audios(Zenodo) is effective.
+Datasets
+Additional datasets can be found here.
+Bird CLEF 2023
+Bird CLEF 2021, 2022 (for pretraining)
+ff1010bird_nocall (5,755 files for learning no call)
+xeno-canto files not included in training dataset CC-BY-NC-SA (896 files) and CC-BY-NC-ND (5,212 files).
+Zenodo dataset (background noise)
+esc50 (rain, frog)
+aicrowd2020_noise_30sec (background noise for pretraining)
+Models
+My models are based on the BirdCLEF 2021 2nd place solution using timm.
+My solution consists of a total of 4 models, all with eca_nfnet_l0 as the backbone. Each set is slightly different.
+MelSpectrogram (sample_rate: 32000, mel_bins: 128, fmin: 20, fmax: 16000, window_size: 2048, hop_size: 512, top_db=80.0, NormalizeMelSpec) following this solution.
+Public: 0.8312, Private: 0.74424
+Balanced sampling with the above settings.
+Public: 0.83106, Private: 0.74406
+PCEN (sample_rate: 32000, mel_bins: 128, fmin: 20, fmax: 16000, window_size: 2048, hop_size: 512).
+Public: 0.83005, Private: 0.74134
+MelSpectrogram (sample_rate: 32000, mel_bins: 64, fmin: 50, fmax: 14000, window_size: 1024, hop_size: 320).
+Public: 0.83014, Private: 0.74201
+Training
+Knowledge distillation of pre-computed predictions in Kaggle Models (bird-vocalization-classifier) was the hallmark of my solution. This model cannot complete inference in less than 2h, but it is very powerful. cmAP_5 on my validation dataset was 0.9479. So I tried to extract useful information from this model.
+The Kaggle models pre-computed predictions were created here.
+According to this paper, they argued that efficient distillation required 1. consistent input, 2. aggressive mixup, and 3. a large number of epochs. So I did 2 and 3 because it was challenging to integrate the Kaggle model into my training pipeline. It certainly looked effective.
+I chose only approaches that improve both CV and LB. In this competition, I just couldn't believe in one or the other.
+Using 5 StratifiedKFold. Only 1 fold did not cover all classes, so the remaining 4 were used for training.
+The evaluation metric is padded_cmap1. The best results were the same with padded_cmap5 in most cases.
+Use primary_label only
+no-call is represented by all 0
+loss: 0.1 * BCEWithLogitsLoss (primary_label) + 0.9 * KLDivLoss (from Kaggle model)
+Softmax temperature=20 was best (tried 5, 10, 20, 30).
+I used randomly sampled 20-sec clips for training. Audio that is less than 20 sec is repeated.
+epoch = 400 (Most models converge at 100-300)
+early stopping(pretraining=10, training=20)
+Optimizer: AdamW (lr: pretraining=5e-4, training=2.5e-4, wd: 1e-6)
+CosineLRScheduler(t_initial=10, warmup_t=1, cycle_limit=40, cycle_decay=1.0, lr_min=1e-7, t_in_epochs=True,)
+mixup p = 1.0 (It was better than p=0.5)
+I also encountered a situation where the training time was significantly longer when pretrained with past competition data. Thanks to everyone who suggested solutions.
+Augmentation
+OneOf ([Gain, GainTransition])
+OneOf ([AddGaussianNoise, AddGaussianSNR]
+AddShortNoises esc50 (rain, frog)
+AddBackgroundNoise from Zenodo. The 60 minutes with the fewest bird calls were extracted from each dataset and divided into 30 sec (training only).
+AddBackgroundNoise from aicrowd2020_noise_30sec and ff1010bird_nocall (pretraining only).
+LowPassFilter
+PitchShift
+Hardware
+1 * RTX 3090
+Pretraining time: 30-40h per model.
+Training time: 9-12h per model.
+Inference
+Reducing the inference time is the part I was having trouble with. Thanks to @leonshangguan for sharing his effective approach, I was able to use 4 models.
+Ensemble with simple averaging.
+4 models using PyTorch JIT. total 110min.
+Inference notebook
+What didn’t work
+focal loss.
+Split a low-sample class.
+Backbone other than eca_nfnet_l0 and eca_nfnet_l1.
+Optimizers (adan, lion, ranger21, shampoo). I tried to create a custom normalize-free model but failed.
+CMO (mixup worked better when using distillation).
+CQT (slow and degraded).
+Change to first stride(1, 1). CV was good but inference takes a long time and not a single model is completed in less than 2h.
+Pretraining Zenodo data (story before trying distillation).
+Distillation training from scratch (not use imagenet weights). It didn't converge in the amount of time I could tolerate.
+MelSpectrogram, PCEN, and CQT integrated into input channels in all combinations. There was no synergistic effect.
+Ablation study
+Name Public LB Private LB
+BaseModel 0.80603 0.70782
+BaseModel + Knowledge Distillation 0.82073 0.72752
+BaseModel + Knowledge Distillation + Adding xeno-canto 0.82905 0.74038
+BaseModel + Knowledge Distillation + Adding xeno-canto + Pretraining 0.8312 0.74424
+BaseModel + Knowledge Distillation + Adding xeno-canto + Pretraining + Ensemble (4 models) 0.84019 0.75688
+Acknowledgments
+My solution builds on contributions from participants in this and past competitions, birding enthusiasts, and the work of the machine learning community. thank you very much 🙏
+Training Code: https://github.com/AtsunoriFujita/BirdCLEF-2023-Identify-bird-calls-in-soundscapes
+Author
+atfujita
+atsunorifujita
+Share
+3
+19 Comments
+Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+Post Comment
+Pardeep Singh
+Posted 3 years ago
+· 447th in this Competition
+Congrats @atsunorifujita and thanks for sharing this detailed writeup 🙏
+Reply
+React
+Jan H.
+Posted 3 years ago
+· 57th in this Competition
+Congratulations, and thanks for the helpful post! Could you also make your training code available on github and post a link?
+Reply
+React
+atfujita
+Topic Author
+Posted 3 years ago
+· 4th in this Competition
+Absolutely! I'm preparing for it.
+Reply
+React
+yukiya
+Posted 3 years ago
+· 70th in this Competition
+Thank you very much in advance. I am interested in distillation, but I cannot make it work
+Reply
+React
+3 more replies
+Profile picture for atfujita
+Profile picture for yukiya
+Profile picture for Jan H.
+Jan Schlüter
+Posted 3 years ago
+· 72nd in this Competition
+Congratulations, and thanks for sharing! Just to see if I got it correctly, your training steps were:
+Take a backbone that is pretrained on ImageNet
+Train a model with this backbone on BirdCLEF 2021+2022+ff1010, with Google's bird vocalization classifier as a teacher, lr 1e-5
+Replace the last layer, train the model further on 2023+ff1010+xeno-canto, again with the same teacher, lr 2.5e-4
+Any idea how much you gained in inference time from using PyTorch's JIT? I tried PyTorch 2's compilation on single models or the full ensemble, but it didn't help at all (probably also because of graph-breaking Python control statements).
+Reply
+React
+atfujita
+Topic Author
+Posted 3 years ago
+· 4th in this Competition
+Thank you!
+My training steps are as you said. To be precise, ff1010 in 2. is used as background noise.
+PyTorch JIT reduced the inference time by about 20%.
+I also tried ONNX, but didn't use it because of the complexity of the inference pipeline. The PyTorch JIT was able to include MelSpectrogram and PCEN in the model and converted it, simplifying the inference code.
+Reply
+React
+Aaditya Bansal
+Posted 3 years ago
+· 284th in this Competition
+Thank you for sharing your approach, I am a beginner in Deep Learning, do you have any tips as to how I can approach complex problems like this.
+Reply
+React
+atfujita
+Topic Author
+Posted 3 years ago
+· 4th in this Competition
+Thank you, I think we just have to come up with ideas and experiment. That's why we always have to keep learning.
+Reply
+React
+Gaurav Srivastava
+Posted 3 years ago
+· 233rd in this Competition
+Awesome! Congratulations @atsunorifujita 🔥
+Reply
+React
+atfujita
+Topic Author
+Posted 3 years ago
+· 4th in this Competition
+Thank you 👍
+Reply
+React
+Nischay Dhankhar
+Posted 3 years ago
+· 9th in this Competition
+Congrats on a great solo finish @atsunorifujita 🎉 your distillation technique is indeed powerful.
+Reply
+React
+atfujita
+Topic Author
+Posted 3 years ago
+· 4th in this Competition
+Thank you! I hope you are enjoying your work 👍
+Reply
+React
+Harshit Sheoran
+Posted 3 years ago
+· 9th in this Competition
+Congratulations on your solo gold! Great Find on how to make use of already existing model
+Reply
+React
+atfujita
+Topic Author
+Posted 3 years ago
+· 4th in this Competition
+Thank you and congratulations 🙌
+Reply
+React
+Leon
+Posted 3 years ago
+· 10th in this Competition
+Congrats for your solo gold!💯
+Reply
+React
+atfujita
+Topic Author
+Posted 3 years ago
+· 4th in this Competition
+Thank you and congratulations on your solo gold 🎉
+Reply
+React
+Pushkar Ambastha
+Posted 3 years ago
+Congratulations and brilliant discussion. A few questions since I saw the ps recently:
+Is there any reason why Focal Loss cannot outperform BCE?
+Why do you prefer librosa over torchaudio?
+Is there any substantial postprocessing you used in inference or that you plan to use as future work?
+What models are appropriate for ONNX?
+How do you get started with PyTorch jit? Do you have any recommended documentation?
+Reply
+React
+atfujita
+Topic Author
+Posted 3 years ago
+· 4th in this Competition
+Thank you and nice questions!
+Is there any reason why Focal Loss cannot outperform BCE?
+I don't know why. I was just comparing the experimental results. Focal loss may be better for different data.
+Why do you prefer librosa over torchaudio?
+Because I wanted my model inputs and KaggleModel inputs to be as consistent as possible. Firstly I was using soundfile.
+Is there any substantial postprocessing you used in inference or that you plan to use as future work?
+I can't think of anything at the moment. A simple average of multiple models worked.
+What models are appropriate for ONNX?
+It was possible to convert to ONNX by separating mel spectrogram and PCEN from my model. However, I got lost motivation to use it because the inference time was not significantly different from PyTorch JIT.
+How do you get started with PyTorch jit? Do you have any recommended documentation?
+In many cases, it's pretty straightforward (it fails with unsupported layers). The official documentation is helpful, but you can convert it with a few lines of code.
+https://pytorch.org/docs/stable/jit.html
+Reply
+React
+Pablo Larrosa
+Posted 3 years ago
+· 530th in this Competition
+Congratulations!, I'd like to know how many time you needed to train your folds in a RTX 3090.
+Thank you in advance!
+Reply
+React
+atfujita
+Topic Author
+Posted 3 years ago
+· 4th in this Competition
+Thank you and good question!
+Pretraining time: 30-40h per model.
+Training time: 9-12h per model.
+Reply
+React
+Pablo Larrosa
+Posted 3 years ago
+· 530th in this Competition
+How much memory the RTX 3090?
+Reply
+React
+atfujita
+Topic Author
+Posted 3 years ago
+· 4th in this Competition
+RTX 3090 has 24GB of VRAM
+Reply
+React
+英語
+Ornithology
+日本語
+鳥類学
+名詞
+鳥類学
+拡張機能オプション詳細 »

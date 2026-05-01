@@ -1,0 +1,312 @@
+warping perchv2 inside pytorch for training
+dowbload the onnx version, it is very fast
+https://huggingface.co/justinchuby/Perch-onnx
+
+possible uses:
+
+for onine distillation
+as feature extractor
+import numpy as np
+import torch
+import torch.nn as nn
+import onnxruntime as ort
+
+ONNX_FILE='perch_v2_no_dft.onnx'
+
+class OnnxFeatureExtractor(nn.Module):
+    def __init__(
+        self,
+    ):
+        super().__init__()
+        self.session = ort.InferenceSession(
+            ONNX_FILE,
+            providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+        )
+
+    @torch.no_grad()
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if not x.is_cuda:
+            raise ValueError("Expected CUDA tensor input.")
+        if x.dtype != torch.float32:
+            x = x.float()
+
+        x = x.contiguous()
+        device_id = x.device.index if x.device.index is not None else 0
+
+        batch_size = x.shape[0]
+        embedding = torch.empty((batch_size,1536), device=x.device, dtype=torch.float32)
+        spatial_embedding = torch.empty((batch_size,16, 4, 1536), device=x.device, dtype=torch.float32)
+
+        binding = self.session.io_binding()
+        binding.bind_input(
+            name='inputs',
+            device_type="cuda",
+            device_id=device_id,
+            element_type=np.float32,
+            shape=tuple(x.shape),
+            buffer_ptr=x.data_ptr(),
+        )
+        binding.bind_output(
+            name='embedding',
+            device_type="cuda",
+            device_id=device_id,
+            element_type=np.float32,
+            shape=tuple(embedding.shape),
+            buffer_ptr=embedding.data_ptr(),
+        )
+        binding.bind_output(
+            name='spatial_embedding',
+            device_type="cuda",
+            device_id=device_id,
+            element_type=np.float32,
+            shape=tuple(spatial_embedding.shape),
+            buffer_ptr=spatial_embedding.data_ptr(),
+        )
+        self.session.run_with_iobinding(binding)
+
+        return spatial_embedding, embedding
+
+if __name__ == "__main__":
+    m = OnnxFeatureExtractor()
+    m.eval()
+    m.cuda()
+
+    x = torch.randn(64, 160_000).cuda()
+    spatial_embedding, embedding = m(x)
+    print(spatial_embedding.shape)
+    print(embedding.shape)
+example code:
+https://www.kaggle.com/code/hengck23/perch2-onnx-direct-lse-256-4fold
+https://www.kaggle.com/code/hengck23/onnx-distill-prechv2-stop-lse-4fold
+
+
+1
+16 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+hengck23
+Topic Author
+Posted 17 days ago
+
+· 793rd in this Competition
+
+pytorch differentiable perchv2 ! convert from onnx to pytorch with weights
+https://www.kaggle.com/code/hengck23/pytorch-differentiable-perchv2
+
+
+Reply
+
+1
+
+2
+Lixin73
+Posted 16 days ago
+
+· 94th in this Competition
+
+ONNX vs PyTorch train audio
+
+embedding cosine mean: 0.9999999999995033
+
+embedding cosine min: 0.9999999999992175
+
+embedding MAE: 7.8e-08
+
+embedding max abs: 6.1e-07
+
+spectrogram corr: 0.9999999999998748
+
+
+Reply
+
+React
+hengck23
+Topic Author
+Posted a month ago
+
+· 793rd in this Competition
+
+train sample: 35k clip, 66 soundscapes only (this version haven't used unllabelled set yet)
+
+significance of this result is that it shows "only 66 soundscape images" + clips can give good results if the embedding is strong.
+(note the stop gradient)
+
+
+
+Example application. For LSE and hgnetv2_b0, refer to @ttahara : https://www.kaggle.com/competitions/birdclef-2026/discussion/683822
+
+you may want to:
+1) Ask AI chatbot to comment
+2) Do we improve perch embedding or not? One should have done an experiment on direct perch feature +MLP or (PCA+LR)
+3) what if we did not stop gradient ?
+4) how about distilling perch spatial embedding, etc?
+
+
+Reply
+
+1
+hengck23
+Topic Author
+Posted a month ago
+
+· 793rd in this Competition
+
+update:
+1) without stop gradient: lb 0.889 (but local cv is better)
+2) use onnx feature (spatial embed) directly:just train MLP: lb0.885
+https://www.kaggle.com/code/hengck23/perch2-onnx-direct-lse-256-4fold
+
+
+Reply
+
+React
+hengck23
+Topic Author
+Posted a month ago
+
+· 793rd in this Competition
+
+AI makes me lazy …. 
+
+
+
+but it does offer me new insights.
+Let ai analyses results!
+
+check if they are hallucinating or not
+give you new insights
+they praise you occasionally I have been doing this for quite sometime. So i understand what they think, can do or cannot do. It helps me to decide how to automate for kaggle
+
+Reply
+
+React
+This comment has been deleted.
+
+hengck23
+Topic Author
+Posted a month ago
+
+· 793rd in this Competition
+
+my ideal:
+
+10k unlablled soundscapes, 12 windows each file. each window is 5sec.
+self-supervised learning: use 5 windows to predict the next (predict multi layer latent) …
+used the learned latent of 5 windows to do few shot or linear probing using 66 labelled soundscapes
+
+Reply
+
+React
+hengck23
+Topic Author
+Posted a month ago
+
+· 793rd in this Competition
+
+one way to think how stop gradient work:
+
+the prediction of 1536 dstilled emebdding vector is not accurate at first with high mse
+yet the prediction yet is trained to make prediction with emebdding+noise
+as training proceeds, the mse gets less.
+in effect, we are using mse loss as a regularisation to smooth the loss landscape of prediction head (bce loss)
+or you can treat emebdding+decreasing noise as augmentation
+or you can treat it as : stop gradient method = direct onnex method + "unbias shift"
+
+Reply
+
+React
+This comment has been deleted.
+
+Timmy Juicehouse
+Posted a month ago
+
+· 238th in this Competition
+
+Supplement my experiment. I used the GPU version of Perch, and extracting the embedding only took about 13 minutes.
+
+
+Reply
+
+React
+DaylightH
+Posted a month ago
+
+· 52nd in this Competition
+
+Thanks for sharing! I hadn't tried Perch before because I noticed the community baselines take almost 90 minutes to run. But using the model you recommended, I was able to score 0.926 in just 23 minutes! This method is much faster than using TFLite, and there's no need for precision conversion.
+
+
+Reply
+
+React
+Aic
+Posted a month ago
+
+· 405th in this Competition
+
+Great insights on the stop-gradient mechanism! I'm curious about the Spec Augmentation part: since you split the ONNX, does adding masks on the spectrogram affect the stability of the MSE distillation loss, given that the target Perch embeddings were originally trained on clean specs?
+
+
+Reply
+
+React
+Navneet
+Posted a month ago
+
+Thank you to PyTorch for training @hengck23
+
+
+Reply
+
+React
+hengck23
+Topic Author
+Posted a month ago
+
+· 793rd in this Competition
+
+becuase of spect augmentation in training i want to spect the onnx into 2
+
+
+
+#consult your LLM for details
+import onnx
+from onnx import utils
+
+utils.extract_model(
+    "perch.onnx",
+    "wave_to_spect.onnx",
+    input_names=["inputs"],          # replace with actual
+    output_names=["spectrogram"]        # from Netron
+)
+
+utils.extract_model(
+    "perch.onnx",
+    "spect_to_latent.onnx",
+    input_names=["spectrogram"],
+    output_names=["..."]
+)
+you can also output each intermediate layers of efficientnetb3 for distillation …
+
+
+Reply
+
+React
+Mike Kim
+Posted a month ago
+
+· 16th in this Competition
+
+Which LLM is this from? Did you notice any difference between Opus4.6 and GPT5.4?
+
+
+Reply
+
+React
+This comment has been deleted.
+

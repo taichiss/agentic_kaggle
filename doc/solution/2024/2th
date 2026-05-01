@@ -1,0 +1,150 @@
+貼り付けたテキスト
+ソースガイド
+Skip to
+content
+Kaggle
+Create
+Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2024
+2nd place solution
+7th Place Solution for the BirdCLEF 2024 Competition
+4th place solution: Team Cerberus
+5th solution
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to
+content
+Kaggle
+2nd place solution — BirdCLEF 2024
+2nd place solution
+BirdCLEF 2024
+Solution Writeup · 2nd place · Jul 8, 2025
+First of all, thanks to the organizers for this competition and congratulations to all winning teams!
+Summary
+Only first 5 seconds of each recording is used for training
+EfficientNet B0 backbone
+Performance boost by using pseudo labels from target domain
+Ensemble of 6 models
+Model diversity through different Mel parameters, data subsets, image sizes and probabilities to add pseudo labels
+First experiments
+The start in this year’s edition was not easy. Using models and training methods from last year didn’t work that well at first. Almost all attempts that improved local CV didn’t improve or even decreased public LB score and I was not able to get past 0.64 AUC for single models or 0.69 for ensembles.
+Almost thinking about giving up, I restarted from scratch using the public notebook from @salmanahmedtamu following methods discussed by @lihaoweicvch. Thanks for sharing!
+With this it was possible to get single model performance of 0.65/0.66 AUC.
+The original notebook uses:
+Only first 5s of training files and no extra files or classes from other sources
+Model input: resized 3 channel Mel spec images of size 256x256
+Backbone: eca_nfnet_l0
+Mel parameters:
+n_fft = 2048
+hop_length = 512
+n_mels = 128
+f_min = 20
+f_max = 16000
+Training parameters:
+CosineAnnealingLR scheduler with 5 warmup epochs
+Peak learning rate 1e-4
+100 epochs with early stopping if AUC is not improving for 7 epochs
+Batch size 64
+Average of BCE and FocalLoss
+GEM pooling
+Augmentations:
+HorizontalFlip
+CoarseDropout
+Mixup of Mel spectrogram images within training batches
+From this baseline I started to experiment with different backbones, hyperparameters, augmentation methods and image sizes. One major drawback of the model was its relative long submission time (> 1h). So besides improving the score, one objective was to reduce inference time to fit more models in an ensemble. For this I switched to an EfficientNet B0 backbone (tf_efficientnet_b0_ns) and reduced image sizes. It turned out, that results were pretty unstable regarding LB score (0.62-0.66) and sensitive to different combinations of Mel parameters and input sizes. But with further adjustments I was able to create models with inference time below 12 minutes, still keeping a score around 0.65 AUC.
+Main changes to the original notebook include:
+Backbone: tf_efficientnet_b0_ns
+5 dropout layers before fc layer (inspired by BirdCLEF2023 4th place and BirdCLEF2021 2nd place)
+Higher learning rate (1e-3), less warmup epochs (3) and less epochs (50)
+Different Mel parameters (n_mels, hop_length)
+Additional augmentation: local and global time/frequency stretching performed on Mel spec images via resizing parts and entire image
+Creating checkpoint soup instead of using early stopping
+Creating checkpoint soups follows the idea of model soups. But here, weights of the same model from different checkpoints from epochs 13-50 are averaged if they show an improvement in local CV score on one of the tracked metrics (LRAP, cMAP, F1, AUC). This led to more stable and sometimes even better LB scores.
+With all above mentioned modifications, I was now able to create an ensemble of 6 models achieving 0.70 AUC on public LB. Not great but good enough to start playing around with pseudo labels created from the unlabeled dataset.
+Performance boost with pseudo labels
+Using pseudo labels from the test domain and their handling during training was the key element to move up to the top 10 in the leaderboard. Pseudo labels were created by applying the model ensemble with the best public LB score on the unlabeled data to create predictions for each 5s interval of each file.
+After that, during next stage training, randomly selected 5s audio segments from the unlabeled test set are added to the training samples with a 25 % to 45 % chance. Before mixing the two audio signals, amplitudes of both waveforms are multiplied by a random factor.
+The target vector of the training sample (1.0 at positions of primary and secondary species, rest all zeros) is combined with the pseudo label (vector with predicted probabilities) to form the new target vector by taking the maximum of both.
+This method of using the pseudo labeled test data combines several advantages:
+Noise augmentation: By mixing training samples with samples from the target domain the model learns how species sound within the environmental background noise of the test site habitat. This helps to address the domain shift between Xeno-Canto recordings and test soundscapes.
+Additional training data: The model gets more training samples representing the noise characteristics and species distribution of the target domain.
+Knowledge distillation: Since pseudo labels are derived from predictions of a stronger model (or ensemble of models in this case), its knowledge is transferred during training to the smaller model
+After integrating pseudo labels, LB score significantly increased. The new ensemble was then used again to create a new set of pseudo labels. This cycle was repeated 3 times to iteratively improve model/ensemble performance. Progress on LB score (publ.|priv.) is shown in the following table:
+Stage Pseudo labels Single model (ID 4) Ensemble
+0 - 0.65735 | 0.59270 0.70065 | 0.61738
+1 From stage 0 ensemble 0.69165 | 0.66119 0.71090 | 0.67084
+2 From stage 1 ensemble 0.69936 | 0.67445 0.72528 | 0.69035 *
+3 From stage 2 ens. (normalized) 0.71154 | 0.67683 0.71716 | 0.69527
+After the 2nd iteration pseudo labels needed some normalization (scaling to range 0…1 ) to allow stable model training because label minimum values got too large. Also, the stage 3 ensemble was not selected for final ranking because public LB score unfortunately didn’t show the expected improvement.
+Performance and parameters of models from the 2nd place ensemble (2nd stage in previous table) are shown in the following table:
+Params./Model ID 1 2 3 4 5 6
+seed 42 42 42 42 70 42
+n_folds 5 5 5 5 10 5
+fold 4 1 4 4 0 4
+dataset bc24 bc24 bc24 bc24 bc24+ bc24
+n_mels 128 128 128 64 64 64
+hop_length 512 512 1024 1024 1024 1024
+image_height 256 256 128 64 64 64
+image_width 256 256 128 128 128 64
+pseudoLabelChance 35 % 40 % 45 % 30 % 30 % 25 %
+ampExpMin -0.5 -1.0 -0.5 -0.5 -0.5 -0.5
+ampExpMax 0.1 0.2 0.1 0.1 0.1 0.1
+Inference time ~ 50 min. ~ 50 min. ~ 17 min. ~ 12 min. ~ 12 min. ~ 11 min.
+Public LB score 0.73270 0.71975 0.71104 0.69936 0.69124 0.69309
+Private LB score 0.68521 0.68533 0.68116 0.67445 0.64543 0.65862
+Model diversity in the ensemble was realized by different Mel parameters, data subsets, image sizes, chances to add pseudo labels and amplitude factors to change the volume relation between training and pseudo label data. Parameters ampExpMin and ampExpMax provide the range for the random amplitude factor multiplied to training and pseudo label samples to change their volume in the mix: ampFactor = 10**(random.uniform(ampExpMin,ampExpMax))
+Model 5 is the only one using external data. For this, additional files for the 182 species of the competition were downloaded from Xeno-Canto and the first 5 seconds part of each file was added to the training set (padded with zeros if too short).
+Post-processing
+Models were ensembled by simply taking the mean of predictions (probabilities from sigmoid outputs) of each single model. As a last step, for each file, predictions of a given window, were summed with those of the two neighboring windows with factor 0.5. This post-processing method was used by @theoviel and his team in the 3rd place solution of the Cornell Birdcall Identification competition .
+Optimizations for inference
+Parallel preprocessing of test audio files via multithreading
+Precalculation of different versions of Mel spectrograms and reusing them for different models
+Adding models using smaller image sizes as input
+Setting a 2h timer to prevent submission timeouts for larger ensembles
+What didn’t work
+Too many things ;) Unfortunately, I found a good approach to use pseudo labels rather late in the competition. Some post deadline submissions show, that many things that didn’t work at the beginning are actually quite beneficial to improve private LB score if pseudo labels are included. Hope to continue on those experiments maybe at the next edition…
+Inference Notebooks
+All 6 models (Score may vary because submission time > 2h)
+Best 2 models (Stable and better LB score with submission time ~1h10min)
+Working Note
+Lasseck M (2024) Improving Bird Recognition using Pseudo-Labeled Recordings from the Target Location. In: CEUR Workshop Proceedings.
+Tagged
+Computer Science
+Environment
+Neural Networks
+Audio Classification
+Author
+adsr
+mariotsaberlin
+Share
+7
+4
+1 Comment
+Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+Post Comment
+Yassine Alouini
+Posted 2 years ago
+· 381st in this Competition
+Well done on the second place and thanks for sharing your insights!
+Reply
+2

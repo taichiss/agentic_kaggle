@@ -1,0 +1,97 @@
+ソースガイド
+このテキストは、鳥類の鳴き声データから種を特定するAIコンペティションにおいて、第6位に入賞した手法の詳細な技術解説です。投稿者は、音響イベント検出に優れたSEDモデル構造を採用しつつ、損失関数の計算において意図的に理論上の定石を外すことで過学習を抑制し、予測精度を向上させるという独自の工夫を凝らしました。さらに、複数のモデル出力を活用した擬似ラベル付け（Pseudo Labeling）を反復的に行うことで、学習データの質と量を補強し、最終的な予測の安定性を高めています。このように、既存の枠組みに実験的なアプローチを組み合わせることで優れた成果を上げた、実践的な知見を共有する内容となっています。
+
+
+
+
+
+
+
+
+
+
+
+Skip to content Kaggle
+Create Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF+ 2025
+6th place solution
+3rd Place Solution
+10th Solution
+9th place solution
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to content Kaggle 6th place solution — BirdCLEF+ 2025 6th place solution
+BirdCLEF+ 2025
+Solution Writeup · 6th place
+6th place solution Thank you to the organizers for hosting this excellent competition, and also to all the participants who shared valuable insights throughout the competition period.
+I was greatly inspired by the top solutions from past competitions. Thank you to everyone who shared their approaches. In this post, I will mainly highlight the differences in my approach.
+Model / Loss I used a SED-style model like the one below:
+class AttBlockV2(nn.Module): def init(self, in_features: int, out_features: int, activation="sigmoid"): ... self.activation = activation ...
+def forward(self, x):
+    norm_att = torch.softmax(torch.tanh(self.att(x)), dim=-1)
+    cla = self.nonlinear_transform(self.cla(x))
+    x = (norm_att * cla).sum(2)
+    return x, norm_att, cla
+def nonlinear_transform(self, x): if self.activation == "linear": return x elif self.activation == "sigmoid": return torch.sigmoid(x)
+class BirdModel(nn.Module): def init(self, cfg, pretrained: bool = True): ... self.encoder = timm.create_model( cfg.backbone, pretrained=cfg.pretrained, num_classes=0, global_pool="", in_chans=cfg.in_chans, drop_path_rate=0.2, drop_rate=0.5, ) ... self.att_block = AttBlockV2(in_features, self.num_classes, activation="sigmoid") ...
+def forward(self, x, y=None):
+    ...
+    clipwise_output, norm_att, segmentwise_output = self.att_block(x)
+    segmentwise_logit = self.att_block.cla(x).transpose(1, 2)
+    if self.training:
+        return clipwise_output, segmentwise_logit.max(1)[0], y
+    else:
+        return clipwise_output, segmentwise_logit.max(1)[0]
+content_copy During training, I applied nn.BCEWithLogitsLoss to both clipwise_output and segmentwise_logit.max(1)[0]. Although clipwise_output passes through a sigmoid before loss computation (making BCEWithLogitsLoss technically inappropriate), this setup significantly improved my public score.
+When using timm/tf_efficientnet_b3.ns_jft_in1k as the backbone and submitting with clipwise_output (without using train_soundscape), I achieved a public score of 0.900 and a private score of 0.908. At this stage, clipwise_output gave better results than segmentwise_logit.
+Pseudo Labeling I added pseudo labels to train_soundscapes and ran several training cycles with them included as training data.
+In the first round, I used only the clipwise_output from a single model (timm/tf_efficientnet_b3.ns_jft_in1k) to generate pseudo labels.
+From the second round onwards, I used an ensemble of multiple models' segmentwise_logit.max(1)[0] outputs for pseudo labeling.
+Since clipwise_output was trained somewhat unnaturally with BCEWithLogitsLoss, its values were too small and didn't help improve the score when reused in pseudo labeling.
+Using segmentwise_logit.max(1)[0] for pseudo labeling led to higher public scores.
+Models used for generating pseudo labels included:
+timm/tf_efficientnet_b3.ns_jft_in1k
+timm/tf_efficientnet_b5.ns_jft_in1k
+timm/tf_efficientnetv2_b3.in21k
+Finally, I trained the following two models on the combined training data and pseudo labels, and used them for the final submission:
+timm/tf_efficientnet_b3.ns_jft_in1k
+timm/tf_efficientnetv2_b3.in21k
+Score Public Score: 0.928
+Private Score: 0.923
+Author Takoi takoihiraokazu
+Share
+React 3 Comments Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve! This comment will be made public once posted.
+Post Comment Ty-Yuki Posted a year ago
+· 757th in this Competition
+Thank you for sharing your 6th place solution! It's very insightful to see your approach, especially the details on the SED-style model and the pseudo-labeling strategy.
+I have a question regarding your loss function: You mentioned applying nn.BCEWithLogitsLoss to clipwise_output even though it passes through a sigmoid before loss computation. Could you elaborate on why this particular setup significantly improved your public score, despite being "technically inappropriate"? Was there any specific observation or intuition that led you to this choice?
+Reply
+React Takoi Topic Author Posted a year ago
+· 6th in this Competition
+Thank you for your question.
+I believe this setup might have helped prevent overfitting to the training data. Normally, when the model's output is low, it would take negative values before applying the sigmoid. However, since the output is passed through a sigmoid beforehand, it can no longer take negative values. As a result, when the label is 0, the model is forced to produce very low output values; otherwise, the loss would become large. This tendency to keep the outputs low might have contributed to reducing overfitting.
+As for why I used this setup — to be honest, there wasn’t any particular reason. I just tried it out, and it happened to improve my public score, so I continued using it until the end.
+Reply
+1 Andrew h Posted a year ago
+SED-style model, its a great decision
+Reply
+React

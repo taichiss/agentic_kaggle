@@ -1,0 +1,88 @@
+このテキストは、機械学習コンペティション「BirdCLEF 2023」において第3位に入賞した手法を詳細に解説した技術レポートです。主な目的は、録音データから鳥の鳴き声を特定するための音響イベント検出（SED）モデルの構築プロセスを共有することにあります。特筆すべき工夫として、従来のモデル構造を回転させて周波数帯域にアテンション（注目）を向ける手法や、距離による音の減衰を模したリバーブ（残響）拡張によるドメインシフトの解消が挙げられています。また、推論速度を向上させて時間制限内に複数のモデルをアンサンブルさせるための実用的な最適化技術についても体系的にまとめられています。
+
+Skip to
+content
+Kaggle
+Create
+Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2023
+3rd place solution: SED with attention on Mel frequency bands
+5th place solution
+9th Place Solution: 7 CNN Models Ensemble
+6th place solution: BirdNET embedding + CNN
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to
+content
+Kaggle
+3rd place solution: SED with attention on Mel frequency bands — BirdCLEF 2023
+3rd place solution: SED with attention on Mel frequency bands
+BirdCLEF 2023
+Solution Writeup · 3rd place · Jul 8, 2025
+First of all, thanks to the organizers Sohier Dane, Stefan Kahl, Tom Denton, Holger Klinck and all involved institutions (Kaggle, Chemnitz University of Technology, Google Research, K. Lisa Yang Center for Conservation Bioacoustics at the Cornell Lab of Ornithology, LifeCLEF, NATURAL STATE, OekoFor GbR and Xeno-canto).
+This year’s competition was a welcome change compared to previous challenges. The cMAP evaluation metric eliminated the need for threshold tuning, while the inference time limit encouraged a focus on efficient models with a good balance between accuracy and speed.
+In this post I want to briefly introduce some aspects of my solution. A more detailed description will be provided later as an update or in the upcoming working note.
+Quick summary
+Modified SED architecture with attention on frequency bands
+Addressing domain shift with reverb augmentation
+Using freezed TorchScipt models and precalculated inputs to speed up inference
+Addressing fluctuating inference time by setting a timer in inference notebook
+Datasets
+2021/2023 competition data
+2020 extended xeno-canto data
+2023 extended xeno-canto data (all files with 2023 species as primary label)
+BirdCLEF 2019 soundscapes (2021 species only & nocall/noise)
+DCASE 2018 Bird Audio Detection Task (nocall/noise)
+Some nocall/noise files from datasets of previous competitions/solutions
+Data preparation
+Convert files to 32 kHz (if necessary)
+Convert extended (downloaded) xeno-canto files to FLAC
+Add duration information for each file to dataset metadata
+Add first 10 seconds interval of all xeno-canto files to training set
+Split training set into 8 folds (but mostly only 3 folds were used)
+Model input
+Log Mel spectrogram of 5 second audio chunks (n_fft= 2048, hop_length=512, n_mels=128, fmin=40, fmax=15000, power=2.0, top_db=100)
+Normalized to 0…255
+Converted to 3 channel RGB image
+Model backbone/encoder architectures (from timm)
+tf_efficientnet_b0_ns
+tf_efficientnetv2_s_in21k
+I also tried resnet50, resnet152, tf_efficientnet_b2_ns, tf_efficientnet_b3_ns, tf_efficientnet_b4_ns, efficientformer_l3, tf_efficientnetv2_m_in21k, densenet121 and eca_nfnet_l0 but none of those were included in inference ensemble because in my case tradeoff between performance and inference time was not as good as for EffNetB0 or EffNetV2s.
+All models used pretrained ImageNet weights and served as feature extractor combined with a custom classification head. As classifier I used a modified SED head with attention on frequency bands instead of time frames. The intuition behind this is, that species in soundscapes often occupy different frequency bands. In original SED architecture, feature maps representing frequency bands are aggregated via mean pooling and attention is applied on features representing time frames. If attention is instead applied on frequency bands it can help to distinguish species vocalizing at the same time but with different pitch. The modification can be achieved simply by rotating the Mel spectrogram by 90 degrees before feeding it to the original SED network.
+Data augmentation (esp. to deal with weak/noisy labels and domain shift between train/test set)
+Select 5s audio chunk at random position within file:
+Without any weighting
+Weighted by signal energy (RMS)
+Weighted by primary class probability (using info from pseudo labeling)
+Add hard/soft pseudo labels of up to 8 bird species ranked by probability in selected chunk
+Random cyclic shift
+Filter with random transfer function
+Mixup in time domain via adding chunks of same species, random species and nocall/noise
+Random gain of signal amplitude of chunks before mix
+Random gain of mix
+Pitch shift and time stretch (local & global in time and frequency domain)
+Gaussian/pink/brown noise
+Short noise bursts
+Reverb (see below)
+Different interpolation filters for spectrogram resizing
+Color jitter (brightness, contrast, saturation, hue)
+In soundscapes, birds are often recorded from far away, resulting in weaker sounds with more reverb and attenuated high frequencies (compared to most Xeno-canto files where sounds are usually much cleaner because the microphone is targeted directly at the bird). To account for this difference between training and test data (domain shift), I added reverb to the training files using impulse responses, recorded from the Valhalla Vintage Verb audio effect plugin. During training, I randomly selected impulse responses and convolved them with the audio signal with a 20% chance, using a dry/wet mix control ranging from 0.2 (almost dry signal) to 1.0 (only reverb).
+I didn’t use pretraining followed by finetuning, instead I trained on all 2021 & 2023 species + nocall (659 classes). Background species were included with target value 0.3. For inference, predictions were filtered to the 2023 species (264 classes).

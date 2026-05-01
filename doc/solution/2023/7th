@@ -1,0 +1,121 @@
+ソースガイド
+このソースは、BirdCLEF 2023という鳥類の鳴き声識別コンペティションにおいて、第7位に入賞したチームの技術的な解法を解説したレポートです。彼らの成功の核心は、sumix augmentationと呼ばれる独自のデータ拡張手法にあり、これは複数の音源を異なる音量で合成することで、現実世界の複雑な録音環境を擬似的に再現するものです。推論プロセスでは、rexnet150やefficientnet_b2といった複数のモデルをアンサンブルさせ、さらに知識蒸留（Knowledge Distillation）を用いることで精度の向上とモデルの最適化を図っています。また、OpenVinoを利用した推論の高速化や、特定の時間軸に注目するアテンション機構の導入など、実用的なパフォーマンスと識別の正確性を両立させるための高度な戦略が網羅的に記述されています。
+Skip to content Kaggle
+Create Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2023
+top 7th solution - sumix augmentation did all the work
+4th Place Solution: Knowledge Distillation Is All You Need
+2nd place solution: SED + CNN with 7 models ensemble
+1st place solution: Correct Data is All You Need
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to content Kaggle top 7th solution - sumix augmentation did all the work — BirdCLEF 2023 top 7th solution - sumix augmentation did all the work
+BirdCLEF 2023
+Solution Writeup · 7th place · May 28, 2023
+What's important in our best inference notebook ? Ensemble of 19 models Ensemble of efficientnet_b2 from torchvision and rexnet150 from timm Speedup with openvino For submission we trained all models with knowledge distillation on full dataset - (rkl prefix is indicator) Our five models from 19 with rkl-rx-wdfbn-rx-ema-200-full prefix achieve 0.7471 on private test set and 0.83194 on public test set, rx - rexnet150, distillated rexnet150 models from rexnet150 trained before
+Custom Augmentations Let's imagine you're at some party right now and you're surrounded by talking people. It's not hard for you to pay attention to a certain group to hear their conversation and you can freely change your target. So the task - to cut specific speaker from audio - is natural. What we can say about audio in which - one person cries and another one laughs? In such audio there are two actions - laughing and crying, and this is true for birds too. With this consideration we've come up to sumup idea:
+def sumup(waves: torch.Tensor, labels: torch.Tensor): batch_size = len(labels) perm = torch.randperm(batch_size)
+waves = waves + waves[perm]
+
+return {
+    "waves": waves,
+    "labels": torch.clip(labels + labels[perm], min=0, max=1)
+}
+Boosting score What if you have an audio where one bird is more louder than another? This audio is still with two different birds, but if signal from second bird is tiny, it's okay to assume, that maybe probability of second bird is small or even zero.
+def sumix(waves: torch.Tensor, labels: torch.Tensor, max_percent: float = 1.0, min_percent: float = 0.3): batch_size = len(labels) perm = torch.randperm(batch_size) coeffs_1 = torch.rand(batch_size, device=waves.device).view(-1, 1) * ( max_percent - min_percent ) + min_percent coeffs_2 = torch.rand(batch_size, device=waves.device).view(-1, 1) * ( max_percent - min_percent ) + min_percent label_coeffs_1 = torch.where(coeffs_1 >= 0.5, 1, 1 - 2 * (0.5 - coeffs_1)) label_coeffs_2 = torch.where(coeffs_2 >= 0.5, 1, 1 - 2 * (0.5 - coeffs_2)) labels = label_coeffs_1 * labels + label_coeffs_2 * labels[perm]
+waves = coeffs_1 * waves + coeffs_2 * waves[perm]
+return {
+    "waves": waves,
+    "labels": torch.clip(labels, 0, 1)
+}
+We propose yet another customization of data mix specific for audio domain - sumix augmentation. As you can see, we used linear slope in our experiments, but it's open question what's slope for labels better to use, maybe min_percent = 0.3 doesn't need slope at all. This augmentation is applicable to any audio classification task. sumix is better than sumup because it also affects loudness, i. e. implies another audio augmentation.
+When we decided to check solutions from past competitions, we tried to add background noise in our pipeline, but noise didn't show any improvement. Our thoughts - incorporating new background noises for audios is already in sumix or sumup. For gaussian/colored noises we have similar explanation, why those augmentations didn't work - competition's data is not excellent and consists of noisy samples, so sumix and sumup propagate noise and make noise diverse by themselves.
+Training pipeline concatmix with probability 0.5 - implementation sumix(min_percent=0.3, max_percent=1.0) with probability 1 mixup on mel-spectrograms with Beta(1.5, 1.5) with probability 1 cutmix on mel-spectrograms with Beta(1.5, 1.5) with probability 0.5 AdamW with constant LR 1e-3 and weight_decay 1e-2 for all models binary_cross_entropy for every class, labels are primary labels plus secondary labels Random 5 continuous seconds from audio at training, first 5 seconds at validation We turned off weight_decay for all normalization layers EMA with decay 0.999 Almost total correlation between LB and our CV, ensemble of 20 models gathered as best in CV achieves 0.75021 on private test set and 0.83328 on public test set, this ensemble is our top-3 submission on public test set Knowledge distillation After training a model, we use it as teacher for another model with the same architecture, augmentations, AdamW, EMA and etc., except loss. At second stage with distillation we use
+Models rexnet150 with dropout 0.3 and drop_path 0.2 rexnet150-time - same rexnet150 but with attention head, distilled from rexnet150 without time-aware head efficientnet-b2 with dropout 0.3 and drop_path 0.2 efficientnet-b2-time - analogously, distilled from efficientnet-b2 Already mentioned hacks allow to reach score 0.7471 with 5 rexnet150 trained on full data with batch_size=336 200 epochs and knowledge distillation on a single A100 (40GB). To boost performance we ensemble rexnet150 with efficientnet-b2 from torchvision. To boost performance yet another time we use attention head - copy-past self-attention operation from transformers. All experiments were conducted in mix-precision with bfloat16 type.
+Ensemble of 5 models with prefix rkl-rx150-wdfbn-rx150-time-ema-ep200-full-{5seeds}, i.e rexnet150 with attention head for time awareness distilled from simple rexnet150, achieves 0.75151 on private set and 0.83261 on public set.
+We didn't try: External data not from BirdClef2021/BirdClef2022 SSL SED models Utilization of BirdNet eca_nfnet from timm We tried, but it didn't work: Pretraining our models on BirdClef2021/BirdClef2022, we made few attempts, it didn't show any improvements in LB, experiments conduction became much slower, so we gave up the idea Any background noise (even which was used in previous year's competition) Any LR scheduler Any Noise(Gauss, Colored) tf_efficientnet_b2_ns from timm SwinV2/ConvNeXt from torchvision Manifold MixUp focal_loss, soft_focal_loss Weighted samplers SpecAugment Speeding up inference time We measured inference time with random input in kaggle kernel, I don't remember which one of intel's processors was, often in our kaggle notebook we got Intel Xeon 2.2 Gz.
+Our thoughts - ONNX by itself utilizes 2 cpus, OpenVino is faster cause it additionally fuses some layers for inference and uses compilation specific to a certain CPU in submission notebook to take advantage of processor's type
+Appendix: MultiHeadAttentionClassifier's implementation. All hyperparameters are preserved class MultiHeadSelfAttention(nn.Module): def init( self, input_channel: int, head_size: int, num_heads: int, attention_dropout: float, ) -> None: super().init() hidden_dim = head_size * num_heads self.hidden_dim = hidden_dim
+    self.head_size = head_size
+    self.num_heads = num_heads
+
+    self.key = nn.Linear(input_channel, hidden_dim)
+    self.query = nn.Linear(input_channel, hidden_dim)
+
+    self.attention_dropout = nn.Dropout(attention_dropout)
+    self.sqrt_head_size = sqrt(head_size)
+
+    self.value = nn.Linear(input_channel, hidden_dim)
+
+def tranpose_for_scores(self, x: Tensor) -> Tensor:
+    # [BS; T; H] -> [BS; T; K, M]
+    new_x_shape = x.size()[:-1] + (self.num_heads, self.head_size)
+    x = x.view(new_x_shape)
+    return x.permute(0, 2, 1, 3) # [BS; K; T; M]
+
+def get_key(self, x: Tensor) -> Tensor:
+    return self.tranpose_for_scores(self.key(x))
+
+def get_query(self, x: Tensor) -> Tensor:
+    return self.tranpose_for_scores(self.query(x))
+
+def get_value(self, x: Tensor) -> Tensor:
+    return self.tranpose_for_scores(self.value(x))
+
+def forward(self, x: Tensor) -> Tensor:
+    # [BS; L; C]
+    key = self.get_key(x)
+    query = self.get_query(x)
+    value = self.get_value(x)
+
+    attention_scores = torch.matmul(query, key.transpose(-1, -2)) 
+    attention_scores /= self.sqrt_head_size
+    attention_scores = F.softmax(attention_scores, dim=-1)
+    attention_scores = self.attention_dropout(attention_scores)
+    x = torch.matmul(attention_scores, value) # [BS; K; N; M]
+    x = x.permute(0, 2, 1, 3).contiguous()
+    x = x.view(x.shape[:2] + (self.hidden_dim,))
+    return x
+class MultiHeadAttentionClassifier(MultiHeadSelfAttention): def init( self, input_channel: int, head_size: int = 32, num_heads: int = 24, attention_dropout: float = 0.3, num_classes: int = 264, dropout: float = 0.3 ) -> None: super().init(input_channel, head_size, num_heads, attention_dropout) self.query = nn.Parameter( torch.empty(num_heads, num_classes, head_size), requires_grad=True ) nn.init.normal_(self.query) self.classifier = nn.Sequential( nn.Dropout(dropout), nn.Conv1d(num_classes, num_classes, kernel_size=self.hidden_dim, groups=num_classes) )
+def get_query(self, x: Tensor) -> Tensor:
+    return self.query
+
+def forward(self, x: Tensor) -> Tensor:
+    # x.shape == [BS; C; F; T] // output from backbone
+    x = vec.view(x.shape[:-2] + (-1,))
+    # [BS; C; L]
+    x = vec.permute(0, 2, 1)
+   # [BS; L; C]
+
+    out = super().forward(x)
+    return self.classifier(out).squeeze()
+Authors Tingir Badmaev loonypenguin
+Danil Gaynanov eviltsundera
+Mihail Dremin dreminm
+slime martynoveduard
+Share
+React 1 Comment Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve! This comment will be made public once posted.
+Post Comment Pardeep Singh Posted 3 years ago
+· 447th in this Competition
+Congrats for landing in the gold zone and thanks for sharing the writeup
+Reply
+React

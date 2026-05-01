@@ -1,0 +1,194 @@
+貼り付けたテキスト
+ソースガイド
+この資料は、自然界の鳥の鳴き声を特定する競技会「BirdCLEF 2024」において、第8位に入賞した参加者の解法レポートをまとめたものです。筆者はアンサンブルモデルやOpenVINOによる推論の高速化に加え、外部の分類器を活用して精度の高い訓練データを抽出するフィルタリング手法を採用しています。特に、学習データとテストデータの乖離を埋めるための疑似ラベル（Pseudo-Labeling）と、シンプルながら強力なデータ拡張であるsumixの活用が戦略の核となっています。最終的には、複雑な手法よりも簡潔なパイプラインの構築が、信頼できる評価指標の欠如という困難を乗り越える鍵であったと結論付けています。
+
+
+
+
+
+
+
+
+
+
+
+Skip to
+content
+Kaggle
+Create
+Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2024
+8th place solution
+9th place recap
+6th Place Solution
+2nd place solution
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to
+content
+Kaggle
+8th place solution — BirdCLEF 2024
+8th place solution
+BirdCLEF 2024
+Solution Writeup · 8th place · Jun 13, 2024
+8th Place Solution
+I would like to thank everyone who organized this great competition and all the participants who worked hard to complete it !!
+Spectrogram
+MelSpectrogram(
+sample_rate=32_000,
+n_fft=1_095,
+hop_length=500,
+f_min=40,
+f_max=15_000,
+n_mels=128,
+)
+Model
+I used an ensemble of three models.
+SED
+eca_nfnet_l0
+tf_efficientnet_b0.ns_jft_in1k
+Simple 2D CNN
+eca_nfnet_l0
+logits ensemble seems slightly better than rank ensemble.
+Inference
+Used openvino to reduce inference time (thanks @honglihang to openvino notebook)
+inference time: ~ 90 mins
+Training
+Loss
+FocalLossBCE
+It is almost the same as a great baseline(thanks @salmanahmedtamu)
+Used secondary labels as 1.0
+Step0. Pretrain
+Data
+2021, 2022, and 2023, but only those with primary labels that are not included in 2024's 182.
+First 5 seconds
+Details
+Signal augmentations
+NoiseInjection
+GaussianNoise
+PinkNoise
+RandomVolume
+Spectrogram augmentations
+FrequencyMasking (2 bands)
+TimeMasking (2 bands)
+RandomFlip
+Step1. Finetune for Pseudo-Labeling
+As discussed extensively, there was a significant difference in distribution between the xeno data and the test data. This was evident from the model's preds, influenced by various factors like insect noise, bird volume, and echoes from obstacles. To address this gap, I used pseudo-labeling as one of the measures.
+Data
+Only 2024
+Filtered by Google's bird vocalization classifier preds.
+5 seconds
+Details
+Same augmentations as in pretraining
+Simple mixup
+I trained models for 15 epochs from a pretrained model and used the model with the highest CV score to infer on unlabeled data.
+Step2. Finetune for Submission
+Data
+2024, ff1010bird (nocall only), unlabeled_soundscapes (with step 1 preds)
+Filtered using Google's bird vocalization classifier pred scores to extract the foreground for all but nocall
+5 seconds
+full data
+Details
+sumix (ref: BirdCLEF2023 7th solution)
+sumix is a simple yet highly effective.
+Other Ideas Explored but Insufficiently Tested
+Variants of SED (frequency-axis attention, hybrid, etc.)
+1D models
+Various mixup methods (sumix was the best)
+longer duration (as a measure against weakly labeled data)
+Background noise, heavy augmentations
+Multi round pseudo labeling
+TTA (time-shifted slightly)
+KD
+I experimented with various ideas, but most of them don't appear to be effective. However, I can't confidently assess their effectiveness because I couldn't establish a reliable CV scheme. Consequently, I had to rely on the leaderboard to assess their effectiveness. This has made BirdCLEF 2024 a particularly tough competition for me.
+In the end, pseudo-labeling was my only method to bridge the domain gap, but after visualizing the pseudo-labels, it became clear that they were inaccurate. I still don't fully understand what was key, but I have a sense that it was beneficial to build a simple pipeline.
+Inference notebook: https://www.kaggle.com/code/kapenon/bc2024-8th-place-solution-kapenon
+Acknowledgement
+I would like to express my sincere gratitude to Rist Inc. for their invaluable support.
+Author
+kapenon
+kapenon
+Share
+React
+6 Comments
+Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+Post Comment
+C R Suthikshn Kumar
+Posted 2 years ago
+· 27th in this Competition
+Congratulations on securing 8th place in this competition. Thanks for sharing the details of your models.
+I observe you are using 32_000 instead of 32,000. Whether _ is ok to be in integer values.
+Reply
+React
+kapenon
+Topic Author
+Posted 2 years ago
+· 8th in this Competition
+It follows Python syntax. The meaning is the same as 32,000.
+Reply
+React
+Aaditya Porwal
+Posted 2 years ago
+· 25th in this Competition
+Congratsss for gold!!
+Reply
+React
+RihanPiggy
+Posted 2 years ago
+· 7th in this Competition
+congratulations! Glad to see openvino still works well~
+Reply
+React
+thacrobatheskis
+Posted 2 years ago
+· 308th in this Competition
+Congrats! How did you use the google bird vocalization classifier to filter the training data & soundscapes? (I tried using the max class probability for it as a no-call classifier, but it didn't seem to work very well.)
+Reply
+React
+kapenon
+Topic Author
+Posted 2 years ago
+· 8th in this Competition
+I referred to this Notebook (https://www.kaggle.com/code/philculliton/inferring-birds-with-kaggle-models) to perform inference, and used the max probability for each 5-second clip as the result of the call/no-call classifier.
+Hmm, I should be doing almost the same process as you. Could it be the influence of combining other processes?　(e.g. adding no_call class)
+Reply
+React
+thacrobatheskis
+Posted 2 years ago
+· 308th in this Competition
+Interesting! Did you take the max over just the competition bird probabilities, or all birds? (I took it over all birds)
+How did you use it on the train_audio? Some options: remove the audio from the train data, keep it but set the targets to 0 prob, or add a no_call class (I kept the data but set the targets to 0 prob if the google bird model predicted < threshold)
+What threshold did you use?
+Sorry for all the questions! I tried several variations, so super curious about your approach here :)
+Reply
+React
+kapenon
+Topic Author
+Posted 2 years ago
+· 8th in this Competition
+I took the maximum over all birds (not 182), just like you. I assumed BirdCLEF2024 data only contained vocalizations from 182 bird species (though I'm not confident about the unlabeled ones), so I chose this approach to account for the possibility of misclassification between classes by Google's model, which has been trained on many classes.
+The threshold is set at 0.5. In my training pipeline, I iterated over each audio file during training. Each audio file was split into 5-second clips, and I filtered all clips based on Google's model predictions using a threshold of 0.5. From those clips with predictions above 0.5, one was randomly selected. If no clips exceeded 0.5, I chose randomly from all clips.
+I'm sorry for any misunderstanding caused by my previous responses. Let me clarify:
+The "no_call" class I referred to is from the ff1010 dataset. My hypothesis was that filtering with Google's model would leave us with data where bird vocalizations are clearly present. To achieve both the addition of background noise and maintaining label accuracy, I used mixup to blend the data.
+Reply
+React

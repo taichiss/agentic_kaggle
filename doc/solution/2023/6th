@@ -1,0 +1,107 @@
+Skip to content Kaggle
+Create Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2023
+6th place solution: BirdNET embedding + CNN
+10th place solution
+top 7th solution - sumix augmentation did all the work
+4th Place Solution: Knowledge Distillation Is All You Need
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to content Kaggle 6th place solution: BirdNET embedding + CNN — BirdCLEF 2023 6th place solution: BirdNET embedding + CNN
+BirdCLEF 2023
+Solution Writeup · 6th place · May 26, 2023
+Thank you to the host and Kaggle for organizing the competition.
+My solution is a combination of the embedding vectors of BirdNET-Analyzer V2.2 and the CNN from the BirdCLEF 2021 2nd place solution.
+Model (BirdNET embedding + CNN) In order to utilize the features of BirdNET, the embedding of BirdNET is concatenated to the output of the CNN of the BirdCLEF 2021 2nd place solution.
+BirdNET embedding The embedding vectors of BirdNET were created with BirdNET V2.2 embeddings.py. I modified BirdNET V2.2 audio.py so that if the length of the audio data is shorter than BirdNET's sample rate (48000), the data is padded to output at least 1 second of embedding vector. Using V2.2 rather than the latest version BirdNET V2.3, slightly improved cv.
+CNN The backbone of the CNN from the BirdCLEF 2021 2nd place solution used timm's eca_nfnet_l1 and seresnext26t_32x4d.
+Training After pretraining with data from BirdCLEF 2021 + BirdCLEF 2022, I train the CNN and other linear layers with data from BirdCLEF 2023. BirdNET is not trained.
+The input for training is data for 30 seconds. Since BirdNET outputs embedding vectors for 3 seconds of data, I averaged each of the embedding vectors for 30 seconds.
+In most experiments, cv was highest in the final epoch, so I included all data in the training set.
+The main training parameters are as follows:
+loss: BCEWithLogitsLoss
+MelSpectrogram
+sample_rate: 32000, window_size: 1024, hop_size: 320, fmin: 0, fmax: 14000, mel_bins: 128, power: 2, top_db=None labels: primary label=0.9995, secondary label=0.4 or 0.5 (BirdCLEF 2022 3rd place solution), label smoothing=0.01
+cv: primary_label StratifiedKFold(n_splits=5)
+optimizer: AdamW(weight_decay=1e-4)
+scheduler: warmup 0-3epoch(lr=3e-6->3e-4) + Cosine Annealing 3-70epoch(lr=3e-4->3e-6)
+Augmentation As in the previous two competitions, augmentation was important. I combined the following augmentations:
+audiomentations.Shift Mixup (BirdCLEF 2021 2nd place solution) Gaussian Noise random lowpass filter random power (BirdCLEF 2021 5th place solution) torchaudio.transforms.FrequencyMasking torchaudio.transforms.TimeMasking Oversampling The following Oversampling was performed, but I think the effect was minimal.
+Oversampling to have at least 20 of data for each class
+I doubled the number of training data that have two or more secondary labels because data with more than two secondary_labels have worse val_loss
+As in the BirdCLEF 2022 5th place solution, files with reverb/echo effects created for some minority class data and added to the training data
+Strong augmentation was applied to the oversampled data
+Inference The CNN input is given 5 seconds of data for inference, and the BirdNET input is given the first 3 seconds of data for inference.
+To submit within 2 hours, I converted each model to ONNX
+As in this notebook, I also used ThreadPoolExecutor to speed up inference
+Ensembling The outputs of 2 models with different CNN backbones (eca_nfnet_l1, seresnext26t_32x4d) simply averaged.
+What did not work add background noise (BirdCLEF 2021 2nd place solution) postprocess (BirdCLEF 2022 2nd place solution) Speeding up inference using OpenVINO Even if the model was converted to OpenVINO, the inference time was not much different from ONNX. I think I just used it wrong. Using MFCC as input (as in this paper) Using CQT as input Using FAMILY etc. from eBird_Taxonomy_v2021.csv for prediction (as in this paper) Rough lb history name Private Score Public Score BirdCLEF 2021 2nd place solution CNN (with BirdCLEF 2021 + BirdCLEF 2022 pretrain) 0.71 0.80 BirdCLEF 2021 2nd place solution CNN + Augmentation + BirdNET embedding 0.74 0.82 BirdCLEF 2021 2nd place solution CNN + Augmentation + BirdNET embedding + Oversampling + Ensembling 0.75 0.83 Author anonamename anonamename
+Share
+React 10 Comments Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve! This comment will be made public once posted.
+Post Comment Pardeep Singh Posted 3 years ago
+· 447th in this Competition
+Great work @anonamename and congrats on the solo gold. Thanks for sharing the writeup 🎉
+Reply
+React Ayush Jha Posted 3 years ago
+Congrats on getting 6th position and for getting gold!!!
+Reply
+React Nischay Dhankhar Posted 3 years ago
+· 9th in this Competition
+Great way to integrate BirdNet, congratulations on the gold! 🎉
+Reply
+React Aphysict Posted 3 years ago
+· 12th in this Competition
+Congratulations and thanks for sharing! I remember that BirdNET is trained on sample rate 48000 audios, how do you handle the difference on sample rate?
+Reply
+React anonamename Topic Author Posted 3 years ago
+· 6th in this Competition
+The sample rate has not been changed. The sample rate was left at its default, which resamples to 48000, because I thought that changing and loading the sample rate to 32000 would not be suitable for BirdNET's input data.
+Reply
+React atfujita Posted 3 years ago
+· 4th in this Competition
+Congratulations and thanks for sharing! The results for only 2 models were impressive. Better than my single model😨
+Reply
+React Aaditya Bansal Posted 3 years ago
+· 284th in this Competition
+Thank you for sharing your work, as a beginner just getting started with Deep learning I am amazed with how you can figure out so many details and approaches to solve a problem. Do you have any tips for how I can get started to efficiently solve these complex problems?
+Reply
+React anonamename Topic Author Posted 3 years ago
+· 6th in this Competition
+I still don't know how to solve these problems efficiently. In my case, I carefully examine the data, think of hypotheses that might solve the problem, and experiment while gradually improving the model hundreds of times. It's through this process of trial and error that a good solution is found, albeit very rarely.
+Reply
+React Aaditya Bansal Posted 3 years ago
+· 284th in this Competition
+Understood😊 I will keep on learning and experimenting and once again thank you for sharing your approach.
+Reply
+React Harshit Sheoran Posted 3 years ago
+· 9th in this Competition
+Congratulations!, We tried something similar with BirdNet, great to see that you made it work!
+Reply
+React Gaurav Srivastava Posted 3 years ago
+· 233rd in this Competition
+Congratulations 🎉 And really thanks for sharing
+Reply
+React
+英語 the 日本語 の 冠詞 定冠詞, あの, その
+拡張機能オプション詳細 »
+チャット
+🐦

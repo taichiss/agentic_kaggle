@@ -1,0 +1,29 @@
+[project]
+name = "birdclef-2026-workspace"
+version = "0.1.0"
+description = "Kaggle BirdCLEF workspace with Codex quality harness."
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "mypy>=1.18.2",
+  "pre-commit>=4.3.0",
+  "ruff>=0.13.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+pretty = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+ignore_missing_imports = true

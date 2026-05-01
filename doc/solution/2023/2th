@@ -1,0 +1,385 @@
+このテキストは、Kaggleで開催された「BirdCLEF 2023」という鳥類音声識別コンペティションにおいて、世界第2位に輝いた解法の技術解説記事です。筆者は、Sound Event Detection (SED) と畳み込みニューラルネットワーク (CNN) を組み合わせた合計7つのモデルをアンサンブルすることで、極めて高い予測精度を実現しています。特筆すべき戦略として、OpenVINOを用いた推論処理の高速化が挙げられており、これにより制限時間内での大規模なアンサンブルが可能になっています。また、過去のコンペティションデータの活用や、多様な音声拡張技術、そして異なる損失関数を用いた2段階の学習プロセスなど、実戦的で緻密なアプローチが詳しく記されています。最終的に、ロジットの重み付き平均によるアンサンブルが、未知のデータに対しても非常に有効であったことが示されています。
+
+Skip to
+content
+Kaggle
+Create
+Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2023
+2nd place solution: SED + CNN with 7 models ensemble
+1st place solution: Correct Data is All You Need
+BirdCLEF 2024
+10th Solution
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to
+content
+Kaggle
+2nd place solution: SED + CNN with 7 models ensemble — BirdCLEF 2023
+2nd place solution: SED + CNN with 7 models ensemble
+BirdCLEF 2023
+Solution Writeup · 2nd place · Apr 4, 2024
+Congratulations to all the winners! Thanks to Kaggle and Cornell Lab of Ornithology for hosting this interesting competition.
+This is my first solo gold medal and I am glad to have this result.
+This competition shared a lot of similarity to the past BirdClef competitions(2020/2021/2022). Thus I spent a lot of time gathering the solution shared by the top teams in the past competitions. Special thanks to all of you for sharing such important information!
+Let me briefly introduce my solution. I will update the solution for more details in a couple of days.
+Most important (7 models ensemble!)
+Please see the notebook below.
+openvino is all you need!!
+Training data
+Here is my training data.
+2023/2022/2021/2020 competition data
+2020 additional competition data
+additional training data from xeno-canto, including 2023 comp species in both foreground and background(records with 2023 comp species only in background which is less than 60 seconds are included).
+I intended to collect more records from ebird site, but I realized that ebird data is not public and cannot be used. I asked the host and confirmed that. Thanks @tomdenton answering my questions.
+Thus, my training pipeline does not contain records from ebird site.
+Model Architecture
+First, I used SED architecture. The same as yours.
+backbones are:
+tf_efficientnetv2_s_in21k
+seresnext26t_32x4d
+tf_efficientnet_b3_ns
+All of them are trained on 10sec clip.
+Second, I used CNN proposed by 2nd place of 2021 competition
+backbones are:
+tf_efficientnetv2_s_in21k
+resnet34d
+tf_efficientnet_b3_ns
+tf_efficientnet_b0_ns
+All except b0 are trained on 15sec clip. b0 is trained on 20sec clip.
+Pseudo Labeling and Hand Labeling
+I have used SED model to generate pseudo label and extracted the potential nocall using quantile threshold. Then, I hand labeled the potential nocall by hearing the record. I hand labeled about 1800 records but did not see improvement. Maybe the pseudo label contains more FP rather than FN. I did not have time to further investigate the prediction.
+Model Training
+augmentations:
+GaussianNoise
+PinkNoise
+Gain
+NoiseInjection
+Background Noise(nocall in 2020, 2021 comp + rainforest + environment sound + nocall in freefield1010, warblrb, birdvox)
+PitchShift
+TimeShift
+FrequencyMasking
+TimeMasking
+OR Mixup on waveforms
+Mixup on spectrograms.
+With a probability of 0.5 lowered the upper frequencies
+self mixup for records with 2023 species only in background.(60sec waveform -> split to 6 * 10sec -> np.sum(audios,axis=0) to get a 10sec clip)
+I have used weights (computed by primary_label and secondary_labels) for Dataloader in order to cope with unbalanced dataset.
+Training stages
+For training I have used 2 stage training:
+Pretrain on all data(834 species).
+Finetune on 2023 species(264 species).
+In both stages, I first train model with CrossEntropyLoss, and then train on with BCEWithLogitsLoss(reduction='sum'). Model converges faster with CrossEntropyLoss than BCEWithLogitsLoss, but BCEWithLogitsLoss gives better score.
+To give more diversity, models are trained on different windows and different mixup rate, and some of them only trained on CrossEntropyLoss. And also 3 of the models are fintuned on 30s clip.
+CV strategy
+For each validation sample - slice the first 60 seconds to pieces -> predict each piece -> max(sample_predictions, dim=pieces).
+CV does not show correlation with LB, but it seems that the right ways to improve the LB are those which do not significantly decrease CV. So I monitored the CV when tuning the pipeline.
+Inference
+For SED model, feed model 10 sec chunk BUT apply head only on centered 5 sec reduced CNN image and use max(framewise, dim=time).
+Also, tta(2s) is used for SED model.
+Important: convert pytorch model to openvino model significantly reduce inference time(about 40%). (eca_nfnet_l0 backbone ONXX cannot be converted to openvino because the stdconv layer in timm use train mode of F.batch_norm in forward method). That is the magic of ensembling 7 models.
+Ensemble
+I spent quite a lot of time understanding the metrics. The ensemble is as followed:
+(weighted average, 0.84 on LB, 0.76 on private) Apply weighted average on raw logit. This ensemble does not make sense for me because the output logit of models differ and should not be simply added, otherwise the result is biased. But considering that the absolute value of logit may also contribute to the score and it does give the best LB, so I choose it for final submission to have a gamble.
+(rank average, 0.83 on LB, 0.75 on private) Convert the logit to rank and apply weighted average on rank. I think this is the reasonable way to ensemble, considering that I don't have a reliable CV. Be careful that in this comp submission is padded with 5 rows of 1, thus the ranking should start from 0 to prevent the largest ranking to be 1 after convert rankings to percentile form.(For example, 0, 0.333, 0.666 is good while 0.333, 0.666, 1.0 is bad. otherwise the score will decrease due to the potential false positive of those ranked 1.0)
+Basically all of my single model's performance reaches about 0.81-0.82 on LB, so the weight of each model is similar to give diversity although higher public lb requires large weight of sed v2s and sed b3_ns.
+Looking at the private LB, weighted average seems to be better. emmm……Why?
+What did not work
+contrast
+EMA
+BirdNet
+adjusting logit according to previous and next 5s clip
+q transform
+Inference Notebook: https://www.kaggle.com/code/honglihang/2nd-place-solution-inference-kernel
+github: https://github.com/LIHANG-HONG/birdclef2023-2nd-place-solution
+Author
+RihanPiggy
+honglihang
+Share
+2
+35 Comments
+Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+Post Comment
+Jonathan Carlson2
+Posted 2 years ago
+Hello!
+Thanks for the very nice written code!
+When i download the .csv file, and rename it to train.csv and put it in ./input, i get this error when trying to train:
+KeyError: 'duration'
+It comes from
+modules/preprocess.py", line 104, in preprocess
+(df["duration"] <= cfg.background_duration_thre)
+Any idea on how to fix this?
+Reply
+React
+HungryLearner
+Posted 3 years ago
+· 52nd in this Competition
+Congratulations…..
+Ensembling trick of openvino is indeed something to add to my knowledge arsenal. Great work!!!
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thank you! It is also my first time to try openvino.
+Reply
+React
+Gaurav Srivastava
+Posted 3 years ago
+· 233rd in this Competition
+Amazing 💯 Congratulations and thanks for sharing 😊
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thanks! It is really a long journey for me and I slept for two days to recover from lack of sleep
+Reply
+2
+Ayça Güler
+Posted a year ago
+Thanks for your contrubition. I have a question about re-producing the pipeline. Can I produce the same results via github or via kaggle notebook. As I understood, I need to construct the directory in github on my own hardware or maybe on colab. But, I can get the same result from the kaggle notebook by running it on kaggle kernel. @honglihang
+Reply
+React
+Amee Assad
+Posted 2 years ago
+Here a little late, but…
+Your solution is incredibly inventive and probably the easiest to follow compared to all the ones I've viewed from the last 3 years. I hope to use it to finetune on just 2 bird species. I was wondering if you still have your .ckpt files that i could use, so that I don't have to train all over again? Thanks :)
+Reply
+React
+Pardeep Singh
+Posted 3 years ago
+· 447th in this Competition
+Great stuff @honglihang congrats on your first solo gold and thanks for sharing this writeup + code 🎉 🔥
+Reply
+React
+Joao Pedro Rebeschini
+Posted 3 years ago
+Awesome job!!
+Reply
+React
+Saleh Ahmad
+Posted 3 years ago
+That is one amazing solution to the competition!
+Reply
+React
+Suraj
+Posted 3 years ago
+· 581st in this Competition
+Awesome approach to use openvino for boosting inference times over ensembling @honglihang ! Congrats !
+Reply
+React
+Muhammad Bilal Hussain
+Posted 3 years ago
+@honglihang I wanted to reach out and express my heartfelt gratitude for sharing your incredible 2nd place solution in the recent competition. Your approach, combining Sound Event Detection (SED) with Convolutional Neural Networks (CNN) and utilizing an ensemble of seven models, is truly remarkable.
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thanks you! We should all thanks to those who shared these amazing stuffs in the past few years.
+Reply
+React
+Jan Schlüter
+Posted 3 years ago
+· 72nd in this Competition
+Very nice, congratulations and thanks for the quick writeup! Will look into openvino as well, nice find.
+I hand labeled about 1800 records but did not see improvement.
+So in the end, you neither used manual nor pseudo-labels? I experimented with pseudo-labels on the test set (with much weaker models than the top solutions), but hardly got an improvement either, hence I'm curious.
+self mixup for records with 2023 species only in background
+Interesting idea! What was the intuition behind that? Make it more likely that the bird in question is actually part of the 10s clip? How much did it help, compared to other tricks?
+In both stages, I first train model with CrossEntropyLoss, and then train on with BCEWithLogitsLoss(reduction='sum').
+Again, interesting idea, will keep this in my head!
+For SED model, feed model 10 sec chunk BUT apply head only on centered 5 sec reduced CNN image and use max(framewise, dim=time).
+This sounds expensive. Does this double the inference time or did you feed longer chunks than 10s and then extracted multiple 5sec chunks from that?
+Also, tta(2s) is used for SED model.
+tta = test-time augmentation? Was there even time for that? :-O
+Again, congratulations for your work!
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Hi, thanks for your question.
+I hand labeled about 1800 records but did not see improvement.
+I used both pseudo label and hand label, although there is no improvement seen in public LB, I have not confirm whether it has improvement in private LB.
+self mixup for records with 2023 species only in background.
+The idea comes from that I found mixup in waveform is effective. So I think I can take use of the records with 2023 species only in background by applying the same idea because I no longer need to care about where the bird call appears in background by doing this mixup to fully use the record. I have not confirmed whether it is useful, but there was a marginal improvement in the score.
+For SED model, feed model 10 sec chunk BUT apply head only on centered 5 sec reduced CNN image and use max(framewise, dim=time).
+Yes, it is expensive which double the inference time. So I only use 10s, not any longer…
+Also, tta(2s) is used for SED model.
+TTA is only applied on attention head so it is super fast. The encoder extract the 10s feature and the target 5s is in the center of the matrix (2.5s to 7.5s). For tta, I take the feature from 1.5s to 6.5s and 3.5s to 8.5s.
+Reply
+React
+muhinyia
+Posted 3 years ago
+· 511th in this Competition
+Congratulations!
+Amazing stuff!
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thank you!
+Reply
+React
+MICADEE
+Posted 3 years ago
+· 328th in this Competition
+Incredible !!! Congratulations 🎉.
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thanks! Happy kaggling!
+Reply
+React
+atfujita
+Posted 3 years ago
+· 4th in this Competition
+Congratulations and thanks for sharing! I would like to learn Openvino from your notebook.
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thank you! The same to you. Your solution is super incredible and intersting. I will take a deep look into your solution after I get enougth sleep~
+By the way, have you already got the winner email from the kaggle team? I haven't…
+Reply
+React
+atfujita
+Posted 3 years ago
+· 4th in this Competition
+Thanks!
+I also haven't got it yet.
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thanks for your reply.
+I still haven't received yet, maybe it cost sometime….
+Reply
+React
+Aaditya Bansal
+Posted 3 years ago
+· 284th in this Competition
+Congratulations ✨ and thanks for sharing, I am just a beginner getting started with Deep Learning this year only, for me it is both fascinating and intimidating how you can figure out so many things while approaching a problem. Do you have any tips about how I can become more efficient in problem solving like this. Thank you for your time.
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thank you! I started kaggle about 2 years ago and also had a hard time to understand the solutions. I think it is a process of try and error based on the knowledge shared by others. It is better to get new ideas through reading about the papers and the past top solutions.
+Reply
+React
+Mohammad Albaddawi
+Posted 3 years ago
+· 381st in this Competition
+Congratulations and thanks for sharing
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thank you! happy kaggle
+Reply
+React
+sqrt4kaido
+Posted 3 years ago
+· 49th in this Competition
+Congratulations on achieving second place as a solo participant! Incorporating "heavy" augmentations like pitch shifting seems like it would significantly extend the training time. Have you taken any measures to address this?
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thank you. I appreciate you sharing the data in 2020 comp and I took full use of it. I used torch-audiomentations to perform pitch shift and time shift on GPU
+Reply
+React
+Maximiliano Diaz Battan
+Posted 3 years ago
+· 75th in this Competition
+Congratulations, and thanks for sharing! We tried onnx but not openvino. Onnx worked very well individually, but when we tried to ensemble the models, the results were very bad, almost all the time we ended up with a timeout or some kind of error, probably because we made some mistake during the ensemble. For that reason, we skip onnx, and our ensemble was with only 4 Pytorch models.
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Also congratulations to you! Thanks for sharing the information about onnx. I am also new to onnx and openvino and maybe it is lucky for me to try openvino at first because I learnt about openvino in a project at work
+Reply
+React
+liuzhangzhen
+Posted 3 years ago
+· 31st in this Competition
+Congratulations, thanks for sharing
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thank you and congratulations to you too!
+Reply
+React
+Harshit Sheoran
+Posted 3 years ago
+· 9th in this Competition
+Congratulations! It must have been a fulfilling journey :)
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+The same to your team! Congratulations! It has been a really a fulfilling(and short sleep) journey for me since the RSNA.
+Looks that you have made birdnet work, I will read your solution in detail after getting enough sleep.
+Reply
+React
+Sinan Calisir
+Posted 3 years ago
+· 55th in this Competition
+Huge congrats!!! 🎉🎉 Thanks for sharing, I was really curious about the top solutions. I'll read this in detail after having my (missing) night sleep.
+Reply
+React
+RihanPiggy
+Topic Author
+Posted 3 years ago
+· 2nd in this Competition
+Thank you! Also congrats to you!
+The other top solutions are very incredible to me. I will also read in detial after getting back to sleep..

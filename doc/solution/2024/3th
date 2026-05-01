@@ -1,0 +1,212 @@
+貼り付けたテキスト
+ソースガイド
+Skip to content Kaggle
+Create Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2024
+3rd solution
+1st place solution
+BirdCLEF+ 2025
+7th place solution
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to content Kaggle 3rd solution — BirdCLEF 2024 3rd solution
+BirdCLEF 2024
+Solution Writeup · 3rd place · Jun 25, 2024
+I am the one posting but this is team work with @christofhenkel and @theoviel : team NVBird!
+Thanks everyone for the interesting competition, and congratulations to the winners ! We are very happy with the 3rd place, even though we missed the win by a very tiny margin.
+Overview Our pipeline is summarized below. A key ingredient of our solution is to use unlabeled soundscapes for pseudo labeling and model distillation. A number of models were trained with the training data, then used to predict labels on 5 second clips from unlabelled soundscapes. These were added to the original training data to train a new set of models used for the final submission.
+Bird-CLEF-pipe
+Data Overall, we relied on knowledge acquired during previous competitions, and added some extra samples to fight class imbalance.
+We use this year’s competition data plus the additional data from Xeno Canto shared in the forum, plus records from previous year competitions for the same species as this year. When a record name appeared in several competitions we picked the most recent one (their content is not always identical form one competition to the next one) We capped the number of records per species to 500, keeping the most recent ones. Indeed, adding all extra data leads to severe class imbalance that was detrimental to model accuracy. Low frequency classes are upsampled so that there are at least 10 samples for each class in the training folds.
+To train models, we use the following preprocessing and augmentations:
+We didn’t use all the training data. For each record we use a random crop of 5 seconds clip among the first 6 seconds, or the last 6 seconds of a record. If record length is smaller than 5 seconds, random padding so that the middle of the signal is between 2 and 3 seconds in the 5 sec resulting clip. For most of the models we used time shifting with a one second window as the only augmentation besides mixup. An exception are some models which are inspired by Birdclef23 2nd place SED models (https://github.com/LIHANG-HONG/birdclef2023-2nd-place-solution/blob/main/configs/sed_v2s.py)and use the same augmentations as used there We use an additive mixup: primary labels are the max of primary labels of the two audios to be mixed. Secondary labels are the concatenation of secondary labels. We mostly use image models that take log mel spectrograms as input. For these we compute mel spectrograms with parameters chosen to have an image size of 224x224 or 288x288 depending on the image model we use. Input waveforms are normalized to have a std of 1.
+Models First Level models The cpu-only requirement was quite constraining for submissions, but this does not apply for pseudo-label generation, so we could use more backbones for first level models. When ensembling several models larger than the ones used at second level we perform what is known as model distillation. This is a rather powerful technique in general.
+Models used include:
+Efficientvit_b0.224.in1k on 224x224 log mel spectrograms Efficientvit_b1.r288_in1k on 288x288 log mel spectrograms A variety of CNNs (efficientnets, mobilenets, tinynets, mnasnets, mixnets) and Efficientvits (b0, b1, m3 trained on 224x224 log mel spectrograms. SED model with tf_efficientnetv2_s_in21k on 128x313 log mel spectrograms? We also fine-tuned aves-large and aves-base, which is a recent waveform based model. Depending on the pipeline one or more of these models were used to predict pseudo labels on unlabelled soundscapes. We trained most models on full data with 5 different seeds.
+Second Level models We used efficientvit-b0 primarily and mnasnet-100 on 224x224 log mel spectrograms. Efficientvit-b0 showed great performances while still being very fast to infer. 5 folds take 40 minutes to submit using ONNX. We tried several models with similar throughput to effvit-b0, and decided to also use an mnasnet-100 for diversity. Since computing log mel spectrograms is slow on CPU we decided to use the same mel spectrogram hyperparameters for all models in the inference notebook, to only have to do log mel spectrogram transformation once and use the same input for our ensemble models.
+For training second level models we added the unlabelled soundscapes with the predicted pseudo labels to the training data. This looks simple but it took several attempts to find the correct way to do it. What worked fine was to use rather large batch sizes (128), We used the two following strategies;
+Add extra soundscapes to each batch. Each soundscape is split into 5 second clips, which means we added 48 x 4 = 192 clips with pseudo labels to the 128 samples with actual labels in each batch. Add 128 samples with pseudo labels, taken from random soundscapes this time. Final ensemble At the end we had an ensemble of 14 model weights via 3 pipelines, one pipeline per team member:
+Pipeline 1 - 5 seeds Level 0: efficientvit_b0 Level 1: efficientvit_b0 Pipeline 2 - 2 seeds + 2 Level 0: efficientvit_b1, mobilenetv2, efficientnet_b0, efficientnetv2_b0, efficientvit_b0, efficientvit_m3, aves-base, aves-large
+Level 1: 2x mnasnet-100
+Level 0: Efficientvit_b0, mixnet_s, mnasnet_100, tinynet_b, efficientvit_b0, efficientvit_b1, mobilenetv3
+Level 1: 2x efficientvit_b0,
+Pipeline 3 - 5 seeds Level 0 efficientvit_b1_288, 5x efficientnet_v2_s sed, aves-base, aves-large Level 1 5x efficientvit_b0 That ensemble scored 0.689970 private, and 0.742124 public.
+Training It was a bit tricky to tweak parameters without a validation set. We have two training pipelines with different parameters, and it is rather unclear what actually mattered.
+We used BCEWithLogitsLoss, without any label smoothing. Labels were defined by primary labels. Secondary labels were used to mask loss: loss for secondary labels is multiplied by 0. Reason is that we don’t know if a secondary label occurs at the start and at the end of the record, but they could. Given the uncertainty, we mask the loss for these. Masking secondary label loss improves LB by about 0.01.
+When using pseudo labels on unlabelled soundscapes we set their secondary labels to be empty.
+We used AdamW or Ranger optimizers. The number of epochs for the second level was way higher than for first level ones. For instance in one pipeline first level models are trained with 30 epochs while second level models are trained with 88 epochs.
+Post Processing We used several post processing, to incorporate soundscape-level information.
+The first one worked well on public LB with a 0.02 boost initially. Experiments after competition end show that its effect is much smaller (0.004 on our best unselected submission), and even detrimental on our best selected submission (- 0.002). The idea is that if a bird appears anywhere in the soundscape then its probability to appear in any 5 second slice is increased. For a given soundscape, once we have a 48x182 logits array or predictions P, we compute the maximum P_max of P over the time dimension. We then replace P with: P + (P_max + P.mean() - P_max.mean()) * 0.8. The 0.8 weight can be tuned further.
+The second postprocessing had a smaller impact on LB the first time it was tried but it had a larger impact of +0.01 on our best selected sub. The idea is to smooth predictions for each 5 second clip by blending it a bit with the previous two and the following two clips. We used a convolution for smoothing predictions with the kernel [0.1, 0.2, 0.4, 0.2, 0.1].
+What did not work A lot. Main issue was that we could not find a reliable local validation scheme. We mainly looked at train data cross-validation like most of the participants, but also put some effort in looking at past BirdCLEF train / test differences individually for each year. We thought that this might help to understand what augmentations might be bridging the train (= xeno-canto) / test (= PAM soundscape recordings) gap. However, the results were quite inconclusive. Probably because soundscapes are quite different each year. Whatever we tried lost correlation with the public LB once scores were high enough.
+One thing that seemed to work great and didn’t in the end was the post processing based on max probability per soundscape.
+Another one was the Aves model which improved public LB by about 0.01 each time it was used, but appeared to be detrimental on private LB.
+We tried a number of augmentations, including those documented in previous competitions or in academic papers, but none seemed to really help.
+ONNX did not bring much speedup (maybe 10%) and Openvino was much faster (almost 2x speedup compared to pytorch). However we noticed a drop of about 0.01 when using Openvino compared to ONNX, and decided not to use it. Maybe the speedup from openvino would have been compensated by the larger number of models we could use in the final ensemble?
+Our final model selection did not work that well in the end. We had individual models submitted with private scores above 0.70, but we did not include them in our ensemble given their relatively low public scores.
+Thanks for reading !
+Edit, link to code (alphabetical order):
+CPMP's part Dieter's part Theo's part Best selected submission: https://www.kaggle.com/cpmpml/birdclef-2024-inf-ens-08 Authors CPMP cpmpml
+Dieter christofhenkel
+Theo Viel theoviel
+Share
+1
+20 16 Comments Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve! This comment will be made public once posted.
+Post Comment Shubham Thapa Posted 2 years ago
+· 402nd in this Competition
+Congrats for the gold and thankyou for the writeup !
+I have some questions aswell :-
+Regarding loss ( Secondary labels were used to mask loss ) that means you were not giving any importance to secondary lables at all ?
+Regarding Full data training ( We trained most models on full data ) how did you made sure that model is not overfitting ? i did the same but model got overfitted i guess ( i added lots of augs / background noise etc , tried to make my data hard to learn on classes ) which were abundant and also oversampled my other classes with some techniques .
+Regarding PsudoLabels ( what was your threshold to determine psudo labels and there can be multiple classes in the audio clip or the time frame which you were using to infer so i am assuming you might be using 1 label which has the max conf ? I did the same but i guess my model was overfitting.
+Regarding Upsampling ( did you just made multiple copies of the audio clips or added some transformation on those ) ? I upsampled the classes by adding some augs to the original 5 sec clip and also added unlaballed soundscapes to some other copies , ( i took only those soundscape clips where my model was getting very low confidence like < 0.05 ) but didnt got any luck probably becuase at the end i overfitted my model .
+Again Thankyou for your time and effort .
+Reply
+React CPMP Topic Author Posted 2 years ago
+· 3rd in this Competition
+Congrats for the gold and thankyou for the writeup !
+Thank you on behalf of the team.
+that means you were not giving any importance to secondary lables at all ?
+I think yes (not sure about the meaning of "importance"). We do find secondary labels to be important as we use them.
+how did you made sure that model is not overfitting ?
+We didn't really. We did train models using 5 fold CV, but the CV score wasn't correlated with LB score once we reached 0.65 or above. on LB. I welcome any hint on how to properly evaluate models in this competition besides submitting them.
+Regarding PsudoLabels ( what was your threshold to determine psudo label
+We use the predicted probability as label. We don't round probabilities to binary labels.
+i am assuming you might be using 1 label which has the max conf ?
+We don't. The competition is a mult label competition, not a multi class competition.
+Regarding Upsampling ( did you just made multiple copies of the audio clips or added some transformation on those ) ?
+We duplicated the record, then augmentations (time shift and mixup) are applied independently on each copy.
+Reply
+React Shubham Thapa Posted 2 years ago
+· 402nd in this Competition
+Thankyou for the answers .
+We don't. The competition is a mult label competition, not a multi class competition.
+What i meant by that was how you were deciding the primary label for your psudo labels in the window of your time frame and i guess it will be your max confidence class ? since you are setting your secondary classes as empty as mentioned in your write up.
+Reply
+React
+3 more replies Profile picture for CPMP Profile picture for Shubham Thapa Shiro Posted 2 years ago
+· 14th in this Competition
+Congratulation for the gold and thanks you for the write up !
+I have few questions:
+(1) regarding the pseudo labels approach, does smaller batch was also giving you positive results? I tried 16 but did not get any luck unfortunately … That was just providing more stable LB. (2) how did you pick which checkpoint to select for inference?
+Reply
+React CPMP Topic Author Posted 2 years ago
+· 3rd in this Competition
+Congratulation for the gold and thanks you for the write up !
+Thank you on behalf of the team.
+does smaller batch was also giving you positive results?
+We tried as large batch as possible. 256 seemed to lower performance hence we stopped at 128. We then found that the more pseudo labels per batch the better. Maybe we could have gone further.
+how did you pick which checkpoint to select for inference?
+The last epoch one. We don't use early stopping.
+Reply
+1 Aaditya Porwal Posted 2 years ago
+· 25th in this Competition
+Congrats for the gold and 3rd position and thankyou for the writeup !!!
+Reply
+React Phaedrus Posted 2 years ago
+· 297th in this Competition
+Congratulations and great writeup.
+Could you clarify a little about masking loss for secondary labels? From what I can understand, if a bird X is present as secondary label, you essentially mask loss for this bird/index in BCEWithLogitsLoss? Is this the correct interpretation?
+Also, will you be opening up your inference sub for us to look at optimizations and stuff? 😐
+Reply
+React CPMP Topic Author Posted 2 years ago
+· 3rd in this Competition
+Congratulations and great writeup.
+Thanks on behalf of the team.
+if a bird X is present as secondary label, you essentially mask loss for this bird/index in BCEWithLogitsLoss?
+Yes, we mask as you say.
+I documented this idea in my 2020 Birdclef writeup. I reproduce it here:
+Primary labels were noisy, but secondary labels were even noisier. As a result we masked the loss for secondary labels as we didn't want to force the model to learn a presence or an absence when we don't know. We therefore defined a secondary mask that nullifies the BCE loss for secondary labels. For instance, assuming only 3 ebird_code b0, b1, and b2, and a clip with primary label b0 and secondary label b1, then these two target values are possible:
+[1, 0, 0]
+[1, 1, 0]
+The secondary mask is therefore:
+[1, 0, 1]
+I hope this is clearer now.
+will you be opening up your inference sub
+I'll check with my team members.
+Reply
+1 Phaedrus Posted 2 years ago
+· 297th in this Competition
+Thankyou!
+Reply
+React Cody_Null Posted 2 years ago
+· 293rd in this Competition
+Wow great work! I may have to go back to the board a bit. I had used efficientvit_b0 and it took 25 min to run on ONNX. 5 in 40 minutes is crazy, I couldnt get any of my models to be that fast! I would love to hear more about how that worked
+Reply
+React CPMP Topic Author Posted 2 years ago
+· 3rd in this Competition
+Wow great work!
+Thank you on behalf of the team.
+I would love to hear more about how that worked
+We didn't do anything fancy there. We used the model.half().float() trick that was shared, this shaved few minutes per 5 checkpoints. But we use various tricks like loading records once for all models, computing mel spectrograms once for all models, etc.
+Reply
+React Dieter Posted 2 years ago
+· 3rd in this Competition
+melspec transformation takes quite some time. But even we had 5 models we only need to do it once. So you can check how long multiple effnet b0 of you would take, if you only do melspec once
+Reply
+React Hugo de Heer Posted 2 years ago
+· 247th in this Competition
+Congratulations with gold first of all and thanks for your clear writeup!
+How did you manage to submit 5 fold efficientnet_b0 224x224 within 40 minutes? For us, without ONNX it took around ~1h for a single fold, and with ONNX we observed a 2x speedup to around ~30 minutes per fold. Still around ~3.8x slower than your approach.
+How did you use the different seeds? Did you just pick the seed with highest public LB for submission?
+How did you exactly merge your pipelines, I am a bit confused by your ensembling section. Did you both submit level 0 and level 1, and which models were included?
+Cool to see that you also tried the convolving postprocessing smoothing, we observed that surprisingly smoothing the current 5 seconds with the mean of the whole 4 minutes was even better than the convolved kernel, wonder if you also tried that.
+Thanks!
+Reply
+React CPMP Topic Author Posted 2 years ago
+· 3rd in this Competition
+Congratulations with gold first of all and thanks for your clear writeup!
+Thank you on behalf of the team.
+How did you manage to submit 5 fold efficientnet_b0 224x224 within 40 minutes?
+Efficientvit_b0, not efficientnet_b0 :D
+How did you use the different seeds? Did you just pick the seed with highest public LB for submission?
+Certainly not. This is a recipe for overfitting. We either used random seeds, or fixed seeds we change from time to time (team mates have differnent views here, but we all agree that tuning the seed is a disaster)
+How did you exactly merge your pipelines,
+We took the average of the logits of the 14 models.
+smoothing the current 5 seconds with the mean of the whole 4 minutes was even better than the convolved kernel,
+We tried and found that smoothing with the max over the soundscape is even better. Till we saw that it isn't with high score on private LB.
+Reply
+React Hugo de Heer Posted 2 years ago
+· 247th in this Competition
+Ah great! Thanks for the clarification!
+And then I assume that you submitted all Level 1 models from each pipeline together, and then you used a varied ensemble of bigger models for Level 0 to get better pseudo labelling for Level 1? That is a very nice idea, we tried pseudo-labelling with the Google model on unlabelled soundscapes. That did not work out for us, unfortunately. Your approach on training multiple larger models on Xeno-Canto and using that for pseudolabelling seems to be a better approach :)
+Reply
+React CPMP Topic Author Posted 2 years ago
+· 3rd in this Competition
+Actually the best second level model we selected was using pseudo labels from effcientvit_b0 only!
+The other two pipelines used Aves and looked great on public LB, but were not great on private LB unfortunately.
+Best unselected pipelines were similar to those in the ensemble but without Aves.
+Reply
+React CPMP Topic Author Posted 2 years ago
+· 3rd in this Competition
+We shared our code, link in the post.
+Reply
+React Anirudh Mittal Posted 2 years ago
+Thanks for the insight! Can you also share the code?
+Reply
+React Metin Amedi Posted 2 years ago
+Congratulations 🎊
+Reply
+React Muhammad Azeem Posted 2 years ago
+Congratulations and nice writeup.
+Reply
+React
