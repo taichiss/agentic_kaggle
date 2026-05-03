@@ -1,0 +1,151 @@
+Most of the useful ideas come from me—that’s how it feels when I work together with AI.
+AI can do a great job writing code, but if you ask it to explore on its own, it tends to stubbornly follow a path that seems correct. I guess that’s also a probability-distribution thing: as soon as it sees class imbalance, it immediately thinks of focal loss—but we all know focal loss isn’t always effective in most of the case. That is my feeling.
+
+
+React
+11 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+coolz
+Topic Author
+Posted 9 days ago
+
+· 1st in this Competition
+
+And now, both the claude code and me are stuck.
+
+
+Reply
+
+3
+Tom
+Posted 14 days ago
+
+· 13th in this Competition
+
+Hallucination is still a big problem for a purely agent-driven setup. It really needs to stay grounded in actual facts. I spent about a month working on this, mostly by continuously updating a set of development rules in memory.md. Just iterating over and over until things stopped going off track. Eventually, it started to come together. I could get the agent to produce designs that were actually usable and consistent. Then I added a stricter code review pipeline, with multiple layers of verification. Only after passing all that does it submit through the Kaggle CLI. That helped a lot with stability and result quality. What’s interesting is, sometimes I open the submission page and see improvements… and I honestly don’t even know which change caused them. It’s like some parts are working better than expected, but not fully explainable yet.
+
+Honestly, I’m really happy to finally have an agent that can reliably solve problems. Now it actually feels possible to work on multiple competitions at the same time, just by sharing and reusing the same development rules.
+
+
+Reply
+
+React
+coolz
+Topic Author
+Posted 14 days ago
+
+· 1st in this Competition
+
+But on the other hand, small improvements—like a 0.01 gain in score—aren’t that important in real-world applications. AI can quickly produce a model with performance that’s “good enough,” and that’s already pretty powerful.
+
+What I’m trying to say is: right now, I think AI can generate a cat, a dog, or even something in between a cat and a dog—but it won’t generate something outside of “cat” and “dog.” In theory, it should never go beyond the coordinate axes. I’m not sure if I’m understanding this correctly.
+
+Of course, in terms of efficiency gains, AI is undeniably super powerful. It can help me write a notebook in 1 second. Without AI, I probably wouldn’t even be able to code anymore, lol.
+
+
+Reply
+
+React
+Katy Hess
+Posted 12 days ago
+
+Hallucination isn’t solved by just “using a better model,” it’s controlled through structure. What you built with the evolving memory.md rules and the multi-layer review pipeline is basically turning an unreliable generator into a more disciplined system.
+
+By forcing the agent to pass through stricter checks before hitting the Kaggle CLI, you’re reducing the chance that hallucinated or inconsistent logic actually makes it into a final result. That’s a big shift from a purely agent-driven loop to something closer to an engineered workflow.
+
+The part where results improve but you can’t fully explain why is especially interesting. That tends to happen when multiple small changes interact, feature tweaks, preprocessing differences, even randomness in training. To tighten it up, you could do a one change at a time iteration to pinpoint what is driving the gains.
+
+Overall, though, this is a strong approach. You’ve essentially shown that agents can be made reliable, not by removing their weaknesses, but by designing around them.
+
+
+Reply
+
+React
+Navneet
+Posted 11 days ago
+
+Cool ideas @cooolz
+
+
+Reply
+
+React
+Katy Hess
+Posted 12 days ago
+
+You’re raising a really important limitation, and I think your framing around probability distributions is a big driver.
+
+AI models are optimized to predict the most likely next step based on patterns they’ve seen before, not to truly “explore” a problem space. This can be because of focal loss, due to statistically common parings, not just because they are best fit. There can be the illusion of confidence while missing very context-specific approaches.
+
+I also agree with your point on focal loss being overused. Its effectiveness really depends on the structure of the data and the problem itself. Sometimes simpler strategies, like resampling, adjusting class weights, or even redefining the objective, end up performing better. It highlights the gap between what’s usually recommended and what’s actually best.
+
+One thing I’d add is that this tendency can be managed depending on how the question is framed. If you push AI to justify its choices, compare alternatives, or identify when a solution might fail, it tends to move away from that “default path” thinking. Without that, it’s essentially pattern-matching its way through the problem.
+
+So I don’t think it’s just a limitation, it’s more of a bias toward familiarity. And like any bias, it becomes much more noticeable in open-ended exploration than in structured tasks like coding.
+
+
+Reply
+
+React
+Jake
+Posted 14 days ago
+
+· 139th in this Competition
+
+I couldn't agree more. What today's coding agents are good at: writing code really really fast, analysing other peoples code and telling you what it's doing, error checking existing code, and discussing your ideas with you. What its not good at: avoiding code bloat (neither are humans, fair), coming up with original ideas, holding a lot of context and still remembering what's really fundamentally important (neither are humans, again). Personally, I'm really impressed with the coding agents, but I couldn't agree more that "most of the useful ideas are coming from me", for now.
+
+
+Reply
+
+React
+Mike Kim
+Posted 14 days ago
+
+· 16th in this Competition
+
+I can code a simple idea by hand and get an instant public LB + 0.01 and Gemini codes the most elaborate research backed Pytorch network that gets LB -0.02 . I am rooting for the machines.
+
+
+Reply
+
+5
+BNBU Anpeng Yuan
+Posted 14 days ago
+
+· 22nd in this Competition
+
+I completely share your perspective. Most of the truly useful, original ideas still come from humans—that’s exactly how I feel when collaborating with AI. AI is incredibly good at executing, implementing, and generating standard solutions like writing clean code, applying known algorithms, or producing well-structured outputs. But when it comes to real exploration, creativity, or breaking fixed mindsets, it often falls short. As you said, AI tends to stubbornly follow patterns that look statistically correct, because it’s built on learned probability distributions and existing knowledge.
+
+
+Reply
+
+React
+coolz
+Topic Author
+Posted 14 days ago
+
+· 1st in this Competition
+
+AI is a very good copilot—it never says no, unless it runs out of tokens.😃
+
+
+Reply
+
+2
+Markus.JM
+Posted 2 days ago
+
+· 100th in this Competition
+
+Thats why most of the IQ benchmarks are benchmaxxed, nearly all humans would figure out that certain paths are not right and shift their approach to a more sensible one, yet most humas will fail on the Norway Mensa test frotnier labs use for validation as proof that LLMs are now smarter than most humans. (which they are not)
+
+
+Reply
+
+React

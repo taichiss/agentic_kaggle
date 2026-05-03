@@ -1,0 +1,57 @@
+EDA findings: 26 species have zero training signal anywhere — how are you handling them?
+Spent time doing a deep EDA and found a few things I hadn't seen discussed yet:
+
+It's not just 28 missing species — 26 have NO data at all 28 species in the submission have no train_audio clips. But when you check train_soundscapes_labels.csv, only 2 appear there. The other 26 — mostly the 25 "Insect sonotype" classes plus Chiasmocleis mehelyi — have absolutely zero training signal anywhere in the provided data.
+With Macro ROC-AUC every species counts equally. Ignoring them means a guaranteed 0 on 26/234 classes.
+
+Only 0.6% of soundscapes are labeled 10,658 soundscape files exist but only 66 are labeled. That's 10,592 files of Pantanal audio with no labels — the exact domain the test set comes from.
+
+Geographic shift is real Training recordings are global (lat: -54 to +69). Test is Pantanal-specific. Most training data is Northern Hemisphere.
+
+Full breakdown with charts here: https://www.kaggle.com/code/kodatirevanth/birdclef-2026-eda-beginner-s-deep-dive
+
+Has anyone found a strategy for the 26 completely unlabeled insect sonotypes? Curious what approaches people are trying.
+
+
+React
+3 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+Will Hirsch
+Posted a month ago
+
+· 934th in this Competition
+
+Your notebook doesn't account for the soundscape labels permitting more than one species to be labeled in a given row. It treats every semicolon-separated list as a new species not targeted by the submission format. All 26 of the species you list are present in the soundscape labels but are never labeled without another species in the same row.
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 794th in this Competition
+
+ask chatgpt on “taxonomy-based classification”. This is why taxonomy.csv class is given to you.
+
+
+Reply
+
+React
+Jan H.
+Posted a month ago
+
+· 1645th in this Competition
+
+This is mentioned in the data description. Those classes appear in train_soundscapes_labels.csv, which tells you where they are in soundscapes. Having said that, I'm also in the EDA phase. Some of those classes look distinctive to me, but some look just like other classes in that list.
+
+
+Reply
+
+React

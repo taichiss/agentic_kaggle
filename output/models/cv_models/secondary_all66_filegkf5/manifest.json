@@ -1,0 +1,94 @@
+{
+  "name": "secondary_all66_filegkf5",
+  "dataset": "all66",
+  "splitter": "file_group_kfold",
+  "n_splits": 5,
+  "feature_mode": "probe_pca_blend",
+  "windows": 739,
+  "files": 66,
+  "sites": 9,
+  "active_classes": 75,
+  "oof_macro_auc": 0.8913744474396611,
+  "mean_fold_auc": 0.8695246237839953,
+  "min_fold_auc": 0.8342797329363397,
+  "max_fold_auc": 0.9202093091171857,
+  "min_fold_active_classes": 28,
+  "max_fold_active_classes": 46,
+  "folds": [
+    {
+      "fold_id": 1,
+      "auc": 0.852603495631859,
+      "active_classes": 46,
+      "windows": 149,
+      "files": 13,
+      "sites": [
+        "S03",
+        "S08",
+        "S09",
+        "S15",
+        "S19",
+        "S22"
+      ]
+    },
+    {
+      "fold_id": 2,
+      "auc": 0.9202093091171857,
+      "active_classes": 35,
+      "windows": 147,
+      "files": 13,
+      "sites": [
+        "S03",
+        "S08",
+        "S15",
+        "S18",
+        "S22",
+        "S23"
+      ]
+    },
+    {
+      "fold_id": 3,
+      "auc": 0.8342797329363397,
+      "active_classes": 35,
+      "windows": 148,
+      "files": 14,
+      "sites": [
+        "S08",
+        "S09",
+        "S13",
+        "S15",
+        "S22",
+        "S23"
+      ]
+    },
+    {
+      "fold_id": 4,
+      "auc": 0.8473237493375797,
+      "active_classes": 28,
+      "windows": 146,
+      "files": 13,
+      "sites": [
+        "S08",
+        "S09",
+        "S13",
+        "S19",
+        "S22",
+        "S23"
+      ]
+    },
+    {
+      "fold_id": 5,
+      "auc": 0.8932068318970119,
+      "active_classes": 39,
+      "windows": 149,
+      "files": 13,
+      "sites": [
+        "S08",
+        "S09",
+        "S15",
+        "S18",
+        "S19",
+        "S22"
+      ]
+    }
+  ]
+}

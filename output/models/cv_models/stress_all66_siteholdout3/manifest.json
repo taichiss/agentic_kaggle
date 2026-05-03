@@ -1,0 +1,55 @@
+{
+  "name": "stress_all66_siteholdout3",
+  "dataset": "all66",
+  "splitter": "site_holdout",
+  "n_splits": 3,
+  "feature_mode": "probe_pca_blend",
+  "windows": 739,
+  "files": 66,
+  "sites": 9,
+  "active_classes": 75,
+  "oof_macro_auc": 0.8571849436999563,
+  "mean_fold_auc": 0.7437804238016837,
+  "min_fold_auc": 0.6686245141097235,
+  "max_fold_auc": 0.8228107207842186,
+  "min_fold_active_classes": 29,
+  "max_fold_active_classes": 37,
+  "folds": [
+    {
+      "fold_id": 1,
+      "auc": 0.8228107207842186,
+      "active_classes": 29,
+      "windows": 477,
+      "files": 40,
+      "sites": [
+        "S22"
+      ]
+    },
+    {
+      "fold_id": 2,
+      "auc": 0.6686245141097235,
+      "active_classes": 37,
+      "windows": 135,
+      "files": 12,
+      "sites": [
+        "S08",
+        "S13",
+        "S18",
+        "S23"
+      ]
+    },
+    {
+      "fold_id": 3,
+      "auc": 0.7399060365111091,
+      "active_classes": 36,
+      "windows": 127,
+      "files": 14,
+      "sites": [
+        "S03",
+        "S09",
+        "S15",
+        "S19"
+      ]
+    }
+  ]
+}

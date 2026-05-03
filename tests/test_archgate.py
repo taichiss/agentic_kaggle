@@ -28,7 +28,9 @@ class ArchGateTest(unittest.TestCase):
     def test_forbidden_dependency_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_root = Path(tmp_dir)
-            write_file(tmp_root / "src" / "training" / "pipeline.py", "def train() -> None:\n    pass\n")
+            write_file(
+                tmp_root / "src" / "training" / "pipeline.py", "def train() -> None:\n    pass\n"
+            )
             write_file(
                 tmp_root / "src" / "core" / "logic.py",
                 "from training.pipeline import train\n",

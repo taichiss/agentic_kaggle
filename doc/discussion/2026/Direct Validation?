@@ -1,0 +1,146 @@
+Direct Validation?
+After all the feedback from last years discussion (https://www.kaggle.com/competitions/birdclef-2025/discussion/567495) despite my initial interpretation of the data tab, I see that this year the file structure is similar but there is a mostly similar validation.
+
+"although some recording sites overlap between train and test, precise recording dates and times do NOT overlap with recordings of the hidden test data. This year, some of the train_soundscapes have been labeled by expert annotators, and we provide the ground truth for a subset of train_soundscapes in train_soundscapes_labels.csv with columns filename referencing the soundscape file, start and end referencing the 5-second segment for which column primary_label provides a semicolon-separated list of species codes that have been marked as present in this segment.
+
+Important note: Some species with occurrences in the hidden test data might only have train samples in the labeled portion of train_soundscapes and not in the train_audio (XC and iNat data). However, not all species from train_soundscapes have occurrences in the test_soundscapes."
+
+So it looks like same region, same species, different times. Very happy to see this changes and I really believe this is exactly what we needed to make BirdCLEF 2026 one of the most interesting competitions this year!
+
+Most of points and problems of last year are fixed!
+
+
+React
+13 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+Tom Denton
+Competition Host
+Posted 2 months ago
+
+Hello, and welcome to the competition!
+We have provided labels on a number of the soundscapes this year!
+The train_soundscapes folder is available, with labels provided in train_soundscapes_labels.csv, as described in the competition data tab.
+
+
+Reply
+
+React
+Quan Vu
+Posted 2 months ago
+
+· 1199th in this Competition
+
+Another distinguishing highlight this year 🎉
+
+
+Reply
+
+React
+Cody_Null
+Topic Author
+Posted 2 months ago
+
+Hi Tom, no clue how I missed this. I think I missed that dataset was the same species to the test. Sounds like this year it was just naming confusion. I will update the post! Thank you so much!
+
+
+Reply
+
+React
+Stefan Kahl
+Competition Host
+Posted 2 months ago
+
+Hey folks, thanks for being back, and thanks for your enthusiasm. Yes, we heard you, and as Tom mentioned, we do have annotated soundscapes. All details are in the description: "This year, some of the train_soundscapes have been labeled by expert annotators, and we provide the ground truth for a subset of train_soundscapes in train_soundscapes_labels.csv" Please let us know if you have questions about how this year's train soundscapes tie into the training and validation workflow.
+
+
+Reply
+
+React
+Cody_Null
+Topic Author
+Posted 2 months ago
+
+Yes, looks like it was just a misunderstanding and that this is the same sort of sample as test data. I will update the post now.
+
+
+Reply
+
+React
+Stefan Kahl
+Competition Host
+Posted 2 months ago
+
+All good. Again, please let us know if there are any uncertainties about those soundscapes. This is the first validation data for BirdCLEF since its inception - so a first for us too :)
+
+
+Reply
+
+React
+This comment has been deleted.
+
+
+3 more replies
+Profile picture for Bartley
+Profile picture for D.M.
+Profile picture for Olly Powell
+Dieter
+Posted 2 months ago
+
+· 964th in this Competition
+
+me very happy
+
+
+Reply
+
+1
+
+3
+Tom Denton
+Competition Host
+Posted 2 months ago
+
+See? It's not /always/ sadness.
+
+
+Reply
+
+2
+Bartley
+Posted 2 months ago
+
+@stefankahl @tomdenton Could you share some insights here? Are there any changes based on the feedback from last year?
+
+See answer here and here.
+
+
+Reply
+
+React
+Quan Vu
+Posted 2 months ago
+
+· 1199th in this Competition
+
+I remember last year (2025), Out of Fold score didn't have any effect at all. This year, it seems that the problem is still the same, the constraints are still the same, only the data collection location has changed 😂
+
+
+Reply
+
+React
+Stefan Kahl
+Competition Host
+Posted 2 months ago
+
+And we have reptiles now :)
+
+
+Reply
+
+1

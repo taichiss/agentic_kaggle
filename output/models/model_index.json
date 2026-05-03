@@ -1,0 +1,224 @@
+{
+  "dataset_slug": "birdclef-2026-perch-probe-cv-models",
+  "results": [
+    {
+      "name": "main_all66_sitebalanced3",
+      "dataset": "all66",
+      "splitter": "site_balanced_file",
+      "n_splits": 3,
+      "feature_mode": "probe_pca_blend",
+      "windows": 739,
+      "files": 66,
+      "sites": 9,
+      "active_classes": 75,
+      "oof_macro_auc": 0.8822187477100215,
+      "mean_fold_auc": 0.853931165732202,
+      "min_fold_auc": 0.8175892320816329,
+      "max_fold_auc": 0.8811072685410813,
+      "min_fold_active_classes": 42,
+      "max_fold_active_classes": 53,
+      "folds": [
+        {
+          "fold_id": 1,
+          "auc": 0.8811072685410813,
+          "active_classes": 51,
+          "windows": 269,
+          "files": 23,
+          "sites": [
+            "S03",
+            "S08",
+            "S09",
+            "S13",
+            "S15",
+            "S18",
+            "S19",
+            "S22",
+            "S23"
+          ]
+        },
+        {
+          "fold_id": 2,
+          "auc": 0.8630969965738916,
+          "active_classes": 53,
+          "windows": 260,
+          "files": 23,
+          "sites": [
+            "S03",
+            "S08",
+            "S09",
+            "S13",
+            "S15",
+            "S18",
+            "S19",
+            "S22",
+            "S23"
+          ]
+        },
+        {
+          "fold_id": 3,
+          "auc": 0.8175892320816329,
+          "active_classes": 42,
+          "windows": 210,
+          "files": 20,
+          "sites": [
+            "S08",
+            "S09",
+            "S15",
+            "S19",
+            "S22",
+            "S23"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "secondary_all66_filegkf5",
+      "dataset": "all66",
+      "splitter": "file_group_kfold",
+      "n_splits": 5,
+      "feature_mode": "probe_pca_blend",
+      "windows": 739,
+      "files": 66,
+      "sites": 9,
+      "active_classes": 75,
+      "oof_macro_auc": 0.8913744474396611,
+      "mean_fold_auc": 0.8695246237839953,
+      "min_fold_auc": 0.8342797329363397,
+      "max_fold_auc": 0.9202093091171857,
+      "min_fold_active_classes": 28,
+      "max_fold_active_classes": 46,
+      "folds": [
+        {
+          "fold_id": 1,
+          "auc": 0.852603495631859,
+          "active_classes": 46,
+          "windows": 149,
+          "files": 13,
+          "sites": [
+            "S03",
+            "S08",
+            "S09",
+            "S15",
+            "S19",
+            "S22"
+          ]
+        },
+        {
+          "fold_id": 2,
+          "auc": 0.9202093091171857,
+          "active_classes": 35,
+          "windows": 147,
+          "files": 13,
+          "sites": [
+            "S03",
+            "S08",
+            "S15",
+            "S18",
+            "S22",
+            "S23"
+          ]
+        },
+        {
+          "fold_id": 3,
+          "auc": 0.8342797329363397,
+          "active_classes": 35,
+          "windows": 148,
+          "files": 14,
+          "sites": [
+            "S08",
+            "S09",
+            "S13",
+            "S15",
+            "S22",
+            "S23"
+          ]
+        },
+        {
+          "fold_id": 4,
+          "auc": 0.8473237493375797,
+          "active_classes": 28,
+          "windows": 146,
+          "files": 13,
+          "sites": [
+            "S08",
+            "S09",
+            "S13",
+            "S19",
+            "S22",
+            "S23"
+          ]
+        },
+        {
+          "fold_id": 5,
+          "auc": 0.8932068318970119,
+          "active_classes": 39,
+          "windows": 149,
+          "files": 13,
+          "sites": [
+            "S08",
+            "S09",
+            "S15",
+            "S18",
+            "S19",
+            "S22"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "stress_all66_siteholdout3",
+      "dataset": "all66",
+      "splitter": "site_holdout",
+      "n_splits": 3,
+      "feature_mode": "probe_pca_blend",
+      "windows": 739,
+      "files": 66,
+      "sites": 9,
+      "active_classes": 75,
+      "oof_macro_auc": 0.8571849436999563,
+      "mean_fold_auc": 0.7437804238016837,
+      "min_fold_auc": 0.6686245141097235,
+      "max_fold_auc": 0.8228107207842186,
+      "min_fold_active_classes": 29,
+      "max_fold_active_classes": 37,
+      "folds": [
+        {
+          "fold_id": 1,
+          "auc": 0.8228107207842186,
+          "active_classes": 29,
+          "windows": 477,
+          "files": 40,
+          "sites": [
+            "S22"
+          ]
+        },
+        {
+          "fold_id": 2,
+          "auc": 0.6686245141097235,
+          "active_classes": 37,
+          "windows": 135,
+          "files": 12,
+          "sites": [
+            "S08",
+            "S13",
+            "S18",
+            "S23"
+          ]
+        },
+        {
+          "fold_id": 3,
+          "auc": 0.7399060365111091,
+          "active_classes": 36,
+          "windows": 127,
+          "files": 14,
+          "sites": [
+            "S03",
+            "S09",
+            "S15",
+            "S19"
+          ]
+        }
+      ]
+    }
+  ]
+}

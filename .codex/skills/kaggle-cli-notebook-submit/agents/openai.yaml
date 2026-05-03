@@ -1,0 +1,6 @@
+display_name: Kaggle CLI Notebook Submit
+short_description: Kaggle CLI でノートブック bundle を作成し push/status/submission 確認する
+default_prompt: >
+  Use this skill when preparing or debugging a Kaggle Notebook submission via Kaggle CLI.
+  Follow the repo's notebook bundle and metadata conventions, prefer ONNX-first submit flows,
+  and verify push/status/submission outputs.

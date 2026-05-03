@@ -1,0 +1,11 @@
+{
+  "title": "BirdCLEF 2026 Perch Probe CV Models",
+  "id": "suzukitaichi/birdclef-2026-perch-probe-cv-models",
+  "licenses": [
+    {
+      "name": "CC0-1.0"
+    }
+  ],
+  "subtitle": "Perch probe CV bundles, notebook cache, and ver8 train_audio MLP head",
+  "description": "Notebook-compatible Perch cache plus trained probe bundles for site-balanced, file-GroupKFold, and site-holdout validation, along with the ver8 train_audio-adapted MLP head bundle."
+}

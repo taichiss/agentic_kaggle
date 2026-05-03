@@ -1,0 +1,407 @@
+Sharing baseline LB.928. Aiming to achieve both reproducibility and inference speed[Fixed(～2026/04/06)]
+In popular notebooks and discussions, I noticed that randomness (Non-reproducibility) and inference speed were issues, so I'm sharing a baseline aimed at improvement.
+
+LB.926 Baseline(includes train models)
+https://www.kaggle.com/code/hideyukizushi/bird26-reproduce-perch-proto-residualssm-inf-train
+[Caution-Reproducibility]The issue has been fixed for reproducibility. For example, you can verify reproducibility by running the inference code twice and checking that the resulting CSV files match.
+[Caution-InferenceTimeout]The inference speed issue (TimeOut) is highly dependent on Kaggle's congestion, so even if you fork my baseline, you may still encounter TimeOuts.
+This inference implementation has performed two Subroutines and no timeouts have occurred. However, the inference time is approaching the constraint of 90 minutes, so there is a high possibility of timeouts occurring due to congestion or individual hardware differences. Please do not be overconfident that timeouts will not occur in this Notebook. Based on our observations of inference times so far, we've noticed that timeouts or significant variations occur depending on the hardware/resource situation. Therefore, we feel the need to create a faster inference pipeline.
+LB.926 Here are the updates to my public notebook
+
+Reproducibility Fix ISSUE
+Initialization of PyTorch models (such as an unspecified torch.randn).
+Randomness in Data Augmentation (Mixup / CutMix). In the mixup_cutmix and mixup_files functions, the NumPy random number generator is used without a fixed seed.
+Random Masking in the Dropout Layer The numerous nn.Dropout(dropout) methods placed within the network drop neurons by relying on PyTorch's global random number generator. If the seed is not fixed, the areas that are masked will change with each execution.
+Inference-Speed Fix ISSUE
+Since ProtoSSM and ResidualSSM were being used for training during inference, I moved the training to a separate notebook and changed the model so that the pre-trained model is used during inference.
+Batching of TTA ("temporal_shift_tta") Current bottleneck: Reducing the process within the temporal_shift_tta function, which loops through the shift amount (5 patterns) and calls the model inference (model(…)) 5 times separately.
+P.S. There are still areas that need improvement. For example, speed optimization, such as using ONNX, remains to be seen. I hope to move from a situation as uncertain as throwing a dart to one where rational results can be obtained.
+
+
+2
+6 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+yukiZ
+Topic Author
+Posted 25 days ago
+
+· 132nd in this Competition
+
+ℹ️Update(2026/04/06) scoring time was 23 minutes
+PublicNotebook[LB.928]※include Publish Model Weight
+https://www.kaggle.com/code/hideyukizushi/bird26-reproduce-perch-proto-residualssm-inf-train
+Inference-Speed Fix ISSUE
+The Perch has been significantly sped up by switching to ONNX.
+Additionally, to enable both inference and asynchronous audio loading, we use ThreadPoolExecutor(max_workers=4) and intra_op_num_threads = 4.
+Since the scoring was completed in 23 minutes, this gives a significant advantage in competitions with limited inference time, as it increases the number of strategies available.
+if USE_ONNX_PERCH:
+    _so = ort.SessionOptions()
+    _so.intra_op_num_threads = 4
+    ONNX_SESSION = ort.InferenceSession(str(ONNX_PERCH_PATH), sess_options=_so, providers=["CPUExecutionProvider"])
+    ONNX_INPUT_NAME = ONNX_SESSION.get_inputs()[0].name
+    ONNX_OUTPUT_MAP = {o.name: i for i, o in enumerate(ONNX_SESSION.get_outputs())}
+if USE_ONNX_PERCH:
+    onnx_outs = ONNX_SESSION.run(None, {ONNX_INPUT_NAME: x})
+    logits = onnx_outs[ONNX_OUTPUT_MAP["label"]].astype(np.float32, copy=False)
+    emb = onnx_outs[ONNX_OUTPUT_MAP["embedding"]].astype(np.float32, copy=False)
+
+Reply
+
+2
+Turabi Yildirim
+Posted 21 days ago
+
+· 558th in this Competition
+
+İs there a possibility of onnx performing worse
+
+
+Reply
+
+1
+yukiZ
+Topic Author
+Posted 19 days ago
+
+· 132nd in this Competition
+
+Hi @turabiyldrm
+
+In conclusion, while converting to ONNX introduces an acceptable level of accuracy error, the execution time is reduced from 90 minutes to 23 minutes. Therefore, given the inference time constraints in the competition, we recommend using the ONNX version.
+
+In detail, when the same audio waveform is input to both the Perch and ONNX models, the output Logits do not perfectly match, resulting in slight differences.
+
+ex)
+BC2026_Train_0001_S08_20250606_030007_5    0.10253045  0.20369478 <---ONNX Use(MyNotebook V15)
+BC2026_Train_0001_S08_20250606_030007_5    0.102530636 0.2036958  <---ONNX Non Use(MyNotebook V14)
+
+⇒Logit matches up to about 5 decimal places, but precision errors occur beyond that.
+The main reasons for this are the following three
+1. Graph Optimization and Operator Fusion Operator fusion combines three computational steps Conv, BatchNorm, and ReLU into a single mathematically equivalent formula. While mathematically equivalent, the order of calculations and the units used for fusion change in the program, resulting in slight discrepancies in floating-point calculation results.
+
+2. Rounding Errors in Floating-Point Arithmetic (FP32) and Hardware Instruction Differences TensorFlow (native environment) and ONNX Runtime use different C++ mathematical libraries and CPU/GPU instruction sets (MKL, Eigen, cuDNN, etc.) in the backend. In deep learning, where floating-point (FP32) multiplication and addition are repeated millions of times, these library differences cause "rounding errors" that accumulate towards the final layer, resulting in slight differences in output values.
+
+3. Differences in "Approximation" Algorithms for Specific Functions For transcendental functions such as Exp, Log, and GELU, and for image and audio resizing (interpolation) processing, TensorFlow and ONNX may employ slightly different approximation calculation algorithms.
+
+
+Reply
+
+React
+BNBU Anpeng Yuan
+Posted 19 days ago
+
+· 22nd in this Competition
+
+Thanks for that explanation!
+
+
+Reply
+
+1
+yukiZ
+Topic Author
+Posted a month ago
+
+· 132nd in this Competition
+
+ℹ️Update(2026/04/05) LB .926 -> LB .928
+PublicNotebook[LB.928]※include Publish Model Weight
+https://www.kaggle.com/code/hideyukizushi/bird26-reproduce-perch-proto-residualssm-inf-train
+[Other improvements]Optimizing the validation strategy
+The validation strategy used GKF.
+Due to the imbalanced data, it was changed to SGKF.
+In addition, for rare cases where partitioning would not be possible, binning was used to achieve partitioning.
+ex)
+
+y_strat = np.argmax(Y_SC, axis=1) 
+
+unique_classes, counts = np.unique(y_strat, return_counts=True)
+rare_classes = unique_classes[counts < n_splits]
+y_strat[np.isin(y_strat, rare_classes)] = -1
+
+sgkf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=91)
+
+oof_base_local = np.zeros_like(scores_raw, dtype=np.float32)
+oof_final = np.zeros_like(scores_raw, dtype=np.float32)
+modeled_counts = np.zeros(scores_raw.shape[1], dtype=np.int32)
+oof_models = {}
+
+split_list = list(sgkf.split(scores_raw, y_strat, groups=groups))
+
+for fold, (tr_idx, va_idx) in enumerate(tqdm(split_list, desc="Embedding-probe folds", disable=not CFG.get("verbose", True)), 1):
+
+Reply
+
+React
+yukiZ
+Topic Author
+Posted a month ago
+
+· 132nd in this Competition
+
+ℹ️Update(2026/04/01)
+PublicNotebook[LB.926]
+https://www.kaggle.com/code/hideyukizushi/bird26-reproduce-perch-proto-residualssm-inf-train
+Inference-Speed Fix ISSUE
+To speed up inference, improve the loop processing of for cls_idx, clf in probe_models.items(): after Test Inference.
+This update changes the process to use tensor operations and batch matrix multiplication, so there are some discrepancies in the inference results compared to the previous version, but reproducibility is guaranteed.
+def build_all_class_features_vectorized(Z, raw_scores, prior_scores, base_scores, valid_classes, n_windows=12):
+    """
+    A function that constructs all 14 types of features for all classes in one go, without using a for loop.
+    Output tensor shape: (V: number of effective classes, N: number of samples, D+14)
+    """
+    N, D = Z.shape
+    V = len(valid_classes)
+
+    # (V, N)
+    raw = raw_scores[:, valid_classes].T
+    prior = prior_scores[:, valid_classes].T
+    base = base_scores[:, valid_classes].T
+
+    n_files = N // n_windows
+    base_view = base.reshape(V, n_files, n_windows)
+
+    # Batch calculation of time series features
+    prev_base = np.concatenate([base_view[:, :, :1], base_view[:, :, :-1]], axis=2).reshape(V, N)
+    next_base = np.concatenate([base_view[:, :, 1:], base_view[:, :, -1:]], axis=2).reshape(V, N)
+    mean_base = np.repeat(base_view.mean(axis=2), n_windows, axis=1)
+    max_base = np.repeat(base_view.max(axis=2), n_windows, axis=1)
+    std_base = np.repeat(base_view.std(axis=2), n_windows, axis=1)
+
+    diff_mean = base - mean_base
+    diff_prev = base - prev_base
+    diff_next = base - next_base
+
+    interact_rp = raw * prior
+    interact_rb = raw * base
+    interact_pb = prior * base
+
+    # Stack 14 scalar features in the last dimension -> (V, N, 14)
+    scalar_feats = np.stack([
+        raw, prior, base, prev_base, next_base, 
+        mean_base, max_base, std_base, 
+        diff_mean, diff_prev, diff_next, 
+        interact_rp, interact_rb, interact_pb
+    ], axis=-1)
+
+    # Z (N, D) -> (V, N, D) 
+    Z_expanded = np.broadcast_to(Z, (V, N, D))
+
+    # features -> (V, N, D+14)
+    X_all = np.concatenate([Z_expanded, scalar_feats], axis=-1)
+    return X_all.astype(np.float32)
+
+class VectorizedMLPProbes(nn.Module):
+    """
+    A class that combines multiple scikit-learn MLPClassifier classes into a single PyTorch model.
+    """
+    def __init__(self, probe_models, device="cpu"):
+        super().__init__()
+        self.valid_classes = sorted(list(probe_models.keys()))
+        self.V = len(self.valid_classes)
+
+        if self.V == 0:
+            return
+
+        sample_clf = probe_models[self.valid_classes[0]]
+        self.n_layers = len(sample_clf.coefs_)
+
+        self.weights = nn.ParameterList()
+        self.biases = nn.ParameterList()
+
+        # (V, in_dim, out_dim)
+        for layer_idx in range(self.n_layers):
+            W = np.stack([probe_models[c].coefs_[layer_idx] for c in self.valid_classes], axis=0)
+            b = np.stack([probe_models[c].intercepts_[layer_idx] for c in self.valid_classes], axis=0)
+
+            self.weights.append(nn.Parameter(torch.tensor(W, dtype=torch.float32), requires_grad=False))
+            self.biases.append(nn.Parameter(torch.tensor(b, dtype=torch.float32), requires_grad=False))
+
+        self.to(device)
+
+    def forward(self, x):
+        # x shape: (V, N, in_dim)
+        h = x
+        for i in range(self.n_layers):
+            h = torch.bmm(h, self.weights[i]) + self.biases[i].unsqueeze(1)
+            if i < self.n_layers - 1:
+                h = torch.relu(h)
+
+        return h.squeeze(-1) # (V, N)
+
+def get_vectorized_mlp_scores(Z, raw, prior, base, probe_models, alpha_p, n_windows=12, device="cpu"):
+    """
+    A wrapper function that wraps all of the above vectorization processes
+    """
+    mlp_scores = base.copy()
+    if len(probe_models) == 0:
+        return mlp_scores
+
+    valid_classes = sorted(list(probe_models.keys()))
+
+    # 1. Building a tensor
+    X_all = build_all_class_features_vectorized(Z, raw, prior, base, valid_classes, n_windows)
+
+    # 2. Batch inference using PyTorch
+    vec_probe = VectorizedMLPProbes(probe_models, device=device)
+    vec_probe.eval()
+    with torch.no_grad():
+        X_tensor = torch.tensor(X_all, dtype=torch.float32, device=device)
+        preds = vec_probe(X_tensor).cpu().numpy() # (V, N)
+
+    # 3. Blending
+    preds_t = preds.T # (N, V)
+    base_valid = base[:, valid_classes]
+
+    mlp_scores[:, valid_classes] = (1.0 - alpha_p) * base_valid + alpha_p * preds_t
+    return mlp_scores
+e.g.
+# ─────Before──
+for cls_idx, clf in probe_models.items():
+    X_cls = build_class_features(...)
+    ...
+    mlp_train_scores_flat[:, cls_idx] = (1 - alpha_p) * train_base_scores[:, cls_idx] + alpha_p * pred
+
+# ─────After──
+alpha_p = float(CFG["frozen_best_probe"]["alpha"])
+    mlp_train_scores_flat = get_vectorized_mlp_scores(
+        Z_FULL, scores_full_raw, train_prior_scores, train_base_scores, 
+        probe_models, alpha_p, n_windows=N_WINDOWS, device=DEVICE
+    )
+P.S. I was concerned about a timeout issue, so I tried submitting twice, and both times the scoring completed successfully. However, the inference time seems to be just barely enough, so I think there's a possibility of a timeout under congested conditions. Therefore, I plan to update the implementation when I have more time.
+
+
+Reply
+
+React
+machengyuan
+Posted a month ago
+
+· 711th in this Competition
+
+Great work sharing, looking forward to your updates.
+
+
+Reply
+
+1
+yukiZ
+Topic Author
+Posted a month ago
+
+· 132nd in this Competition
+
+ℹ️Update(2026/04/02)
+PublicNotebook[LB.926]
+https://www.kaggle.com/code/hideyukizushi/bird26-reproduce-perch-proto-residualssm-inf-train
+Inference-Speed Fix ISSUE
+Multithreading for reading audio files.
+
+Multithreading using ThreadPoolExecutor is a common technique used in the publicly available PyTorch Timm notebook. Since this wasn't commonly seen in Perch implementations, I added an implementation for it.
+The core idea of ​​this implementation is double buffering (prefetching). While the model is performing inference, a separate thread reads the audio file from disk in parallel and keeps it waiting in memory. This allows disk I/O and CPU operations to fully overlap (operate in parallel), reducing the total processing time.
+[Notes]setting ThreadPoolExecutor(max_workers=8)
+
+Kaggle's CPU is a 4-core, 8-thread Intel(R) Xeon(R) CPU @ 2.20GHz.
+Therefore, theoretically, "max_workers=8" yields the best performance, but it may cause thrashing.
+On the other hand, considering the load on the main inference process in parallel processing, "max_workers=4" is also correct, which makes the decision difficult.
+For now, the Sub with ThreadPoolExecutor(max_workers=8) completed scoring within the time limit in two Sub runs.
+
+def infer_perch_with_embeddings(paths, batch_files=16, verbose=True, proxy_reduce="max"):
+    paths = [Path(p) for p in paths]
+    n_files = len(paths)
+    n_rows = n_files * N_WINDOWS
+
+    row_ids = np.empty(n_rows, dtype=object)
+    filenames = np.empty(n_rows, dtype=object)
+    sites = np.empty(n_rows, dtype=object)
+    hours = np.empty(n_rows, dtype=np.int16)
+
+    scores = np.zeros((n_rows, N_CLASSES), dtype=np.float32)
+    embeddings = np.zeros((n_rows, 1536), dtype=np.float32)
+
+    write_row = 0
+    iterator = range(0, n_files, batch_files)
+    if verbose:
+        iterator = tqdm(iterator, total=(n_files + batch_files - 1) // batch_files, desc="Perch batches")
+
+    # ─────ThreadPoolExecutor──
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as io_executor:
+
+        # 1. Reserve the loading of the first batch in the background (start prefetching).
+        next_paths = paths[0:batch_files]
+        future_audio = [io_executor.submit(read_soundscape_60s, p) for p in next_paths]
+
+        for start in iterator:
+            batch_paths = next_paths
+            batch_n = len(batch_paths)
+
+            # --- Phase A: Receiving audio data ---
+            batch_audio = [f.result() for f in future_audio]
+
+            # --- Phase B: Immediately begin loading the "next batch". ---
+            next_start = start + batch_files
+            if next_start < n_files:
+                next_paths = paths[next_start:next_start + batch_files]
+                future_audio = [io_executor.submit(read_soundscape_60s, p) for p in next_paths]
+
+            # --- Phase C: Data Formatting ---
+            x = np.empty((batch_n * N_WINDOWS, WINDOW_SAMPLES), dtype=np.float32)
+            batch_row_start = write_row
+            x_pos = 0
+
+            for i, path in enumerate(batch_paths):
+                y = batch_audio[i]
+                x[x_pos:x_pos + N_WINDOWS] = y.reshape(N_WINDOWS, WINDOW_SAMPLES)
+
+                meta = parse_soundscape_filename(path.name)
+                stem = path.stem
+
+                row_ids[write_row:write_row + N_WINDOWS] = [f"{stem}_{t}" for t in range(5, 65, 5)]
+                filenames[write_row:write_row + N_WINDOWS] = path.name
+                sites[write_row:write_row + N_WINDOWS] = meta["site"]
+                hours[write_row:write_row + N_WINDOWS] = int(meta["hour_utc"])
+
+                x_pos += N_WINDOWS
+                write_row += N_WINDOWS
+
+            # --- Phase D: Heavy Inference (CPU Compute Bound) ---
+            outputs = infer_fn(inputs=tf.convert_to_tensor(x))
+            logits = outputs["label"].numpy().astype(np.float32, copy=False)
+            emb = outputs["embedding"].numpy().astype(np.float32, copy=False)
+
+            scores[batch_row_start:write_row, MAPPED_POS] = logits[:, MAPPED_BC_INDICES]
+            embeddings[batch_row_start:write_row] = emb
+
+            # Selected frog proxies
+            for pos, bc_idx_arr in selected_proxy_pos_to_bc.items():
+                sub = logits[:, bc_idx_arr]
+                if proxy_reduce == "max":
+                    proxy_score = sub.max(axis=1)
+                elif proxy_reduce == "mean":
+                    proxy_score = sub.mean(axis=1)
+                else:
+                    raise ValueError("proxy_reduce must be 'max' or 'mean'")
+                scores[batch_row_start:write_row, pos] = proxy_score.astype(np.float32)
+
+            # Memory leak (OOM) prevention: Ensure that audio memory is reliably released after reading.
+            del x, outputs, logits, emb, batch_audio
+            gc.collect()
+
+    meta_df = pd.DataFrame({
+        "row_id": row_ids,
+        "filename": filenames,
+        "site": sites,
+        "hour_utc": hours,
+    })
+
+    return meta_df, scores, embeddings
+
+Reply
+
+React

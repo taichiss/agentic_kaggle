@@ -3,8 +3,8 @@
 - ユーザー向けの返答は日本語で行う。
 - Python 環境、依存追加、実行コマンドは `uv` を使う。
 - コード変更の前に短い計画を明示し、1回の変更では1機能または1論点だけ進める。
-- コンペ固有の作業前に `strategy/current.md` で `competition`, `metric`, `submission_format`, `constraints`, `available data` を確認する。
-- 新しい事実、仮説、実験結果が出たら `strategy/current.md`, `strategy/experiments.md`, `strategy/todo.md` を更新する。
+- コンペ固有の作業前に `.codex/strategy/current.md` で `competition`, `metric`, `submission_format`, `constraints`, `available data` を確認する。
+- 新しい事実、仮説、実験結果が出たら `.codex/strategy/current.md`, `.codex/strategy/experiments.md`, `.codex/strategy/todo.md` を更新する。
 
 ## Pointers
 - ワークスペース運用ルール: `.codex/codex.md`
@@ -24,6 +24,6 @@
 - Full local gate: `uv run python scripts/quality_gate.py all`
 
 ## Don't
-- 公式情報を会話だけで終わらせない。`doc/overview/` か `strategy/` に残す。
-- 思いつきでトップレベルの新規ディレクトリを増やさない。`data/`, `doc/`, `src/`, `tests/`, `strategy/` を使う。
+- 公式情報を会話だけで終わらせない。`doc/overview/` か `.codex/strategy/` に残す。
+- 思いつきでトップレベルの新規ディレクトリを増やさない。`data/`, `doc/`, `src/`, `tests/`, `.codex/strategy/` を使う。
 - 禁止レイヤーへ直接 import しない。外部I/Oや横断的関心事は `providers/` 経由に寄せる。

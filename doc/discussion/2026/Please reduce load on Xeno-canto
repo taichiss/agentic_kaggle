@@ -1,0 +1,89 @@
+Please reduce load on Xeno-canto
+Hey everyone,
+
+Xeno-canto has contacted us to report unusually high traffic and reduced server performance, largely due to activity from users identifying as “BirdCLEF.”
+
+Please make sure to follow the Xeno-canto API guidelines and use their resources responsibly.
+
+There’s no need to repeatedly crawl Xeno-canto - please take advantage of dataset sharing here on Kaggle instead.
+
+If you’re using AI agents, ensure they are configured to minimize load on external platforms and access resources responsibly.
+
+If you have any questions, feel free to reach out. Thanks!
+
+
+3
+5 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+Stefan Kahl
+Competition Host
+Posted a month ago
+
+As an alternative, please use previously published copies of XC data, like in BirdSet: https://huggingface.co/datasets/DBD-research-group/BirdSet
+
+The user agent in question is "BirdCLEF-Research/1.0 (academic research; bulk download)" and is responsible for almost half of the site's traffic.
+
+
+Reply
+
+React
+Dieter
+Posted a month ago
+
+· 963rd in this Competition
+
+with XC switching to v3 API, cant they just block the user in question?
+
+
+Reply
+
+React
+Ravi Ramakrishnan
+Posted a month ago
+
+· 314th in this Competition
+
+@stefankahl I think it will be better for the host to crawl Xeno Canto data once and share it on Kaggle. It will level the playing field for all and will also help in reducing web traffic to Xeno-Canto.
+
+
+Reply
+
+2
+Stefan Kahl
+Competition Host
+Posted a month ago
+
+I don't think that's a good idea: many species on XC aren't relevant for this competition, we capped at 500 recordings, which is plenty for all species, and we excluded recordings with insufficient licenses. As said above, there are bulk copies of XC out there, which I would recommend using. If everyone is mindful about using someone else's resources, there shouldn't be a problem. And if someone completed a crawl, they should share the data on Kaggle - that's what people have done in previous competitions (and you would get the upvotes, not us).
+
+
+Reply
+
+React
+Tom
+Posted a month ago
+
+· 13th in this Competition
+
+
+
+
+Reply
+
+17
+Idrissa M Dicko
+Posted 22 days ago
+
+· 921st in this Competition
+
+The goat 🐐
+
+
+Reply
+
+React

@@ -1,0 +1,174 @@
+Empty recordings
+Hi, I noticed that some recordings were less than a second and when listening to it, we can not hear any meaningful sound. It seems to be mostly iNaturalist recordings. Here are some examples:
+
+209233/iNat1545859.ogg
+47144/iNat1191939.ogg
+47144/iNat1317365.ogg
+47144/iNat1317366.ogg
+and probably others
+I don't know if the files were corrupted during the download process on your side or if they were originally corrupted
+
+
+2
+2 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+Stefan Kahl
+Competition Host
+Posted 2 months ago
+
+We screened files for corruption; I believe the files above are just part of the messy world of bioacoustics, where the quality of samples can vary quite a bit.
+
+
+Reply
+
+1
+Antoine Masq
+Topic Author
+Posted 2 months ago
+
+· 108th in this Competition
+
+Thanks for your reply, yes I guess that's unavoidable with such a big amount of data (thank you for organizing this by the way). Another thing I noticed is that some files are duplicated, so I made a csv with the files and the hash of the audio signal (attached to this comment). There are 82 duplicates of 78 unique files, so I guess that might be important to take this into account for validation.
+
+Edit: I checked the corrupted files url and the recording seems normal there, so I guess there were some problems during the download process (e.g. 209233/iNat1545859.ogg -> https://static.inaturalist.org/sounds/1545859.m4a?1751141212)
+
+duplicates.csv
+
+Reply
+
+1
+
+1
+Stefan Kahl
+Competition Host
+Posted 2 months ago
+
+Yeah, good point, I searched for duplicates, even using a content-based hash - let's see if these inconsistencies justify updating the dataset, we'll discuss it.
+
+
+Reply
+
+1
+Antoine Masq
+Topic Author
+Posted 2 months ago
+
+· 108th in this Competition
+
+If it can help, here's the list of files that were corrupted and that I re-downloaded with the difference of duration in seconds compared to the recording in the original data. There's only one that I could not download : 'barant1/iNat76423.ogg', on the website the recording is very long (around 30min)
+
+redownloaded_files.csv
+
+Reply
+
+React
+Mxdy21
+Posted a month ago
+
+Hi, Did you update the dataset ?
+
+
+Reply
+
+React
+Jack
+Posted 22 days ago
+
+· 134th in this Competition
+
+Care to share the code you used for redownloading these?
+
+
+Reply
+
+React
+Antoine Masq
+Topic Author
+Posted 22 days ago
+
+· 108th in this Competition
+
+Hi, it can be done by simply using a get request on the url in the table. Basically I re-download everything that is less than a second.
+
+
+Reply
+
+React
+Jack
+Posted 22 days ago
+
+· 134th in this Competition
+
+Did you do anything to avoid rate limits? 2. Did you convert to .ogg?
+
+Reply
+
+React
+Antoine Masq
+Topic Author
+Posted 21 days ago
+
+· 108th in this Competition
+
+Yes, I resample them at 32khz and convert them to .ogg
+
+def process(idx): filename = df.loc[idx, 'filename'] wav, sr = torchaudio.load(PATH+'train_audio/'+filename) Hash = torch.hash_tensor(wav).numpy() original_length = len(wav[0]) status = 'OK'
+
+target_sr = 32000
+if wav.size(1) < target_sr * 2:  
+    try:
+        r = requests.get(df.loc[idx, 'url'])
+        wav, sr = torchaudio.load(r.content)
+        wav = torchaudio.functional.resample(wav, orig_freq=sr, new_freq=target_sr)
+        wav = wav.mean(dim=0, keepdim=True)
+        print(original_length/target_sr, ' -> ', wav.size(1)/target_sr)
+    except:
+        status = 'FAIL'
+Hash = torch.hash_tensor(wav).numpy()
+torchaudio.save(PATH+'clean_audio/'+filename, src=wav, sample_rate=target_sr)
+
+return idx, len(wav[0]), original_length, Hash, status
+
+Reply
+
+1
+Ali Ozan Memetoglu
+Posted 8 days ago
+
+· 14th in this Competition
+
+It seems like a fun activity to listen to some bird sounds and two frogs :)
+
+
+Reply
+
+React
+Antoine Masq
+Topic Author
+Posted 3 days ago
+
+· 108th in this Competition
+
+Well, it is :) but not only that, there are hundreds of files that are affected and sometimes for taxa that do not have a lot of labeled data, so getting those files right is actually important
+
+
+Reply
+
+React
+Mxdy21
+Posted 3 days ago
+
+I think @antoinemasq shared a clean version or file listing the missing audios. Don't forget guys Clean Data is All You Need
+
+
+Reply
+
+React
+
+Hide replies

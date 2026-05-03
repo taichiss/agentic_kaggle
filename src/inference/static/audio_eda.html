@@ -1,0 +1,1072 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BirdCLEF Audio EDA</title>
+  <style>
+    :root {
+      --bg: #f4efe4;
+      --panel: rgba(255, 252, 245, 0.92);
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --line: rgba(71, 85, 105, 0.18);
+      --accent: #0f766e;
+      --accent-soft: rgba(15, 118, 110, 0.12);
+      --warm: #b45309;
+      --danger: #be123c;
+      --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(180, 83, 9, 0.15), transparent 28%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.16), transparent 24%),
+        linear-gradient(180deg, #f8f4ea 0%, #efe8d7 100%);
+    }
+
+    .shell {
+      max-width: 1680px;
+      margin: 0 auto;
+      padding: 28px 20px 36px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .hero-card,
+    .panel,
+    .section-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .hero-card {
+      padding: 22px 24px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(30px, 4vw, 46px);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .stat {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.44));
+      border: 1px solid rgba(255, 255, 255, 0.7);
+    }
+
+    .stat-label {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-value {
+      display: block;
+      margin-top: 8px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 18px 20px 0;
+    }
+
+    .panel-body {
+      padding: 18px 20px 20px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .toolbar-row {
+      display: grid;
+      grid-template-columns: 1.4fr 0.7fr 0.45fr auto auto;
+      gap: 10px;
+    }
+
+    .segment-row {
+      display: grid;
+      grid-template-columns: 0.8fr 0.8fr auto auto;
+      gap: 10px;
+    }
+
+    .context-row {
+      display: grid;
+      grid-template-columns: 0.7fr auto auto auto auto;
+      gap: 10px;
+    }
+
+    input,
+    select,
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 96px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      background: #0f766e;
+      color: white;
+      transition: transform 120ms ease, opacity 120ms ease;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid rgba(15, 23, 42, 0.12);
+    }
+
+    button.warn {
+      background: #b45309;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+
+    .result-list {
+      display: grid;
+      gap: 10px;
+      max-height: calc(100vh - 330px);
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .result-item {
+      text-align: left;
+      background: rgba(255, 255, 255, 0.84);
+      color: var(--ink);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      padding: 14px 14px 12px;
+      border-radius: 14px;
+    }
+
+    .result-item.active {
+      border-color: rgba(15, 118, 110, 0.5);
+      background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(255, 255, 255, 0.88));
+    }
+
+    .result-title {
+      display: block;
+      font-weight: 700;
+      line-height: 1.35;
+      margin-bottom: 6px;
+    }
+
+    .chips,
+    .window-list,
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 13px;
+      border: 1px solid rgba(15, 118, 110, 0.16);
+    }
+
+    .chip.warm {
+      background: rgba(180, 83, 9, 0.1);
+      color: var(--warm);
+      border-color: rgba(180, 83, 9, 0.14);
+    }
+
+    .chip.danger {
+      background: rgba(190, 18, 60, 0.08);
+      color: var(--danger);
+      border-color: rgba(190, 18, 60, 0.12);
+    }
+
+    .detail-grid,
+    .section-grid,
+    .viewer {
+      display: grid;
+      gap: 16px;
+    }
+
+    .meta-grid,
+    .analysis-grid,
+    .species-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .meta-card,
+    .analysis-card,
+    .species-card,
+    .annotation-card {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .meta-card strong,
+    .analysis-card strong,
+    .species-card strong {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .art {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .window-button {
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--ink);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      padding: 10px 12px;
+      border-radius: 12px;
+      text-align: left;
+    }
+
+    .window-button.active {
+      border-color: rgba(15, 118, 110, 0.45);
+      background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(255, 255, 255, 0.95));
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .empty {
+      padding: 18px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.65);
+      color: var(--muted);
+      border: 1px dashed rgba(15, 23, 42, 0.15);
+    }
+
+    .section-card {
+      padding: 16px 18px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) 42px;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(15, 118, 110, 0.85), rgba(180, 83, 9, 0.85));
+    }
+
+    .annotation-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .annotation-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .annotation-note {
+      white-space: pre-wrap;
+      line-height: 1.55;
+    }
+
+    .split-note {
+      display: grid;
+      gap: 8px;
+    }
+
+    .status-text {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 980px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar-row,
+      .segment-row,
+      .context-row {
+        grid-template-columns: 1fr;
+      }
+
+      .result-list {
+        max-height: 420px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <article class="hero-card">
+        <h1>BirdCLEF Audio EDA</h1>
+        <p class="lead">
+          `train_audio` と soundscape を横断して、再生・波形・スペクトログラム・周波数傾向・窓ラベル・簡易メモを一気に見るためのローカルツールです。
+          soundscape は 5 秒窓に前後コンテキストを付けて連続チェックできます。
+        </p>
+        <div class="stats" id="stats"></div>
+      </article>
+    </section>
+
+    <section class="workspace">
+      <article class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">検索</h2>
+          <p class="subtle">ラベル名、分類コード、英名、site、ファイル名で絞れます。</p>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar">
+            <div class="toolbar-row">
+              <input id="query" type="search" placeholder="例: ashgre1, Pointedbelly, S22, XC799754">
+              <select id="dataset">
+                <option value="all">all datasets</option>
+                <option value="train_audio">train_audio</option>
+                <option value="train_soundscapes">train_soundscapes</option>
+                <option value="test_soundscapes">test_soundscapes</option>
+              </select>
+              <input id="limit" type="number" min="10" max="200" value="50">
+              <button id="search-button">検索</button>
+              <button id="reset-button" class="secondary">リセット</button>
+            </div>
+          </div>
+          <p class="subtle" id="result-count">読み込み中...</p>
+          <div id="result-list" class="result-list"></div>
+          <div class="pagination">
+            <button id="prev-button" class="secondary">前へ</button>
+            <span class="subtle" id="page-status"></span>
+            <button id="next-button" class="secondary">次へ</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title" id="detail-title">録音を選択してください</h2>
+          <p class="subtle" id="detail-subtitle">右側にメタデータ、再生、可視化、集計、メモが出ます。</p>
+        </div>
+        <div class="panel-body detail-grid" id="detail-body">
+          <div class="empty">左の一覧から録音を選ぶと、ここに詳細が表示されます。</div>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      items: [],
+      selectedId: null,
+      offset: 0,
+      total: 0,
+      limit: 50,
+      currentDetail: null,
+      activeWindowIndex: null,
+      mediaRequestSeq: 0,
+    };
+
+    const statsEl = document.getElementById("stats");
+    const resultListEl = document.getElementById("result-list");
+    const resultCountEl = document.getElementById("result-count");
+    const pageStatusEl = document.getElementById("page-status");
+    const detailTitleEl = document.getElementById("detail-title");
+    const detailSubtitleEl = document.getElementById("detail-subtitle");
+    const detailBodyEl = document.getElementById("detail-body");
+    const queryEl = document.getElementById("query");
+    const datasetEl = document.getElementById("dataset");
+    const limitEl = document.getElementById("limit");
+
+    document.getElementById("search-button").addEventListener("click", () => search(0));
+    document.getElementById("reset-button").addEventListener("click", () => {
+      queryEl.value = "";
+      datasetEl.value = "all";
+      limitEl.value = "50";
+      search(0);
+    });
+    document.getElementById("prev-button").addEventListener("click", () => {
+      if (state.offset > 0) {
+        search(Math.max(0, state.offset - state.limit));
+      }
+    });
+    document.getElementById("next-button").addEventListener("click", () => {
+      if (state.offset + state.limit < state.total) {
+        search(state.offset + state.limit);
+      }
+    });
+    queryEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        search(0);
+      }
+    });
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      return response.json();
+    }
+
+    async function postJson(url, payload) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      return response.json();
+    }
+
+    async function loadSummary() {
+      const summary = await fetchJson("/api/summary");
+      const stats = [
+        ["recordings", summary.recordings],
+        ["train_audio", summary.datasets.train_audio || 0],
+        ["train_soundscapes", summary.datasets.train_soundscapes || 0],
+        ["labeled files", summary.labeled_soundscape_files || 0],
+        ["test_soundscapes", summary.datasets.test_soundscapes || 0],
+        ["soundscape windows", summary.soundscape_windows],
+        ["active labels", summary.soundscape_active_labels],
+      ];
+      statsEl.innerHTML = stats.map(([label, value]) => `
+        <div class="stat">
+          <span class="stat-label">${label}</span>
+          <span class="stat-value">${value}</span>
+        </div>
+      `).join("");
+    }
+
+    async function search(offset) {
+      state.limit = Math.max(10, Math.min(200, Number(limitEl.value || 50)));
+      state.offset = offset;
+      const params = new URLSearchParams({
+        query: queryEl.value.trim(),
+        dataset: datasetEl.value,
+        limit: String(state.limit),
+        offset: String(state.offset),
+      });
+      const payload = await fetchJson(`/api/recordings?${params.toString()}`);
+      state.items = payload.items;
+      state.total = payload.total;
+      renderResults();
+      if (!state.selectedId && state.items.length > 0) {
+        await selectRecording(state.items[0].recording_id);
+      } else if (state.selectedId && !state.items.some((item) => item.recording_id === state.selectedId)) {
+        state.selectedId = null;
+        if (state.items.length > 0) {
+          await selectRecording(state.items[0].recording_id);
+        } else {
+          clearDetail();
+        }
+      }
+    }
+
+    function renderResults() {
+      const from = state.total === 0 ? 0 : state.offset + 1;
+      const to = Math.min(state.offset + state.limit, state.total);
+      resultCountEl.textContent = `${state.total.toLocaleString()} 件ヒット / ${from} - ${to} 件を表示`;
+      pageStatusEl.textContent = `${Math.floor(state.offset / state.limit) + 1} / ${Math.max(1, Math.ceil(state.total / state.limit))}`;
+      if (state.items.length === 0) {
+        resultListEl.innerHTML = '<div class="empty">該当データがありません。</div>';
+        clearDetail();
+        return;
+      }
+      resultListEl.innerHTML = state.items.map((item) => {
+        const chips = [
+          item.dataset,
+          item.primary_label,
+          item.common_name,
+          item.site,
+          item.window_count ? `${item.window_count} windows` : null,
+        ]
+          .filter(Boolean)
+          .map((chip) => `<span class="chip">${escapeHtml(String(chip))}</span>`)
+          .join("");
+        return `
+          <button class="result-item ${item.recording_id === state.selectedId ? "active" : ""}" data-recording-id="${item.recording_id}">
+            <span class="result-title">${escapeHtml(item.title)}</span>
+            <div class="subtle">${escapeHtml(item.filename)}</div>
+            <div class="chips" style="margin-top: 10px;">${chips}</div>
+          </button>
+        `;
+      }).join("");
+      resultListEl.querySelectorAll("[data-recording-id]").forEach((button) => {
+        button.addEventListener("click", async () => selectRecording(button.dataset.recordingId));
+      });
+    }
+
+    async function selectRecording(recordingId) {
+      state.selectedId = recordingId;
+      renderResults();
+      const detail = await fetchJson(`/api/recordings/${recordingId}`);
+      state.currentDetail = detail;
+      state.activeWindowIndex = detail.soundscape_windows?.length ? 0 : null;
+      renderDetail(detail);
+      await Promise.all([
+        refreshSpeciesPanel(),
+        loadAnnotations(detail.recording_id),
+        refreshMedia(detail.recording_id),
+      ]);
+    }
+
+    function clearDetail() {
+      state.currentDetail = null;
+      state.activeWindowIndex = null;
+      detailTitleEl.textContent = "録音を選択してください";
+      detailSubtitleEl.textContent = "右側にメタデータ、再生、可視化、集計、メモが出ます。";
+      detailBodyEl.innerHTML = '<div class="empty">左の一覧から録音を選ぶと、ここに詳細が表示されます。</div>';
+    }
+
+    function renderDetail(detail) {
+      detailTitleEl.textContent = detail.title;
+      detailSubtitleEl.textContent = detail.relative_path;
+      const metaCards = [
+        ["dataset", detail.dataset],
+        ["label", detail.primary_label || "-"],
+        ["common", detail.common_name || "-"],
+        ["scientific", detail.scientific_name || "-"],
+        ["class", detail.class_name || "-"],
+        ["collection", detail.collection || "-"],
+        ["author", detail.author || "-"],
+        ["license", detail.license_name || "-"],
+        ["rating", detail.rating ?? "-"],
+        ["site", detail.site || "-"],
+        ["duration", `${detail.audio_info.duration_sec.toFixed(2)} sec`],
+        ["sample rate", `${detail.audio_info.sample_rate} Hz / ${detail.audio_info.channels} ch`],
+      ].map(([label, value]) => `
+        <div class="meta-card">
+          <strong>${escapeHtml(label)}</strong>
+          <span>${escapeHtml(String(value))}</span>
+        </div>
+      `).join("");
+
+      const extraChips = [
+        ...(detail.secondary_labels || []).map((label) => `<span class="chip">${escapeHtml(label)}</span>`),
+        ...(detail.tags || []).map((tag) => `<span class="chip warm">${escapeHtml(tag)}</span>`),
+      ].join("");
+
+      const windowButtons = (detail.soundscape_windows || []).map((window, index) => `
+        <button class="window-button ${index === state.activeWindowIndex ? "active" : ""}" data-window-index="${index}">
+          <strong>${formatSeconds(window.start_sec)} - ${formatSeconds(window.end_sec)}</strong><br>
+          <span class="subtle">${escapeHtml(window.label_display.join(", "))}</span>
+        </button>
+      `).join("");
+
+      detailBodyEl.innerHTML = `
+        <section class="viewer">
+          <div class="meta-grid">${metaCards}</div>
+          ${extraChips ? `<div class="chips">${extraChips}</div>` : ""}
+          <div class="section-card section-grid">
+            <h3>Segment Controls</h3>
+            <div class="segment-row">
+              <input id="segment-start" type="number" min="0" step="0.5" value="${detail.default_start_sec}">
+              <input id="segment-duration" type="number" min="0.5" step="0.5" value="${detail.default_duration_sec}">
+              <button id="load-segment-button">区間を読む</button>
+              <button id="load-full-button" class="secondary">全体</button>
+            </div>
+            ${detail.soundscape_windows?.length ? `
+              <div class="section-grid">
+                <div class="context-row">
+                  <input id="window-context" type="number" min="0" step="0.5" value="3">
+                  <button id="window-prev-button" class="secondary">前の窓</button>
+                  <button id="window-context-button">前後コンテキスト</button>
+                  <button id="window-only-button" class="secondary">窓だけ</button>
+                  <button id="window-next-button" class="secondary">次の窓</button>
+                </div>
+                <div class="status-text" id="window-focus-status"></div>
+                <div class="window-list" id="window-list">${windowButtons}</div>
+              </div>
+            ` : ""}
+          </div>
+
+          <audio id="audio-player" controls preload="none" style="width: 100%;"></audio>
+
+          <div class="media-grid">
+            <div>
+              <p class="subtle">Waveform</p>
+              <img id="waveform-image" class="art" alt="waveform">
+            </div>
+            <div>
+              <p class="subtle">Spectrogram</p>
+              <img id="spectrogram-image" class="art" alt="spectrogram">
+            </div>
+            <div>
+              <p class="subtle">Frequency Profile</p>
+              <img id="frequency-profile-image" class="art" alt="frequency profile">
+            </div>
+          </div>
+
+          <div class="section-card section-grid">
+            <h3>Spectrum Analysis</h3>
+            <div id="analysis-tags" class="tag-list"></div>
+            <div id="analysis-grid" class="analysis-grid"></div>
+            <div id="band-energy-panel"></div>
+          </div>
+
+          <div class="section-card section-grid">
+            <h3>Species Panel</h3>
+            <p class="subtle">現在注目している species の出現回数と train_audio の rating 分布を表示します。</p>
+            <div id="species-panel"></div>
+          </div>
+
+          <div class="section-card section-grid">
+            <h3>Annotation</h3>
+            <div class="status-text" id="annotation-context"></div>
+            <div class="split-note">
+              <select id="annotation-category">
+                <option value="false_positive">false_positive</option>
+                <option value="false_negative">false_negative</option>
+                <option value="boundary">boundary</option>
+                <option value="noise">noise</option>
+                <option value="other">other</option>
+              </select>
+              <textarea id="annotation-note" placeholder="誤検知の理由、紛らわしい帯域、ラベル境界の違和感などを書いてください"></textarea>
+              <div class="toolbar-row" style="grid-template-columns: 1fr auto;">
+                <div id="annotation-labels" class="chips"></div>
+                <button id="annotation-save-button" class="warn">メモ保存</button>
+              </div>
+              <div id="annotation-status" class="status-text"></div>
+            </div>
+            <div id="annotation-list" class="annotation-list"></div>
+          </div>
+        </section>
+      `;
+
+      document.getElementById("load-segment-button").addEventListener("click", async () => {
+        await refreshMedia(detail.recording_id);
+      });
+      document.getElementById("load-full-button").addEventListener("click", async () => {
+        document.getElementById("segment-start").value = "0";
+        document.getElementById("segment-duration").value = "";
+        await refreshMedia(detail.recording_id);
+      });
+
+      if (detail.soundscape_windows?.length) {
+        bindWindowControls(detail);
+      }
+      bindAnnotationControls(detail);
+      syncWindowSelection();
+      updateAnnotationContext();
+    }
+
+    function bindWindowControls(detail) {
+      detailBodyEl.querySelectorAll("[data-window-index]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          state.activeWindowIndex = Number(button.dataset.windowIndex);
+          syncWindowSelection();
+          await applyCurrentWindow(true);
+        });
+      });
+      document.getElementById("window-prev-button").addEventListener("click", async () => {
+        if (state.activeWindowIndex === null || state.activeWindowIndex <= 0) {
+          return;
+        }
+        state.activeWindowIndex -= 1;
+        syncWindowSelection();
+        await applyCurrentWindow(true);
+      });
+      document.getElementById("window-next-button").addEventListener("click", async () => {
+        if (state.activeWindowIndex === null || state.activeWindowIndex >= detail.soundscape_windows.length - 1) {
+          return;
+        }
+        state.activeWindowIndex += 1;
+        syncWindowSelection();
+        await applyCurrentWindow(true);
+      });
+      document.getElementById("window-context-button").addEventListener("click", async () => {
+        await applyCurrentWindow(true);
+      });
+      document.getElementById("window-only-button").addEventListener("click", async () => {
+        await applyCurrentWindow(false);
+      });
+      document.getElementById("window-context").addEventListener("change", async () => {
+        await applyCurrentWindow(true);
+      });
+    }
+
+    function bindAnnotationControls(detail) {
+      document.getElementById("annotation-save-button").addEventListener("click", async () => {
+        const note = document.getElementById("annotation-note").value.trim();
+        const labels = currentFocusLabels();
+        const statusEl = document.getElementById("annotation-status");
+        if (note === "") {
+          statusEl.textContent = "メモ本文が空です。";
+          return;
+        }
+        try {
+          await postJson("/api/annotations", {
+            recording_id: detail.recording_id,
+            start_sec: Number(document.getElementById("segment-start").value || "0"),
+            duration_sec: Number(document.getElementById("segment-duration").value || "0"),
+            category: document.getElementById("annotation-category").value,
+            labels,
+            note,
+          });
+          document.getElementById("annotation-note").value = "";
+          statusEl.textContent = "保存しました。";
+          await loadAnnotations(detail.recording_id);
+        } catch (error) {
+          statusEl.textContent = error.message;
+        }
+      });
+    }
+
+    async function applyCurrentWindow(withContext) {
+      const detail = state.currentDetail;
+      if (!detail || state.activeWindowIndex === null) {
+        return;
+      }
+      const window = detail.soundscape_windows[state.activeWindowIndex];
+      const contextSec = Number(document.getElementById("window-context").value || "0");
+      const baseDuration = window.end_sec - window.start_sec;
+      const start = withContext ? Math.max(0, window.start_sec - contextSec) : window.start_sec;
+      const duration = withContext ? baseDuration + contextSec * 2.0 : baseDuration;
+      document.getElementById("segment-start").value = String(Number(start.toFixed(2)));
+      document.getElementById("segment-duration").value = String(Number(duration.toFixed(2)));
+      updateAnnotationContext();
+      await Promise.all([
+        refreshSpeciesPanel(),
+        refreshMedia(detail.recording_id),
+      ]);
+    }
+
+    function syncWindowSelection() {
+      const detail = state.currentDetail;
+      const statusEl = document.getElementById("window-focus-status");
+      detailBodyEl.querySelectorAll("[data-window-index]").forEach((button) => {
+        const isActive = Number(button.dataset.windowIndex) === state.activeWindowIndex;
+        button.classList.toggle("active", isActive);
+      });
+      if (!detail?.soundscape_windows?.length || state.activeWindowIndex === null || !statusEl) {
+        return;
+      }
+      const window = detail.soundscape_windows[state.activeWindowIndex];
+      statusEl.textContent = `focus: ${formatSeconds(window.start_sec)} - ${formatSeconds(window.end_sec)} | ${window.label_display.join(", ")}`;
+      updateAnnotationContext();
+    }
+
+    async function refreshMedia(recordingId) {
+      const start = Number(document.getElementById("segment-start").value || "0");
+      const durationText = document.getElementById("segment-duration").value.trim();
+      const params = new URLSearchParams({ start_sec: String(start) });
+      if (durationText !== "") {
+        params.set("duration_sec", durationText);
+      }
+
+      document.getElementById("audio-player").src = `/audio/${recordingId}.wav?${params.toString()}`;
+      document.getElementById("waveform-image").src = `/api/waveform/${recordingId}.svg?${params.toString()}`;
+      document.getElementById("spectrogram-image").src = `/api/spectrogram/${recordingId}.png?${params.toString()}`;
+      document.getElementById("frequency-profile-image").src = `/api/frequency-profile/${recordingId}.svg?${params.toString()}`;
+
+      const requestSeq = ++state.mediaRequestSeq;
+      try {
+        const analysis = await fetchJson(`/api/spectrum-analysis/${recordingId}?${params.toString()}`);
+        if (requestSeq !== state.mediaRequestSeq) {
+          return;
+        }
+        renderSpectrumAnalysis(analysis);
+      } catch (error) {
+        renderSpectrumError(error.message);
+      }
+      updateAnnotationContext();
+    }
+
+    function renderSpectrumAnalysis(analysis) {
+      const metrics = [
+        ["RMS", `${analysis.rms_db.toFixed(1)} dB`],
+        ["Peak", `${analysis.peak_db.toFixed(1)} dB`],
+        ["Centroid", `${analysis.spectral_centroid_hz.toFixed(0)} Hz`],
+        ["Rolloff85", `${analysis.rolloff_85_hz.toFixed(0)} Hz`],
+        ["Bandwidth", `${analysis.bandwidth_hz.toFixed(0)} Hz`],
+        ["Dominant", `${analysis.dominant_frequency_hz.toFixed(0)} Hz`],
+        ["Flatness", analysis.spectral_flatness.toFixed(3)],
+        ["ZCR", analysis.zero_crossing_rate.toFixed(3)],
+      ];
+      document.getElementById("analysis-grid").innerHTML = metrics.map(([label, value]) => `
+        <div class="analysis-card">
+          <strong>${escapeHtml(label)}</strong>
+          <span>${escapeHtml(value)}</span>
+        </div>
+      `).join("");
+      document.getElementById("analysis-tags").innerHTML = (analysis.tendency_tags || [])
+        .map((tag) => `<span class="chip warm">${escapeHtml(tag)}</span>`)
+        .join("");
+
+      const bandShares = analysis.band_energy_share || [];
+      document.getElementById("band-energy-panel").innerHTML = bandShares.map((band) => `
+        <div class="bar-row">
+          <span>${escapeHtml(band.label)}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${(band.share * 100).toFixed(1)}%"></div></div>
+          <span>${(band.share * 100).toFixed(1)}%</span>
+        </div>
+      `).join("");
+    }
+
+    function renderSpectrumError(message) {
+      document.getElementById("analysis-grid").innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
+      document.getElementById("analysis-tags").innerHTML = "";
+      document.getElementById("band-energy-panel").innerHTML = "";
+    }
+
+    async function refreshSpeciesPanel() {
+      const speciesPanel = document.getElementById("species-panel");
+      const labels = currentFocusLabels();
+      if (!speciesPanel) {
+        return;
+      }
+      if (!labels.length) {
+        speciesPanel.innerHTML = '<div class="empty">現在の録音/窓に紐づく species ラベルがありません。</div>';
+        updateAnnotationContext();
+        return;
+      }
+      const params = new URLSearchParams({ labels: labels.join(",") });
+      const payload = await fetchJson(`/api/species?${params.toString()}`);
+      const items = payload.items || [];
+      if (!items.length) {
+        speciesPanel.innerHTML = '<div class="empty">species 集計が見つかりませんでした。</div>';
+        return;
+      }
+      speciesPanel.innerHTML = `
+        <div class="species-grid">
+          ${items.map((item) => `
+            <div class="species-card">
+              <strong>${escapeHtml(item.primary_label)}</strong>
+              <div>${escapeHtml(item.common_name || "-")}</div>
+              <div class="subtle">${escapeHtml(item.scientific_name || "-")}</div>
+              <div class="bar-row"><span>train</span><div class="bar-track"><div class="bar-fill" style="width:${scaleCount(item.train_audio_recordings, items, "train_audio_recordings")}"></div></div><span>${item.train_audio_recordings}</span></div>
+              <div class="bar-row"><span>windows</span><div class="bar-track"><div class="bar-fill" style="width:${scaleCount(item.soundscape_window_count, items, "soundscape_window_count")}"></div></div><span>${item.soundscape_window_count}</span></div>
+              <div class="bar-row"><span>files</span><div class="bar-track"><div class="bar-fill" style="width:${scaleCount(item.soundscape_file_count, items, "soundscape_file_count")}"></div></div><span>${item.soundscape_file_count}</span></div>
+              <div class="subtle" style="margin-top:10px;">rating mean: ${item.rating_summary.mean === null ? "-" : item.rating_summary.mean.toFixed(2)} / count: ${item.rating_summary.count}</div>
+              ${renderRatingHistogram(item.rating_histogram || [])}
+            </div>
+          `).join("")}
+        </div>
+      `;
+      updateAnnotationContext();
+    }
+
+    function renderRatingHistogram(histogram) {
+      const max = Math.max(1, ...histogram.map((item) => item.count));
+      return histogram.map((item) => `
+        <div class="bar-row">
+          <span>${escapeHtml(item.label)}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${(item.count / max) * 100}%"></div></div>
+          <span>${item.count}</span>
+        </div>
+      `).join("");
+    }
+
+    function scaleCount(value, items, field) {
+      const max = Math.max(1, ...items.map((item) => Number(item[field] || 0)));
+      return `${(Number(value || 0) / max) * 100}%`;
+    }
+
+    async function loadAnnotations(recordingId) {
+      const payload = await fetchJson(`/api/annotations?recording_id=${encodeURIComponent(recordingId)}`);
+      const listEl = document.getElementById("annotation-list");
+      if (!listEl) {
+        return;
+      }
+      const items = payload.items || [];
+      if (!items.length) {
+        listEl.innerHTML = '<div class="empty">まだメモはありません。</div>';
+        return;
+      }
+      listEl.innerHTML = items.map((item) => `
+        <div class="annotation-card">
+          <div class="annotation-head">
+            <div class="chips">
+              <span class="chip danger">${escapeHtml(item.category)}</span>
+              <span class="chip">${formatSeconds(item.start_sec)} - ${formatSeconds(item.start_sec + item.duration_sec)}</span>
+            </div>
+            <span class="subtle">${escapeHtml(item.created_at)}</span>
+          </div>
+          <div class="chips" style="margin-bottom:8px;">
+            ${(item.labels || []).map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join("")}
+          </div>
+          <div class="annotation-note">${escapeHtml(item.note)}</div>
+        </div>
+      `).join("");
+    }
+
+    function currentFocusLabels() {
+      const detail = state.currentDetail;
+      if (!detail) {
+        return [];
+      }
+      if (detail.primary_label) {
+        return [detail.primary_label];
+      }
+      if (detail.soundscape_windows?.length && state.activeWindowIndex !== null) {
+        return detail.soundscape_windows[state.activeWindowIndex].labels || [];
+      }
+      return [];
+    }
+
+    function updateAnnotationContext() {
+      const detail = state.currentDetail;
+      const contextEl = document.getElementById("annotation-context");
+      const labelsEl = document.getElementById("annotation-labels");
+      if (!contextEl || !labelsEl || !detail) {
+        return;
+      }
+      const start = Number(document.getElementById("segment-start")?.value || "0");
+      const duration = Number(document.getElementById("segment-duration")?.value || "0");
+      const labels = currentFocusLabels();
+      contextEl.textContent = `segment: ${formatSeconds(start)} - ${formatSeconds(start + duration)} | recording: ${detail.filename}`;
+      labelsEl.innerHTML = labels.length
+        ? labels.map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join("")
+        : '<span class="chip warm">labels unavailable</span>';
+    }
+
+    function formatSeconds(seconds) {
+      const value = Number(seconds);
+      const minutes = Math.floor(value / 60);
+      const remain = value % 60;
+      return `${String(minutes).padStart(2, "0")}:${remain.toFixed(1).padStart(4, "0")}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    Promise.all([loadSummary(), search(0)]).catch((error) => {
+      resultListEl.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+      resultCountEl.textContent = "読み込みに失敗しました";
+    });
+  </script>
+</body>
+</html>

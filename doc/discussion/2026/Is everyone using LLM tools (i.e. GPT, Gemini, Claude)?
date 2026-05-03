@@ -1,0 +1,1086 @@
+Is everyone using LLM tools (i.e. GPT, Gemini, Claude)?
+I notice (based on LB names) that everyone is using LLM coding tools. Is there anyone in the top 10 that is writing all the code by themselves? Have we entered a phase in time where we must use LLM tools to achieve top 10 LB results?? (i.e. ask LLM read past BirdCLEF solutions and use these to write a new BirdCLEF solution).
+
+Please comment about writing code yourself versus using LLM coding tools.
+
+UPDATE: LLMs wrote 100% of my solution code in recent 1st place Kaggle Playground predict Churn competition. Read solution writeup here
+
+
+React
+82 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+Kiran Pal
+Posted 17 days ago
+
+· 2541st in this Competition
+
+I am not in top of leaderboard, but I won't deny that I was using LLM to write code at first but they are like not giving me what I wanted them to do (may be because of my poor prompting skills). And now I have shifted to documentations. But I also want an medal in these competitions. Can someone suggest me on how I should go next as I have knowledge about the models and their working on a intermediate level and still learning.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted 17 days ago
+
+Hi @kiranpal18 The easiest way to get good results from LLMs is to begin with a full code example. So, show an LLM some working code either from this competition's public sharing or an old competition's public sharing.
+
+Next if you are learning, ask the LLM to explain the code to you. You can use this new understanding to play with the code yourself a little. i.e. after understanding the purpose of hyperparameters or features, you can try tuning/changing some (and watching the result on cv score).
+
+Lastly, you can ask the LLM to improve the code. You can suggest a new idea that you know or that you have read about in the forums or research paper. Or you can just ask LLM to suggest a possible improvement. During the whole process, ask the LLM to explain what and why it is doing.
+
+Run the new code and see if it achieves a better local CV score. Repeat the above process over and over.
+
+
+Reply
+
+React
+Mike Kim
+Posted 21 days ago
+
+· 16th in this Competition
+
+I won't deny the reality of the people here. However, I just find it hard to imagine this kind of NO_HAND_CODE situation for an entire contest as myself - that is for me personally. Because if I just want to change one or two lines, why burn the tokens and pay 50 cents to do so? Or if I have to re-arrange some new training data files, why not write some code by hand and then give the LLM/agent a template? Or if I'm doing EDA why not explore the data by hand in an interactive session? I'm not saying any of you are wrong. If the LLM made a typo and it got through the syntax checker, why not change it while I'm reading the code. I am saying it (pure LLM code) still seems so foreign to me. And yes I've written by hand frameworks for agents to go to work without any human interaction. And I love to run these overnight or over a weekend. But all of these things involve some amount of human coding. And they don't win entire contests alone but do very specific things.
+
+
+Reply
+
+React
+Cody_Null
+Posted 21 days ago
+
+I feel similarly, I can imagine a world where pure LLM could beat even experienced modelers but I have a really tough time imagining a pure LLM beating an experienced modeler + LLM. Then from the business case it makes even less sense. I’ve worked at places scared of using anything less explainable than linear regressions or model by polynomial fit and an occasional gradient boosted trees because of “risk of the unknown” but now all the sudden all our jobs are at risk in the near future? I’m not convinced yet.
+
+
+Reply
+
+1
+Chris Deotte
+Topic Author
+Posted a month ago
+
+UPDATE: LLMs wrote 100% of my solution code in recent 1st place Kaggle Playground predict Churn competition. Read solution writeup here
+
+
+Reply
+
+React
+DaylightH
+Posted a month ago
+
+· 52nd in this Competition
+
+Great work! Thx for sharing. From this we can see that as long as there are enough historical records (past solutions/discussions), LLMs can better extract information and write code. I think the two newly launched ARC competitions(ARC2 and ARC3)can also benefit from this approach.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted 21 days ago
+
+Yes, historical data helps if we want to remove "human from the loop". However with good human guidance, LLMs can achieve Gold. My solution in Mouse competition was written 99% by LLM with human guidance here. I told it what experiments to try, and LLMs wrote the code.
+
+The question is, "When can LLMs achieve Gold with no historical data and minimal to NO "human in the loop"?"
+
+
+Reply
+
+React
+Jiwei Liu
+Posted a month ago
+
+· 41st in this Competition
+
+joke
+
+
+Reply
+
+19
+Chris Deotte
+Topic Author
+Posted a month ago
+
+UPDATE Mar 28 2026:
+
+It looks like using coding tools are helping because in the top 12 gold positions, I see 8 Kagglers who just joined Kaggle in the past week (and have never participated in any Kaggle competitions yet). So it appears that using AI is helping beginners jump into Gold zone! It will be interesting to see if they maintain gold zone through the competition and into the private LB.
+
+
+
+
+Reply
+
+React
+Tucker Arrants
+Posted a month ago
+
+· 185th in this Competition
+
+This competition seems to be an excellent case study - lots of detailed write ups from previous years for the LLMs to peruse and synthesize
+
+
+Reply
+
+React
+JeffFosterUK
+Posted a month ago
+
+· 1308th in this Competition
+
+
+
+It really looks like multi-accounting.
+
+
+Reply
+
+React
+Jacques Zhelin Zhang
+Posted a month ago
+
+A lot of cool discussions! I also want to ask how y'all will use LLM tools/coding agents to do Kaggle comps? Like how is your workflow like? 🤔
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted 24 days ago
+
+Sometimes I chat and upload files to the web browser interfaces GPT, Gemini, Claude and ask it to write me code. And sometimes I used Claude Code on the command line to process lots of files at a time.
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+Many KaggLers like me have been using AI coders for quite some time. I recently tried to "code from scratch" for some experiments. I found that my code was full of bugs, and in machine learning, bugs mean that you still converge—but at a lower accuracy.
+
+It took me a longer time to analyze the loss curves, etc., to find the bug… which was simply that I had set the dropout rate too high (after wrong copy and paste).
+
+In the past, good ML engineers learned from mistakes by repeating experiments (especially by reproducing public notebooks and uncovering hidden magic parameters).
+
+AI agents for ML are a new tool … use them carefully and correctly. Focus on analyzing results too! Because you need to analyze better than the AI to guide it, and to do so, you need to experience mistakes.
+
+(There is a joke in Singapore: doctors are losing the skill to read MRIs after AI is used to read all medical images.)
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Focus on analyzing results too!
+
+This is a good suggestion. I have guided LLM tools to conduct their own EDA before writing code. This helps LLM tools write better code after seeing the plots and logs of their EDA.
+
+
+Reply
+
+React
+Geremie Yeo
+Posted a month ago
+
+LLMs are superior at writing POC code - which is really beneficial for one-off tasks like writing training scripts. However for inference I need to be very careful because in a previous comp I submitted a few timeouts from just copy-pasting agent written code (it seems to think the dummy test set is the real test set, but maybe my prompts is not good enough lol).
+
+Inference code still mostly tab-autocomplete for me and I use Claude Code to review, it doesn't take long since they are usually quite short.
+
+p.s. I build my agent from scratch to maximize learning and customizability
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Yes, LLM are very good at writing code for experiments. We can upload one code and says please update this code to add idea XYZ. Then we can run the new experiment.
+
+
+Reply
+
+React
+Ismail Kasozi
+Posted a month ago
+
+I've tried to stay away from using these tools since I'm still learning about machine learning in general, but after reading comments from the top participants in this discussion, I think I've been taking the wrong approach to this. Initially, I thought that it would be better to be strongly grounded in these disciplines (programming and machine learning) to better guide the model in these competitions.
+
+But these competitions are fast-paced, and you need to code up and run many experiments. Relying on entirely human code just slows you down. I'm going to try reading the past solutions and approaches in detail to get a general sense of what a good solution looks like, then just use a coding agent to iterate over multiple solutions and keep the best one.
+
+I think this is beneficial because it now frees up a lot of time to read the material deeply and appreciate the science behind it, so we can better guide these models.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted 23 days ago
+
+Hi @cosmicwitness , as a learner it is important to understand how everything works. One technique you can use together with LLM, is to ask LLM to help write you code, but then afterward ask LLM to explain why it chose what it did and ask it many more "why" questions to help learn.
+
+
+Reply
+
+1
+Mike Kim
+Posted a month ago
+
+· 16th in this Competition
+
+I have been interested in AutoML for over 10 years. The last time I saw AutoML live at Kaggle Days San Francisco the humans won. My attempts at AutoML via LLMs have at best achieved Bronze in the Code Golf competition. There I wrote the looping framework or "Agent" by hand. The LLM was gpt-oss:120b (Macbook local). I did only a handful (< 9) of golfing by hand. However, I believe the test suite and the initial solution set was written mostly by humans. The error rate of gpt-oss:120b was very high. I'd estimate only 10% of the solutions presented via LLM would pass all the tests. However, some people claim the paid solutions (GPT pro plan with latest codex) have superior performance. This is believable but it's hard to separate the top code golfer making the claim from their skills in code golf from the codex performance. Also their token burn was very high.
+
+Perhaps someone can tell me why the performance of this loop with Gemini Pro has been lackluster. I've used this general prompt for Kaggle autoML and the results are just okay at best. This is the prompt:
+
+**Use the best ideas from Python script 1 to improve Python script 2 with respect to X metric. You may only use imports and data that are within Python script 2. Make minimal changes to Python script 2 and keep all the paths the same as within the original Python script 2. You may use any of the algorithmic ideas present in Python script 1 to improve Python script 2 but focus on the most high impact idea. Return only the improved Python script 2.
+
+Python Script 1: #### (Typically a top 10 Kaggle solution from a prior year - I swap different ones in and out)
+Python Script 2: #### (Typically a gold or silver Kaggle public notebook from the current year - or the current best from LLM)**
+While this results in working code maybe 90% of the time on Gemini Pro, the actual public leaderboard and local CV have been disappointing. Sometimes I just replace the first script with Kaggle BBS high level ideas from the public forum Gold/Silver threads. But then often the code doesn't work at all or the LLM goes off the rails.
+
+My current rank and work on this project will be LLM based as an experiment. I can't guarantee no human code because I think that's misleading, but given the historical data available (past BirdClef competition scripts) it seems plausible to use only a LLM and loop the CV and prior best LLM script.
+
+
+Reply
+
+React
+Cody_Null
+Posted a month ago
+
+Hi Mike, I think for many in the competition the strategy has been primarily to use Claude code and provide a handful of top performances (or summaries) from previous years and ask to adapt it to this years competition noting a cv strategy that may be sound for this year such as using GroupKFold to split the 59 files in train_soundscapes into 5 folds grouping the 3rd segment of the filename to prevent soundscapes from the same location appearing in both train and validation sets. I know some also consider using the 35k train_audio in training for all folds.
+
+With this you can get a pretty solid baseline pretty quickly. I worry many may be tempted to do is do too much too soon with this for the quick reward. Implementing pretraining of previous years, optimized ensembles, and pseudo labels early on will raise score quickly, but potentially make it more difficult to quickly iterate through basic checks like TIMM backbone and augmentations. For that reason I am personally forcing myself to start slow and try things a little differently this competition. Others like @tom99763 have implemented a scheduled phased approach to combat this same idea. His original discussion has a ton of info/reports where he is transparent about what he has tried so far, you can find here: https://www.kaggle.com/competitions/birdclef-2026/discussion/681146
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Interesting @mikeskim I'm curious why this didn't work. In general this type of prompt seems to work for me.
+
+As a baseline, have you tried asking LLM "convert script 1 into a solution for my current comp" and comparing that to your prompt of using script 2 to improve script 1? That would indicate if it is combining them correctly.
+
+
+Reply
+
+React
+Mike Kim
+Posted a month ago
+
+· 16th in this Competition
+
+I haven't tried the inverse but I read the code and Gemini does integrate things from winning solutions. Whether these integrations are logically correct or follow data science principles (probably leaks right now) is not certain. What LLM are you using when this works for you?
+
+
+Reply
+
+React
+
+11 more replies
+Profile picture for Chris Deotte
+Profile picture for Mike Kim
+Tom
+Posted a month ago
+
+· 13th in this Competition
+
+From the beginning until now, I haven’t written a single line of code.
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+I really one to try one thing. Set a idea server. Kagglers keep submitting idea.md. Then one agent keep reading this and decide what to do … token/results can be shared for idea submitter. Top kaggle brains + 24 hr ai exeutor
+
+
+Reply
+
+3
+Tom
+Posted a month ago
+
+· 13th in this Competition
+
+Kaggle should do that. Announcing a competition and adding an additional button "submit idea.md". That's very cool.
+
+
+Reply
+
+React
+Quan Vu
+Posted a month ago
+
+· 1198th in this Competition
+
+I think there will be an issue here: This will inadvertently reduce the diversity of solutions. Only a few Agents play the role of implementing code. Meanwhile, if left to freedom, the hybridization between humans and agents would create many more combinations.
+
+
+Reply
+
+React
+Tom
+Posted a month ago
+
+· 13th in this Competition
+
+However, it’s still not as creative as a human, even after I’ve scraped hundreds of ideas from the internet. I came across @nikitababich’s approach from last year, which was incredibly impressive. I experimented with Claude again, but it still couldn’t extend the idea into something truly effective, whereas I was able to come up with an even stronger improvement almost instantly while taking a shower.
+
+
+Reply
+
+React
+Idrissa M Dicko
+Posted a month ago
+
+· 921st in this Competition
+
+@Tom I’ve seen Claude’s solution and thank you for sharing it, and I’m really impressed by its methodology. It made me want to try the same approach with Codex.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Congrats @tom99763 You are doing great keep up the good work!
+
+
+Reply
+
+React
+Tom
+Posted a month ago
+
+· 13th in this Competition
+
+I’d say those automatic agent tools are an excellent resource for teaching. I’ve used Claude to guide a friend who had no prior computer science background, walking him through not just how to use it, but why it produces certain results. Now he’s able to compete independently and has even reached a bronze level in tabular competitions. That’s honestly incredible.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Great point Tom. Personally, I just ask LLM to write code (without further explanation) because i know what to do but I don't want to spend time writing code. But Kagglers new to data science, can repeatedly ask LLM "Why?" while they are asking it to write code. For example, if LLM writes KFold validation, the user can ask "Why are you using KFold?". By repeatedly asking "Why?", they can both get work done and learn more about data science why.
+
+
+Reply
+
+3
+leo
+Posted 9 days ago
+
+· 144th in this Competition
+
+Human distilling LLM 🤯
+
+
+Reply
+
+React
+anushkrishnav
+Posted a month ago
+
+· 685th in this Competition
+
+I used github copilot cli a lot for EDA man it saved me a lot of time, I made a streamlit notebook , gave it acess to the deployed site with playwright mcp and made a lot of impact, it was nice to use.
+
+
+Reply
+
+React
+porply
+Posted a month ago
+
+· 795th in this Competition
+
+To be honest, I'm wondering how a novice can get started with data science competitions given the current context of having such a powerful large model. Eighty percent of the code is written by AI. What skills should we possess, and how should we acquire such skills
+
+
+Reply
+
+React
+dhyuk54
+Posted a month ago
+
+Honestly, I'd still say learning the basics of neural networks and NLP is a must. For EDA, just let AI agents handle it — saves a ton of time. The real question now is who can come up with a good idea. That's probably the hardest part. Oh, and knowing how to do EDA, pick the right model, and tune hyperparameters still matters a lot too.
+
+
+Reply
+
+React
+Fernandosr85
+Posted a month ago
+
+· 2017th in this Competition
+
+My impression is that LLMs have not ended competition; they have changed the nature of the advantage. In the past, the edge came more from who could write everything from scratch faster. Now, the edge increasingly comes from who can ask better questions, run better experiments, and filter what the LLM produces. In that sense, LLMs level the playing field at the entry point, because they help more people reach a strong baseline, but they can also widen the gap at the top, because the best competitors know how to use that leverage better than others. So it is not exactly “mandatory,” but ignoring it today is a bit like choosing to compete at a slower pace.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Great answer, i agree
+
+
+Reply
+
+React
+Jack
+Posted a month ago
+
+· 130th in this Competition
+
+I use ChatGPT as an assistant but nothing beyond that. I want to develop my own framework for data science agents but haven't made it a priority.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Yes. I also use AI tools as assistants and supply my own ideas and guidance. I wonder if this will change in the future?
+
+
+Reply
+
+React
+Pulkitcc09
+Posted a month ago
+
+yep i mostly use llm tools certainly for my university work
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Sounds good. Do you use LLM tools for coding or other tasks?
+
+
+Reply
+
+React
+Denny Loevlie
+Posted a month ago
+
+· 544th in this Competition
+
+I like to use this LLM-based package I made to do a lot of experimentation, then evaluate the results. https://github.com/loevlie/neuropt
+
+
+Reply
+
+React
+Shelar Arti
+Posted a month ago
+
+I think we’re seeing a shift, but maybe not the one it looks like on the surface. LLMs are becoming standard tools for speeding up development—especially for boilerplate, debugging, or recalling patterns from past competitions. But leaderboard performance still depends heavily on problem understanding and iteration quality. In competitions like BirdCLEF, small details matter a lot:
+
+how you split your data
+how you handle noisy labels
+how you post-process predictions
+These are areas where LLMs don’t really “solve” the problem for you. My guess is that many top competitors are using LLMs—but more as assistants than drivers. The core ideas and decisions are still very much human. So no, I don’t think LLM usage is a requirement—but being effective with tools (including LLMs) is increasingly part of being competitive.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+I agree that humans are still driving the best LLM tool results.
+
+
+Reply
+
+React
+Zainab Noor
+Posted a month ago
+
+Will be suprised to see if someone codes without using ai
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+haha, i agree
+
+
+Reply
+
+React
+DaylightH
+Posted a month ago
+
+· 52nd in this Competition
+
+Is there anyone in the top 10 that is writing all the code by themselves?
+
+Up until now, I feel like there are only 3 types of people who might still write all their code by themselves:
+
+Posers
+People who don't know how to write prompts
+Programming geniuses / Exceptional programmers
+99% of my code was written by Gemini/GPT/Claude, and I think most people on Kaggle are doing the same. But I basically have to spend just as much time reviewing it; sometimes it acts just like a monkey… I feel like LLMs are more like compilers—except they compile natural language, and the process is uncontrollable. So personally, even though I use it to generate code, I would never hand over an entire Kaggle competition to it.
+
+
+Reply
+
+5
+
+1
+Chris Deotte
+Topic Author
+Posted a month ago
+
+In the last few months 99% of my code is written by AI too. What are "posers"? Are these people pretending that they are not using AI but really they are using AI?
+
+
+Reply
+
+React
+SahilB7
+Posted a month ago
+
+I guess using AutoML has become easy due to the anthropic's claude code and openai's codex, however coding is existent and best implemented using gen ai as tool.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Yes, at this point using AI is still a tool and needs guidance from humans. I'm curious when this will change!
+
+
+Reply
+
+React
+Nikita Babych
+Posted a month ago
+
+· 4th in this Competition
+
+That year’s design provides many opportunities to automate experiments via agents, such as metadata algorithm development and iterating over models for ensembles, but unfortunately haven’t tried them yet.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Hi @nikitababich , congratulations on winning 1st place in last year's BirdCLEF. I believe we entered a time when we need to use these LLM tools if we want to finish in the top. Ideas still come from humans, but these tools allow use to run many more experiments then we could without them.
+
+
+Reply
+
+React
+yuanzhe zhou
+Posted a month ago
+
+· 23rd in this Competition
+
+You should try to participate without writing code. :-)
+
+
+Reply
+
+5
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+Check this! Winner of deep past challenge did it without coding! https://x.com/gonedarragh/status/2036390508885316060?s=46
+
+
+Reply
+
+React
+yuanzhe zhou
+Posted a month ago
+
+· 23rd in this Competition
+
+Well done! 😂
+
+
+Reply
+
+React
+Cody_Null
+Posted a month ago
+
+I just want to mention for the LinkedIn influencers out there, their prompt/efforts required a little bit more DS knowledge and experience than "Hi ChatGPT, please provide an inference notebook that will win the Deep Past Competition on Kaggle please?" 🤣
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Congratulations @yuanzhezhou maintaining 1st place! I may enter later and I will only use LLM. In the past 4 months, LLM have written all my code including my last few competitions!
+
+
+Reply
+
+React
+epiktetos
+Posted a month ago
+
+I am focused exclusively on tabular data and simply want to become better at machine learning — that is my goal.
+
+For baselines, I do rely on tools like Gemini, but for feature engineering and the core of my work, I do not use AI agents like Claude Code to write code for me.
+
+The reason is that I genuinely doubt AI agents can drive meaningful score improvements on their own. More importantly, I want to preserve my own intellectual curiosity and the joy of figuring things out myself.
+
+This is a very important point that deserves serious discussion. Thank you, Chris. Will machines eventually surpass human scores entirely — and if so, what does that mean for us?
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Hi @epiktetos You bring up good points. I'm not sure if LLM-only will eventually beat human-in-the-loop or not. Currently I have observed that LLM tools perform better if I feed them my ideas. So currently, I think human-in-the-loop is better. I'm not sure what will be the case in the future.
+
+Regarding learning, it is important for humans to continue to write some code on their own and continue to learn how the algorithms work. Because if human-in-the-loop continues to be better then it is important for humans to gain as much learning and experience that they can.
+
+
+Reply
+
+3
+Soha Naved
+Posted a month ago
+
+Yes,why not to use it and make your code more interactive.If you will not use it someone else will use it and make their code interactive than yours.
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+our old friend ( kaggle no.3) has just started his lobster journey … what are you waiting for? 
+
+
+Reply
+
+React
+Timmy Juicehouse
+Posted a month ago
+
+· 238th in this Competition
+
+hhh…welcome to the new world. However, why someone always downvotes in this discussion, an old-school coder?
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+He may be some agent and not someone
+
+
+Reply
+
+React
+
+3 more replies
+Profile picture for Timmy Juicehouse
+Profile picture for Tom
+Profile picture for Aic
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Yes, I believe all top finishes will be using AI now.
+
+
+Reply
+
+React
+Jacques Zhelin Zhang
+Posted a month ago
+
+It's becoming very normal ig
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Agree.
+
+
+Reply
+
+React
+Adarsh Kumar
+Posted a month ago
+
+If a beginner use those tool its not possible for him to climb those ranks only people with experience can use it as advantage and they could climb that rank on own but LLM work like assistant to faster the process and help them so experience and skill matter more then the LLM
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+I agree that tools by themselves are not currently winning competitions. The user still needs to provide data science knowledge and guidance to get the most out of these tools.
+
+
+Reply
+
+1
+Navneet
+Posted a month ago
+
+I think for this one, I will do it for the assistant's purpose ONLY! @cdeotte
+
+
+Reply
+
+React
+ionlab
+Posted a month ago
+
+Actually, I spend more time babysitting the machine than writing code myself.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+haha, true. With LLM tools we need to spend time reviewing their work and direction.
+
+
+Reply
+
+React
+OpPrime
+Posted a month ago
+
+· 478th in this Competition
+
+Indeed, I project manage and multiple tools write it for me now. You do have to have a clear top view of the project otherwise so far, I have seen it going off the rails multiple times.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Nice. I also use these tools now too.
+
+
+Reply
+
+React
+Athar Sayed
+Posted a month ago
+
+· 236th in this Competition
+
+Vibe coding is the new normal
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+I agree Athar!
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+there are a few levels:
+1) AI LLM coder: just code
+2) AI agent (has access to python exe as calling): karpthy autoresearch, agent to sweep ideas and train models (advanced autoML)
+3) AI agent kaggler: read/post forum and notebook, generate idea and plan … better still, read submission lb score and reason/decide how to improve
+
+i believe we are at now level 1.5 to 1.9.
+maybe 2 to 3 years time to reach level 3 for simple competitions?
+
+
+Reply
+
+React
+EL Younes
+Posted a month ago
+
+I think you’re wrong. As of today, some AI agents have already joined Kaggle competitions—even this one. These agents can work end-to-end, including gathering information from discussions.
+
+The good news about these tools is that there won’t be any secrets between participants. It’s like full transparency—everyone will have the same ability to generate code, test ideas, and so on.
+
+However, there’s also a downside. Anyone using vibe coding or building their own AI agent that follows an end-to-end workflow is effectively contributing knowledge to these systems. The LLMs can learn from this and turn it into their own internal knowledge. It’s like a new form of distillation—from Grandmaster-level experience into LLMs.
+
+That said, to be honest, these LLMs aren’t as smart as they seem. They’re just very good at memorizing patterns and making inferences.
+
+
+Reply
+
+React
+Idrissa M Dicko
+Posted a month ago
+
+· 921st in this Competition
+
+Yan Lecun startups is working on solving that limitation of LLMs AMI Labs so the aim to understand the physical world is exciting and challenging!!
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 793rd in this Competition
+
+I’m classifying AI usage based on levels of autonomy, similar to self-driving cars:
+
+Level 1: Assisted Coding
+AI helps with coding, but humans make all decisions.
+
+Decision: Human 100% | AI 0%
+Work: Human 50% | AI 50%
+
+Level 2: Automated Tasks
+AI handles broader tasks (not just coding), including experiment sweeps, forum browsing, and paper research. Humans still make most decisions.
+
+Decision: Human 80% | AI 20%
+Work: Human ~0% | AI 100%
+
+Level 3: Autonomous Decision & Execution
+AI handles both tasks and decision-making with minimal human input.
+
+Decision: Human 10% | AI 90%
+Work: Human ~0% | AI 100%
+
+" these LLMs aren’t as smart as they seem. They’re just very good at memorizing patterns and making inferences." you are quite right on this now.
+
+
+Reply
+
+React
+EL Younes
+Posted a month ago
+
+Yeah, you are right. Here, there are three levels, and all of them are being used now, especially Level 3. But it always depends on Levels 1 and 2. Levels 1 and 2 are the stages of distilling knowledge, especially if all users rely on the same LLMs such as GPT, Gemini, or Claude, rather than their own open-source LLMs. In this way, there is indirect distillation from Levels 1 and 2 into Level 3. The performance at Level 3 always depends on the quality of Levels 1 and 2. That’s how it works.
+
+However, if the geniuses keep their ideas away from Levels 1 and 2, or even Level 3, they can still outperform all three levels. But when they do use them, they need to find new techniques to stay ahead of these LLMs across all three levels in future competitions.
+
+And of course, competitions are not all the same. Here, we are talking about repeated competitions like this one. One thing everyone should understand is that LLMs or AI agents do not give you guidance and assistance for free — they also take knowledge from you. It’s a trade-off.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Nice scale. I also think we are around 2 now but we will soon see 3 and beyond!
+
+
+Reply
+
+React
+Aic
+Posted a month ago
+
+· 405th in this Competition
+
+You’re all Master-level competitors, and your own skills are already extremely strong. For you, agent coding is a huge convenience — something that makes you even better. From my perspective, agent coding has already become a standard accelerator in Kaggle, or in most competitions more broadly. We have to accept and adapt to it; otherwise, we’ll simply fall behind. But what truly determines your ceiling is still not whether you know how to use an agent, but whether you can design the right validation, identify the right direction, and efficiently direct it to run the right experiments.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Absolutely, i agree. Currently we still need to give good direction to LLMs to get the best code from these tools.
+
+
+Reply
+
+React
+Cody_Null
+Posted a month ago
+
+I think for this one I will do it the old fashioned way. Its interesting research and I am curious about the results but I expect the agents to struggle at the end of the competition without heavy guidance from the top kagglers using them. I also dont really think burning a 5090 24/7 while paying for the api tokens is monetarily worth it yet. I think most top kagglers would be able to get the results they have now on their own, maybe just slightly slower?
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Great comment. I also wonder how well the agents will do in the final weeks. It is easy for them to climb the leaderboard now since LB scores are still low. Programming the old fashioned way is good for continued development of coding skills.
+
+
+Reply
+
+React
+Quan Vu
+Posted a month ago
+
+· 1198th in this Competition
+
+Not fully automated yet, but most of my code is written by AI. Writing code manually takes too long, and using a code agent significantly speeds up the coding process. The downside is that there are often bugs, leading to good ideas but poor experimental results. It still requires review to ensure everything works correctly.
+
+
+Reply
+
+React
+Quan Vu
+Posted a month ago
+
+· 1198th in this Competition
+
+I haven't asked the LLM to read past BirdCLEF solutions to create a new solution. I'm building on my solution from last year and improving it further.
+
+
+Reply
+
+React
+Timmy Juicehouse
+Posted a month ago
+
+· 238th in this Competition
+
+Me too, But I have to admit that the vibe coding is getting stronger and stronger.
+
+
+Reply
+
+React
+Chris Deotte
+Topic Author
+Posted a month ago
+
+Yes, it is much more efficient to use LLM to write code!
+
+
+Reply
+
+React
+Timmy Juicehouse
+Posted a month ago
+
+· 238th in this Competition
+
+I played this match using Gemini Pro. The baseline was basically Vibe Coding, and my own ideas were also implemented through an LLM. The test set was changed one month before the end of the competition. I had been ranked first on the public leaderboard before the change, but now I have been overtaken by other kaggler.
+
+https://www.kaggle.com/competitions/icdar-2026-circleid-writer-identification
+
+I'm also using Gemini for the BirdCLEF2026, but unlike the top-ranked kagglers who use automated vibe tools, I still want to learn from the experience of past competitions myself.
+
+
+Reply
+
+React
+Timmy Juicehouse
+Posted a month ago
+
+· 238th in this Competition
+
+Personally, I think this year's BirdCLEF competition owes a great deal to Perch.
+
+
+Reply
+
+React
+oeeker
+Posted 13 days ago
+
+I still like finding the aha moments by myself and leave all the labor work to my dear LLMs
+
+
+Reply
+
+React
+This comment has been deleted.
+

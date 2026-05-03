@@ -1,0 +1,66 @@
+
+hengck23 · 794th in this Competition · Posted 18 days ago
+soundscape adaptation
+train a binary classifier using kaggle dataset for 2 class: xc audio verus soundscape (can use unlablled set)
+download external data (especially external pam soundscape) such that binary classifier gives high confidence that it is same (same domain) as kaggle soundscape yet and does not contain kaggle bird class
+now these can be used as background for augmentation
+
+2
+
+1
+3 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+Tucker Arrants
+Posted 12 days ago
+
+· 187th in this Competition
+
+Similar idea but using frozen Perch: encode external datasets and compute cosine similarity from this year's soundscape pool and others to measure domain similarity
+
+You can do this with focal - soundscape too which leads to some interesting ideas…
+
+
+
+
+Reply
+
+React
+Timmy Juicehouse
+Posted 17 days ago
+
+· 241st in this Competition
+
+We have too many soundscape files, and it's a huge work😭
+
+
+Reply
+
+React
+BNBU Anpeng Yuan
+Posted 11 days ago
+
+· 22nd in this Competition
+
+Bro I have seen you in xiaohongshu😆
+
+
+Reply
+
+React
+Timmy Juicehouse
+Posted 11 days ago
+
+· 241st in this Competition
+
+hhhh…it's me
+
+
+Reply
+
+React

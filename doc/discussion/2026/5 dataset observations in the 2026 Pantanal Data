@@ -1,0 +1,130 @@
+5 dataset observations in the 2026 Pantanal Data
+Hey everyone,
+
+I have just joined this competition.
+
+I put together this map to show how these files actually link up. Note the dashed line—that’s the "missing link" for our 28 ghost species. Dataset Ecosystem
+
+I’ve been digging through the raw files for the new BirdCLEF+ project, and there are some really interesting structural patterns that aren't immediately obvious from the competition's high-level description. If you're building a pipeline based on previous years, you might want to check these 5 quirks first—they change the game for how we think about the "training" phase.
+
+** 1. The "Invisible 28" (Zero Focal Audio) ** The biggest surprise is that 28 of our target classes have zero clean audio clips in train_audio. This includes all 25 Insect Sonotypes and 3 specific Amphibians.
+
+** 2. The Soundscape "Double-Vision" ** If you’re validating on the train_soundscapes_labels.csv, watch out: the file contains 1,478 rows but only 739 unique segments. Every single labeled row is duplicated exactly twice.
+
+** 3. The Taxonomic Skew (98% Birds) ** We all knew birds would be common, but the clip-level training is almost entirely Aves (Birds account for 97.9% of the focal clips).
+
+However, in the environmental soundscapes, the dominance flips. Labeled activity is actually concentrated in Amphibia (4,174 mentions) and Insecta (1,136), with Birds trailing at 824.
+
+** 4. Sonotypes aren't Species ** It’s important to remember that most insect targets are Sonotypes, not species-level IDs. These are defined purely by their acoustic signature (rhythmic pulses, frequency bands).
+
+** 5. Spatial and Temporal Metadata Exists in Both Training Modalities ** The dataset includes spatial and temporal context in both forms of training data, but in different ways. In train.csv, clip-level recordings include explicit latitude and longitude columns. In train_soundscapes/, filenames encode site, date, and UTC time, and train_soundscapes_labels.csv links labels to those soundscape files.
+
+Good luck in the Pantanal!
+
+ps. I will try to add new information I discover, to the same thread, but please guide where I have gone wrong
+
+
+6
+8 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+OpPrime
+Topic Author
+Posted a day ago
+
+· 479th in this Competition
+
+additions 3, hidden granularity issue for ghosts:
+
+The 984 ghost rows are spread over only 43 unique SC files and 246 unique (file, window) pairs. Many ghost rows share the same (file, window) — they're the same labelled window appearing under different primary_species entries because the SC window is multi-labelled.
+
+Implication: the train/val split for ghost rows is at file granularity → effectively a 43-file split (~30 train / ~13 val). For tail species like 47158son05, a single file ending up on the wrong side of the split can zero out one side.
+
+I think for those of us careful about species representation on train and validation side, this is a very important factor to consider.
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 794th in this Competition
+
+Sonotypes perch embeddings
+
+
+
+
+Reply
+
+2
+OpPrime
+Topic Author
+Posted a month ago
+
+· 479th in this Competition
+
+this is great work buddy, btw, I am a big fan and have you used your notebooks in the past.
+
+
+Reply
+
+React
+OpPrime
+Topic Author
+Posted a month ago
+
+· 479th in this Competition
+
+any my version of insecta and amphibia:
+
+Amphibia PCA
+
+Insecta PCA
+
+
+Reply
+
+React
+Durga Kumari
+Posted a month ago
+
+This is really helpful, especially the “Invisible 28” point and didn’t realize that many classes have zero focal audio. Thanks for summarizing this so clearly.
+
+
+Reply
+
+1
+OpPrime
+Topic Author
+Posted 2 days ago
+
+· 479th in this Competition
+
+A further addition to the data discovery post, I mapped clips' lon/lat and time to soundscapes labelled, and 47 species in clips have direct matching site x hour soundscape. Also if you map clips site x hour to soundscapes site x hour, you find 123 matching cases.
+
+
+Reply
+
+React
+OpPrime
+Topic Author
+Posted 4 days ago
+
+· 479th in this Competition
+
+a number 6 for my list:
+
+The 66 labeled soundscape files cover only 9 unique sites. Because multiple labeled files exist per site, random file-level or row-level splitting will leak site information between train and validation and can inflate local AUC. Use site-aware splits, or at minimum file-aware splits that prevent shared sites across train and validation.
+
+Reply
+
+React
+This comment has been deleted.
+

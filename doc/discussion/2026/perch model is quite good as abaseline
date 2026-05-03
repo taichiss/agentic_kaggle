@@ -1,0 +1,263 @@
+Skip to
+content
+Kaggle
+
+Create
+Home
+
+Competitions
+
+Benchmarks
+
+Game Arena
+
+Data Hub
+
+More
+
+Your Work
+
+Viewed
+
+
+BirdCLEF+ 2026
+
+
+AI Mathematical Olympiad - Progress Prize 3
+
+
+BirdCLEF+ 26 | Two-Pass SSM + Advanced PP
+
+
+BirdCLEF+ 2026 Iter-Pseudo Perch+SED LB 0.935 ft
+
+
+[placeholder] Claude-Code Results for BirdClef2026
+
+Edited
+
+
+Home Credit Risk (0417LGBM)＿RFE_STUDYlASSO
+
+
+notebook
+
+
+BirdCLEF+ 26 | Two-Pass SSM + Advanced PP
+
+
+birdclef2026-v177a-cluster-aware-add
+
+
+ViT_Dino3 models inference
+
+Bookmarks
+
+
+metric
+
+
+Jane Street Real-Time Market Data Forecasting
+
+
+Child Mind Institute — Problematic Internet Use
+
+
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+
+
+NeurIPS - Ariel Data Challenge 2024
+
+
+View Active Events
+
+Search
+
+Cornell Lab of Ornithology · Research Code Competition · a month to go
+
+Submit Prediction
+BirdCLEF+ 2026
+Acoustic Species Identification in the Pantanal, South America
+
+
+Konstantin Dmitriev · 117th in this Competition · Posted 2 months ago
+Google Perch model is quite good as a baseline
+Google's Perch model for bird identification (https://www.kaggle.com/models/google/bird-vocalization-classifier) was updated this year. It shows a significant improvement on 2025 data, and it can predict 203 out of 234 species in the current competition (all Aves and most of Amphibia).
+
+I tried Perch model in this notebook, and it yielded me a good score of 0.825.
+
+The prediction takes almost 90 minutes and finishes just in time. There were some issues with the TF version, as Perch seems to require the latest.
+
+
+12
+12 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+hengck23
+Posted a month ago
+
+· 794th in this Competition
+
+throw in a bunch of wave files (e.g. unlabeled soundscape files from this and previous competitions). extract their emebeddings and make a database. distill (NOT train classifier head) to your favourite pytorch models and enjoy!
+
+
+Reply
+
+React
+yukiya
+Posted a month ago
+
+· 222nd in this Competition
+
+@hengck23 can you elaborate more ? What do you mean distill without the classifier head?
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 794th in this Competition
+
+@nyleve see: https://www.kaggle.com/competitions/birdclef-2026/discussion/685318#3430354
+
+
+Reply
+
+React
+IvanYakovlev
+Posted a month ago
+
+Many top LB kernels use precached Perch embeddings. Correct me if I'm wrong, but wouldn't such solutions fail on a closed test set, since precached embeddings wouldn't be available for those files?
+
+
+Reply
+
+React
+This comment has been deleted.
+
+water joe
+Posted a month ago
+
+· 2128th in this Competition
+
+No problem. Since most of the reasoning time was spent on extracting the embedding of the "test" data, you can take a look at my notebook: https://www.kaggle.com/code/waterjoe/birdclef2026-sub-google-perch
+
+
+Reply
+
+1
+zera
+Posted 2 months ago
+
+· 2226th in this Competition
+
+Did anyone succeed in implementing LoRA for this model?
+
+
+Reply
+
+React
+Bhawesh Sinha 07
+Posted 2 months ago
+
+Scores can be improved too!
+
+
+Reply
+
+React
+Konstantin Dmitriev
+Topic Author
+Posted 2 months ago
+
+· 117th in this Competition
+
+Perch is useful as baseline, but nothing more: it's too slow for this competition. This is not because of TF issues, just a heavy model. I think CNN will do better, but it must be trained, of course. And Perch works just out of the box.
+
+
+Reply
+
+1
+Faisal Ahmed Rony
+Posted 2 months ago
+
+That makes perfect sense, Konstantin. The convenience of an 'out of the box' solution like Perch is great for initial testing, but I see your point about it being a bottleneck for a high-stakes competition due to its weight. Since you mentioned custom CNNs, do you think lightweight architectures like EfficientNet-B0 or perhaps a ResNet backbone would strike the right balance between inference speed and accuracy for this specific dataset? Thanks for the clarification!
+
+
+Reply
+
+React
+yuanzhe zhou
+Posted 2 months ago
+
+· 23rd in this Competition
+
+it might be good to fine-tune it?
+
+
+Reply
+
+React
+Konstantin Dmitriev
+Topic Author
+Posted 2 months ago
+
+· 117th in this Competition
+
+Yes, it's possible. Also, Perch provides embeddings, and one could train custom head based on them. I've read that TFLite is able to solve the problem of slowness, but didn't try it myself.
+
+
+Reply
+
+React
+water joe
+Posted 2 months ago
+
+· 2128th in this Competition
+
+I previously extracted the embedding vectors of this model, and then trained a small network using this. However, the result showed a slight decrease.😂
+
+
+Reply
+
+React
+Jack
+Posted 2 months ago
+
+· 133rd in this Competition
+
+Is this what you've done? Delete this comment btw 😆
+
+
+Reply
+
+1
+anushkrishnav
+Posted 2 months ago
+
+· 686th in this Competition
+
+haha this model indeed seems to be a good one
+
+
+Reply
+
+React
+yuanzhe zhou
+Posted 2 months ago
+
+· 23rd in this Competition
+
+I did not try it but will try.
+
+
+Reply
+
+React

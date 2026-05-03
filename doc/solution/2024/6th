@@ -1,0 +1,123 @@
+入賞した参加者による解法レポートです。筆者は過去の優秀なモデルを基盤としつつ、擬似ラベル（Pseudo Labeling）の活用や、重み付けを用いた移動平均による後処理を導入することで予測精度の向上に成功しています。また、検証データよりも公開リーダーボードの結果を重視した戦略や、データ処理を高速化するためのサンプリング手法の工夫など、実戦的な知見が簡潔にまとめられています。この解説は、複雑な機械学習の課題に対して既存の手法を改良し、堅牢なモデルを構築するプロセスを共有することを目的としています。
+
+
+
+
+
+
+
+
+
+
+
+Skip to content Kaggle
+Create Home
+Competitions
+Benchmarks
+Game Arena
+Data Hub
+More
+Your Work
+Viewed
+BirdCLEF 2024
+6th Place Solution
+2nd place solution
+7th Place Solution for the BirdCLEF 2024 Competition
+4th place solution: Team Cerberus
+Edited
+ViT_Dino3 models inference
+AIMO3 Qwen3.5-27B 4xSpeed FP8 MTP SpecDecoding
+Fork of [44/50] AIMO3: Skills optional, Luc 74f1d7
+Fork of ２GPU STEP150 EMSEMBLE＿self_training f093 6
+Fork of AIMO3-Qwen3.5-35Ba3B-simple-MCTS
+Bookmarks
+metric
+Jane Street Real-Time Market Data Forecasting
+Child Mind Institute — Problematic Internet Use
+ISIC 2024 - Skin Cancer Detection with 3D-TBP
+NeurIPS - Ariel Data Challenge 2024
+View Active Events
+Skip to content Kaggle 6th Place Solution — BirdCLEF 2024 6th Place Solution
+BirdCLEF 2024
+Solution Writeup · 6th place · Jun 12, 2024
+First, I would like to thank the hosts for organizing such a very interesting competition and the kaggle team for facilitating it so smoothly. Also, congratulations to all the top winners.
+My solution is based on the last year's 2nd place solution by @honglihang. I would like to thank him greatly. The difference between his last year's solution and mine is mainly pseudo-label and post-processing.
+CV Strategy CV was not helpful for me, so I tuned my models by checking public LB. To avoid overfitting to public LB, I reduced submissions and gave up tuning minor hyperparams.
+One of the final submissions is my public best model. Using additional training data made public LB about 0.02 worse, but this was counter-intuitive and I expected these to be reversed in private LB, so I selected it for the other one.
+Pseudo Labeling model.forward() method input several pieces of 5 seconds together, but calculate the loss without aggregation when using pseudo-labeled data, and after aggregation with max for competition data. Hard labeling by threshold did not improve scores.
+This improved by 0.020.03 in publc and 0.0150.04 in private before ensemble.
+""" model.forward() """ total_loss = 0 for i in range(bs): start = i * self.factor end = (i + 1) * self.factor
+if is_pseudo[i] == 0:
+    this_logits = torch.max(logits[start:end], dim=0, keepdim=True).values
+    this_y = torch.max(y[i], dim=0, keepdim=True).values
+    this_weight = torch.max(weight[i], dim=0, keepdim=True).values
+
+    loss = self.loss_function(this_logits, this_y)
+    if self.loss == "ce":  # loss: (n_sample, )
+        loss = (loss * this_weight) / weight.sum()
+    elif self.loss == "bce":  # loss: (n_sample, n_class)
+        loss = (loss.sum(dim=1) * this_weight) / weight.sum()
+    else:
+        raise NotImplementedError
+    loss = loss.sum() * self.factor
+    total_loss += loss
+else:
+    this_logits = logits[start:end]
+    this_y = y[i]
+    this_weight = weight[i]
+
+    loss = self.loss_function(this_logits, this_y)
+    if self.loss == "ce":  # loss: (n_sample, )
+        loss = (loss * this_weight) / weight.sum()
+    elif self.loss == "bce":  # loss: (n_sample, n_class)
+        loss = (loss.sum(dim=1) * this_weight) / weight.sum()
+    else:
+        raise NotImplementedError
+    loss = loss.sum() / self.factor
+    total_loss += loss
+Post Processing Calculate a moving average with weights of [0.1, 0.2, 0.4, 0.2, 0.1] and finally add the global average * 0.2 for each species.
+This consistently boosted public and private LB by 0.014~0.016 in both final submissions.
+def smooth_array_general(array, w=[0.1, 0.2, 0.4, 0.2, 0.1]): smoothed_array = np.zeros_like(array) timesteps = array.shape[0] radius = len(w) // 2
+for t in range(timesteps):
+    for i, weight in enumerate(w):
+        index = t - radius + i
+        if index < 0: 
+            smoothed_array[t] += array[0] * weight
+        elif index >= timesteps: 
+            smoothed_array[t] += array[-1] * weight
+        else:
+            smoothed_array[t] += array[index] * weight
+for c in range(array.shape[1]):
+    smoothed_array[:, c] = smoothed_array[:, c] * 0.8 + smoothed_array[:, c].mean(keepdims=True) * 0.2
+return smoothed_array
+Other Setting resampling became a bottleneck, so preprocess sampled to 32 kHz and storing them on disk helps speed up the training phase. sampling by RMS (+0.010) RMS sampling > using first 5sec > random sampling backbone resnet18d, resnet34d and efficientnetv2s Thank you for reading
+Author penguin46 ryotayoshinobu
+Share
+2 4 Comments Hotness
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve! This comment will be made public once posted.
+Post Comment Aaditya Porwal Posted 2 years ago
+· 25th in this Competition
+Congrats!! for the 6th place.
+Reply
+React RihanPiggy Posted 2 years ago
+· 7th in this Competition
+Congratulations for the 6th place! I am happy that the training and inference tricks I used last year also help this year!
+Reply
+1
+1 penguin46 Topic Author Posted 2 years ago
+· 6th in this Competition
+@honglihang Congratulations to you too on your gold medal! I was really helped by your last year's solution, so I am glad that we both stayed in the gold zone!
+Reply
+1
+1 RihanPiggy Posted 2 years ago
+· 7th in this Competition
+@ryotayoshinobu Yes, this year's birdclef is really a hard one, glad to see that we both survived the shake with a relatively robust solution. I tried moving average last year but it decreased LB in last year's metrics… emmmm, sad T T
+Reply
+React
+5 more replies Profile picture for RihanPiggy Profile picture for Aphysict Profile picture for penguin46 C R Suthikshn Kumar Posted 2 years ago
+· 27th in this Competition
+Congratulations on achieving 6th place in this competition. Appreciation for sharing your solution details.
+Reply
+React
+英語 checking 日本語 チェック中 名詞 点検, 制禦, 制馭
+拡張機能オプション詳細 »

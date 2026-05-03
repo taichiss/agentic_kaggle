@@ -1,0 +1,383 @@
+Distilled SED Baseline
+Credit and motivation
+I shared a simple Perch distilled SED model starter notebook. It is entirely motivated by the one and only hengk. Please refer to his original comment here, I just implemented it in my existing pipeline. Show him some love for all that he shares on Kaggle for everyone to learn from.
+
+Idea
+The backbone learns to reproduce Perch v2's 1536-d embeddings via MSE distillation — inheriting representation quality from a model trained on 14,795 species. A separate SED classification head trains on the backbone's detached features (stop-gradient), so the two losses never fight over the backbone. At inference the distillation head is thrown away.
+
+Here is the architecture: 
+
+There are some obvious architecture experiments to try — the distillation head projects B0's 1280-d features up to Perch's 1536-d space (you could use a larger backbone, or meet in the middle with a shared 512-d space), the 512-d bottleneck in the SED head is arbitrary, swap GeM for LSE pooling, etc.
+
+Results
+Comparing the same model with and without distillation provides a consistent +0.02 leaderboard boost across my submissions so far.. The shared notebook uses no metadata priors, TTA, post processing, or clips longer than 5s. It can be improved to achieve single model scores above 0.93 on the public leaderboard.
+
+Notes
+Please note that this model is tediously slow to train on Kaggle as is and will likely require some adjustments to train. I ported it over from my Colab enviroment with the help of Claude. I just wanted to share as much of the training code as possible for those that are interested in trying it themselves. It takes about 100s an epoch to run on the Colab G4 GPU.
+
+If you want to dramatically lower the training time/computation demands, you can preprocess the Perch embeddings once and just load them in instead of running Perch inference every batch.
+
+I hope this is a useful resource to my fellow Kagglers and the competition hosts. Good luck everyone.
+
+Extensions
+Same model + 5-tap Gaussian smoothing -> 0.917 public leaderboard (v1->v2 of public notebook)
+
+Open Ended Questions
+What is the role of augmentation in feature-space knowledge distillation? The role of augmentation is well-understood in standard Hinton-style KD and Noisy Student where the asymmetry forces the student to learn invariance to the augmentation. But for feature-space distillation against a frozen teacher, best practices are not obvious.
+
+If you align augmentations between teacher and student, augmentations serve only as training input diversity. If you show the student augmented data but the teacher clean data, you're asking the student to learn invariance to that augmentation. The viability of the second framing depends on whether the augmentation preserves underlying signal — destructive augmentations like SpecAugment break this framing because there's no underlying clean signal for the student to recover at the masked locations. Can we exploit signal-preserving augmentation asymmetry while keeping destructive augmentations aligned (or absent)?
+
+The unanswered questions: Under what conditions does augmentation asymmetry help feature distillation? Are signal-preserving asymmetries (e.g., student-only gain perturbation against clean teacher) genuinely useful for learning invariance, or does the same input-diversity argument favor aligned application? Are there augmentation classes beyond the obvious ones (SpecAugment, gain, noise, mixup) that have different alignment characteristics worth exploring?
+
+
+6
+12 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+Baidalin Adilzhan [dsmlkz]
+Posted 10 hours ago
+
+· 121st in this Competition
+
+Hi! Amazing work. Could you share what gpu did you use to train and runtime for specific epoch and fold settings using that gpu?
+
+
+Reply
+
+React
+Tucker Arrants
+Topic Author
+Posted 10 hours ago
+
+· 187th in this Competition
+
+The G4 on Colab (RTX 6000 Pro). It takes about 30s an epoch with 64 batch size without distillation, and about 60s an epoch with Perch distillation. I try to be selective with my runs because the cost adds up.
+
+
+Reply
+
+React
+MengYe
+Posted 3 days ago
+
+· 275th in this Competition
+
+i applied my smoothing function to v1 predictions (no code changes), and got 0.921 lb
+
+smoothing
+
+
+Reply
+
+2
+Tucker Arrants
+Topic Author
+Posted 3 days ago
+
+· 187th in this Competition
+
+That is a substantial boost, do you mind sharing how your smoothing differs from the 5 tap Gaussian kernel I applied, or is that a secret?
+
+
+Reply
+
+React
+MengYe
+Posted 3 days ago
+
+· 275th in this Competition
+
+different weights on adjacent categories, like doing a fourier transformation
+
+
+Reply
+
+React
+Salman Ahmed
+Posted 2 days ago
+
+· 27th in this Competition
+
+What do you mean by adjacent categories @konohayui
+
+
+Reply
+
+React
+MengYe
+Posted 2 days ago
+
+· 275th in this Competition
+
+i mean adjacent labels
+
+
+Reply
+
+React
+MarkDjadchenko
+Posted 3 days ago
+
+· 29th in this Competition
+
+Hi, great notebook, could you share the training logs? I just want to check that everything is ok because ns22 isn't growing much and stops at 10 epochs, and I wonder if 25 epochs makes sense. I trained with 2 folds + 10 epochs and got 0.878 LB.
+
+
+Reply
+
+React
+Tucker Arrants
+Topic Author
+Posted 3 days ago
+
+· 187th in this Competition
+
+CV is tricky for this competition so I track many metrics but my main diagnostic is the loss. The distillation and classification loss have healthy decays through the end of epoch 25. My ns22 metric is to see if the model is overfitting to s22, which is the dominant site.
+
+Here is an example from my first fold (slightly different split from the notebook but same general idea). You could probably find a more efficient training loop that runs for maybe 15-20 epochs. The below are logs for a model that scores 0.922 on the leaderboard (raw sigmoid of logits, no post processing).
+
+      "cls_loss": [
+        0.25326,
+        0.05942,
+        0.05111,
+        0.04584,
+        0.04244,
+        0.04037,
+        0.03859,
+        0.03782,
+        0.03659,
+        0.0361,
+        0.03565,
+        0.03486,
+        0.03442,
+        0.03416,
+        0.03385,
+        0.0334,
+        0.03334,
+        0.03343,
+        0.03309,
+        0.03259,
+        0.03259,
+        0.03226,
+        0.03234,
+        0.03253,
+        0.03225
+      ],
+      "dist_loss": [
+        0.01223,
+        0.00891,
+        0.00725,
+        0.00619,
+        0.00554,
+        0.0051,
+        0.00478,
+        0.00451,
+        0.00435,
+        0.00416,
+        0.00404,
+        0.00392,
+        0.00381,
+        0.00371,
+        0.00363,
+        0.00357,
+        0.00351,
+        0.00347,
+        0.00339,
+        0.00336,
+        0.00334,
+        0.0033,
+        0.00329,
+        0.0033,
+        0.00328
+      ],
+      "ns22_macro": [
+        0.6168,
+        0.7674,
+        0.8554,
+        0.9042,
+        0.906,
+        0.9092,
+        0.9264,
+        0.8982,
+        0.9054,
+        0.8965,
+        0.916,
+        0.9167,
+        0.9132,
+        0.9157,
+        0.9135,
+        0.9194,
+        0.9337,
+        0.9288,
+        0.9236,
+        0.9307,
+        0.9293,
+        0.9289,
+        0.9281,
+        0.9279,
+        0.9292
+      ]
+The floor on the distillation loss is primarily due to the difference in mel spec parameters between Perch and the student model, as well as the SpecAugment applied to the students mel but not the teacher (this is something worth exploring for yourself…)
+
+Try a quick test between submitting with the ns22 auc save and the macro auc save - you might see a big difference between the two.
+
+
+Reply
+
+React
+Durga Kumari
+Posted 6 days ago
+
+Thanks for sharing this The explanation of distillation + SED separation made the concept much clearer. Really helpful baseline.
+
+
+Reply
+
+React
+Kurise
+Posted 6 days ago
+
+· 11th in this Competition
+
+Hi @tuckerarrants Thanks for sharing! Could you please offer your code about data processing to .pt? I try to reuse your code in competition data, but it's very very slow(about 1500s one epoch in rtx3090). Seems like .pt data can have a large speed up.
+
+
+Reply
+
+React
+Tucker Arrants
+Topic Author
+Posted 6 days ago
+
+· 187th in this Competition
+
+That is indeed very very slow, here is the code I used to preprocess the waveforms. I did this a month or so ago right after joining the competition, it may be stale - but it is what the model was trained on.
+
+# ---- CONFIG ------------------------------------------------------------------
+SR = 32000                  # target sample rate
+AUDIO_DIR  = Path("/path/to/audio")           # where source files live
+OUTPUT_DIR = Path("/path/to/waveform_cache")  
+AUDIO_EXTS = (".flac", ".wav", ".ogg", ".mp3")
+
+# Optional: if you have a metadata CSV listing the files you care about
+# (with a "filename" column = bare filename), point to it here. Otherwise
+# the script just caches every audio file under AUDIO_DIR.
+META_PATH: Path | None = None  # e.g. Path("/path/to/metadata.csv")
+# ------------------------------------------------------------------------------
+
+def load_audio_32k(path: Path, target_sr: int = SR) -> np.ndarray:
+    """Decode any soundfile-supported format, force mono, resample to target_sr."""
+    audio, file_sr = sf.read(str(path), dtype="float32", always_2d=False)
+    if audio.ndim == 2:                       # stereo -> mono
+        audio = audio.mean(axis=1)
+    if file_sr != target_sr:
+        g = gcd(int(file_sr), target_sr)
+        audio = resample_poly(audio, target_sr // g, int(file_sr) // g).astype(np.float32)
+    return audio
+
+def save_int16(waveform_np: np.ndarray, path: Path) -> int:
+    """Absmax-normalize, scale to int16, save as a torch tensor. Returns n_samples."""
+    waveform = torch.from_numpy(waveform_np).float()
+    absmax = waveform.abs().max()
+    if absmax > 0:
+        waveform = waveform / absmax
+    waveform_int16 = (waveform * 32767).clamp(-32767, 32767).short()
+    torch.save(waveform_int16, path)
+    return len(waveform_int16)
+
+def main():
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    audio_cache_dir = OUTPUT_DIR / "audio"
+    audio_cache_dir.mkdir(exist_ok=True)
+
+    # ---- Decide which files to cache --------------------------------------
+    if META_PATH is not None:
+        meta = pd.read_csv(META_PATH)
+        wanted = set(meta["filename"].unique())
+        source_files = [p for ext in AUDIO_EXTS for p in AUDIO_DIR.rglob(f"*{ext}")
+                        if p.name in wanted]
+    else:
+        source_files = [p for ext in AUDIO_EXTS for p in AUDIO_DIR.rglob(f"*{ext}")]
+
+    print(f"Found {len(source_files):,} audio files to cache")
+
+    # ---- Cache loop (resumable) ------------------------------------------
+    existing = {f.name for f in audio_cache_dir.glob("*.pt")}
+    records, errors = [], 0
+    t0 = time.time()
+
+    for idx, src in enumerate(tqdm(source_files, desc="Caching")):
+        cache_name = f"{idx:06d}.pt"
+        cache_path = audio_cache_dir / cache_name
+
+        if cache_name in existing:
+            n_samples = len(torch.load(cache_path, map_location="cpu"))
+        else:
+            try:
+                audio = load_audio_32k(src)
+                n_samples = save_int16(audio, cache_path)
+            except Exception as e:
+                errors += 1
+                if errors <= 5:
+                    print(f"  Error on {src.name}: {e}")
+                continue
+
+        records.append({
+            "original_filename": src.name,
+            "cache_file": f"audio/{cache_name}",
+            "n_samples": n_samples,
+            "duration_sec": round(n_samples / SR, 2),
+        })
+
+    # ---- Write the index --------------------------------------------------
+    pd.DataFrame(records).to_csv(OUTPUT_DIR / "cache_index.csv", index=False)
+
+    total_hours = sum(r["duration_sec"] for r in records) / 3600
+    print(f"\nDone in {time.time() - t0:.0f}s")
+    print(f"  Cached: {len(records):,} files ({total_hours:.1f} h)")
+    print(f"  Errors: {errors}")
+    print(f"  Index:  {OUTPUT_DIR / 'cache_index.csv'}")
+
+if __name__ == "__main__":
+    main()
+
+Reply
+
+1
+yukiya
+Posted 6 days ago
+
+· 223rd in this Competition
+
+Thank you for sharing ! Do you think this is more promising than the current ProtoSSM trend in the public notebook ?
+
+
+Reply
+
+React
+Tucker Arrants
+Topic Author
+Posted 6 days ago
+
+· 187th in this Competition
+
+They both have their strengths and weaknesses. The distilled CNN approach is a middle ground — you get to use all the regular image classification tricks and draw on years of BirdCLEF solutions, while still exploiting Perch's representational strength as a teacher rather than trying to build something from scratch.
+
+
+Reply
+
+React
+Navneet
+Posted 8 hours ago
+
+Thanks for the SED model @tuckerarrants
+
+
+Reply
+
+React

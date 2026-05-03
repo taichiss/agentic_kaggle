@@ -1,0 +1,174 @@
+`train_soundscapes_labels.csv` has duplicated records
+Hi, all.
+
+I noticed that train_soundscapes_labels.csv has duplicated records.
+To be more specific, there are two identical records for each data point.
+
+import pandas as pd
+
+train_ss_labels = pd.read_csv("/kaggle/input/competitions/birdclef-2026/train_soundscapes_labels.csv")
+
+print(len(train_ss_labels))  # -> 1478
+print(train_ss_labels.duplicated().sum())  # -> 739
+You just need to apply .drop_diplicates() when using train_soundscapes_labels.csv, but I don't know why it has duplicated records.
+
+Data Cleaning
+
+React
+11 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+Stefan Kahl
+Competition Host
+Posted 2 months ago
+
+Oh, ok, good find, not sure what went wrong there; we'll probably do a quick dataset update within the next few days to deal with these quirks you folks found.
+
+
+Reply
+
+2
+This comment has been deleted.
+
+Tawara
+Topic Author
+Posted 2 months ago
+
+· 1586th in this Competition
+
+I think labels annotated by experts are important in this competition. Looking forward to the update :)
+
+
+Reply
+
+React
+D.M.
+Posted a month ago
+
+· 1759th in this Competition
+
+Are the duplicates going to be replaced by extra actual labeled examples, or are we seeing the full set of examples now, just doubled? If it's the former, that would be pretty important.
+
+
+Reply
+
+React
+Stefan Kahl
+Competition Host
+Posted a month ago
+
+We don't have additional labels, we'll remove the duplicate ones.
+
+
+Reply
+
+2
+
+3 more replies
+Profile picture for Ravi Ramakrishnan
+Profile picture for Stefan Kahl
+Profile picture for Cody_Null
+Wasiq Ali
+Posted a month ago
+
+Thank for sharing the information this type of information can help us in for creating real world problem solution
+
+
+Reply
+
+React
+hengck23
+Posted a month ago
+
+· 794th in this Competition
+
+Interestingly enough, none of my AI agents spot this data bug.
+
+
+Reply
+
+React
+Tom
+Posted a month ago
+
+· 13th in this Competition
+
+you need to ask it to do deep EDA first. My agent found this and change cv implementation immediately.
+
+
+Reply
+
+React
+Salman Ahmed
+Posted 2 months ago
+
+· 27th in this Competition
+
+~~Hi @ttahara Those records are not exactly duplicate. I think there are many recordings that are labelled by more than one human. In some duplicate timestamps of same recording you will see different labels. This also shows us practical issues of labelling in such situations.
+
+But yes, you can drop these for sure, since the duplicates here represents exactly same labels tagged by multiple humans. But there are other records in this file with more than one row for same time stamp which contains different labels.~~
+
+I was wrong, I thought there were multiple labelers. Thanks for pointing out. 😃
+
+
+Reply
+
+React
+This comment has been deleted.
+
+Tawara
+Topic Author
+Posted 2 months ago
+
+· 1586th in this Competition
+
+Hi @salmanahmedtamu
+
+I rechecked duplicated records by creating dummy column which is concatenation of all the columns.
+
+train_ss_labels["dummy"] = (
+    train_ss_labels["filename"] + "_" +
+    train_ss_labels["start"] + "_" +
+    train_ss_labels["end"] + "_" +
+    train_ss_labels["primary_label"]
+)
+print(train_ss_labels.groupby("dummy")["filename"].count().value_counts())
+# ↓
+# filename
+# 2    739
+# Name: count, dtype: int64
+After all, I think there are two identical records for each 739 data point.
+
+
+Reply
+
+React
+Salman Ahmed
+Posted 2 months ago
+
+· 27th in this Competition
+
+Ah Thanks. I was wrong, I thought there were multiple labelers. Thanks for pointing out. 😃
+
+
+Reply
+
+React
+Fernandosr85
+Posted a month ago
+
+· 2017th in this Competition
+
+Thanks for flagging this — confirmed on my end too.
+
+One consequence worth noting: the duplicates seem to affect label quality beyond just row count. When I cross-referenced son07 (47158son07) and son08 (47158son08) in the soundscape labels, I found the same file/timestamp annotated as both classes simultaneously (cosine similarity = 1.000 between segments). This explains the near-random AUC for both classes in validation — the model receives contradictory gradients on identical audio.
+
+
+Reply
+
+React

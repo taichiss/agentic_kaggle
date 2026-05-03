@@ -1,0 +1,125 @@
+Stuck at ~0.928 with Two-Pass SSM + Advanced PP — Is Perch/ProtoSSM Hitting a Ceiling?
+Hi everyone 👋
+
+I’ve been working with the BirdCLEF+ 2026 Two-Pass SSM + Advanced Post-Processing pipeline as a base, and I’ve hit a frustrating plateau.
+
+Current situation
+Best score: ~0.928 (Public LB)
+Reported max for this code: ~0.933
+Even when I submit the same pipeline, I can’t reproduce beyond ~0.928
+What I’ve tried so far
+I’ve made several improvements on top of the baseline:
+
+Event / texture decomposition
+Site × hour priors
+Event / texture + site × hour combination
+Weaker/regularized versions of the above (to avoid overfitting)
+Tuning post-processing functions that worked well in previous models
+But none of these gave any meaningful boost — the score barely moves.
+
+My current hypothesis
+It feels like:
+
+The Perch + protoSSM + MLP pipeline might be hitting a ceiling
+Improvements at the model level are not translating to LB gains
+There might be domain gap / post-processing / calibration limitations
+Questions
+I’d love to hear how others are approaching this stage:
+
+Are Perch-based pipelines saturated?
+
+Has anyone successfully pushed beyond this range using Perch/protoSSM?
+Is it worth switching direction?
+
+e.g. moving to EfficientNet-based SED models
+or hybrid pipelines (embeddings + CNN)
+What made the biggest difference for you after ~0.92?
+
+Better CV?
+Post-processing (thresholding, calibration)?
+Soundscape-focused training?
+Any insights on the 0.933 gap?
+
+Could this be due to randomness, data splits, or missing tricks in PP?
+Any advice is appreciated
+I feel like I’m at the point where small tweaks don’t help anymore, so I’m considering a bigger shift in approach.
+
+Would really appreciate any ideas or experiences from people who broke past this plateau!
+
+Thanks 🌿
+
+
+React
+3 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+Dhruv Pai Dukle
+Posted 4 days ago
+
+· 266th in this Competition
+
+Have you tried CLAP?
+
+
+Reply
+
+React
+OpPrime
+Posted 4 days ago
+
+· 480th in this Competition
+
+That is pretty much what I got also, 0.930 with a lot of adjustments, certainly the current prob+protossm path has a ceiling.
+
+Logically the ceiling comes from exploiting what labelled clips and labelled soundscapes have to offer, right? so next step is to exploit what unlabeled soundscapes have to offer, agree?
+
+As a suggestion, read the last year's winner's note here to get an idea of the complex work needed to label the unlabeled soundscapes. The teacher-student model and the winner code is there to help.
+
+So indeed we get to a top ceiling that can be improved by 0.00x score here and there but wont get us to 0.955 in the LB today.
+
+
+Reply
+
+React
+tropicalbanana
+Topic Author
+Posted 4 days ago
+
+· 700th in this Competition
+
+Yeah, that makes sense. I also feel we’ve mostly squeezed out what we can from the labeled soundscapes, and any further gains from this path are likely to be in the 0.00x range. I’m fully on board with using the unlabeled soundscapes. I’ll read through last year’s winner’s note and look more closely at the teacher-student / pseudo-labeling setup. After that, I’ll think about both directions: using CNN, and combining it with the perch-based approach.
+
+
+Reply
+
+React
+OpPrime
+Posted 4 days ago
+
+· 480th in this Competition
+
+great, I am on the same trajectory, I now have 6 ensembles training, so that I can replicate what Babych has done, let's keep exchanging notes.
+
+
+Reply
+
+React
+tropicalbanana
+Topic Author
+Posted 4 days ago
+
+· 700th in this Competition
+
+Great, let’s keep exchanging notes.
+
+I’ve also started working on a CNN model aligned with the Perch-based approach, so I’ll share the results once I have them.
+
+
+Reply
+
+React

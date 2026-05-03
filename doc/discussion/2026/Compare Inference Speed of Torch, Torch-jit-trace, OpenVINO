@@ -1,0 +1,84 @@
+Compare Inference Speed of Torch, Torch-jit-trace, OpenVINO
+How much inference acceleration can be achieved by following this pipeline: .pth → ONNX → OpenVINO IR (.xml/.bin) → CPU compile_model → AsyncInferQueue?
+
+I was asked that question by @gunianxue in my baseline topic. Then I tried comparing the inference speed of Torch, Torch-jit-trace, OpenVINO on 600 ogg files (it means 600 * 12 = 7200 waves).
+
+As you know, how much the inference speed improves depends on the model architecture and the execution conditions.
+
+I used a HGNetV2-B0 w/ LSE-Head architecture and ran the measuring notebook several times.
+https://www.kaggle.com/code/ttahara/birdclef-2026-torch-v-s-openvino-in-infer-speed 　
+　
+
+method	num workers	run1	run2	run3	run4
+Torch	1	4min 8s ± 30.3 s	2min 58s ± 8 s	2min 19s ± 12.3 s	3min 8s ± 11.9 s
+Torch	2	3min 13s ± 26.1 s	2min 28s ± 6.68 s	1min 48s ± 3.61 s	2min 21s ± 4.56 s
+Torch	4	2min 45s ± 17.0 s	2min 23s ± 3.94 s	1min 36s ± 1.88 s	2min 22s ± 2.27 s
+Torch	8	2min 39s ± 10.6 s	2min 22s ± 4.32 s	1min 36s ± 2.02 s	2min 19s ± 2.07 s
+Torch-jit-trace	1	2min 46s ± 2.71 s	2min 40s ± 6.92 s	1min 51s ± 4.39 s	2min 42s ± 12.2 s
+Torch-jit-trace	2	2min 18s ± 5.09 s	2min 15s ± 4.88 s	1min 32s ± 2.87 s	2min 10s ± 2.76 s
+Torch-jit-trace	4	2min 19s ± 4.02 s	2min 13s ± 2.44 s	1min 23s ± 1.1 s	2min 5s ± 3.37 s
+Torch-jit-trace	8	2min 22s ± 2.48 s	2min 18s ± 2.52 s	1min 30s ± 3.72 s	2min 8s ± 1.64 s
+OpenVINO	1	1min 30s ± 861 ms	1min 28s ± 2.16 s	1min 3s ± 933 ms	1min 21s ± 2.73 s
+OpenVINO	2	1min 16s ± 644 ms	1min 15s ± 424 ms	58 s ± 589 ms	1min 7s ± 1.3 s
+OpenVINO	4	1min 17s ± 594 ms	1min 15s ± 389 ms	58.5 s ± 637 ms	1min 8s ± 755 ms
+OpenVINO	8	1min 16s ± 572 ms	1min 15s ± 2.61 s	57.6 s ± 699 ms	1min 8s ± 920 ms
+　
+　
+　
+The result shows us:
+
+The inference speed varies significantly from run to run.
+Torch-jit-trace is slightly faster than Torch.
+OpenVINO is about twice faster than Torch.
+However, it should be noted that the outputs of OpenVINO differ from those of Torch, and the scores may be slightly worse.
+Therefore, it may be better to use Torch-jit-trace rather than OpenVINO if your models do not take so long time for execution.
+
+
+10
+
+1
+4 Comments
+Hotness
+ 
+Comment here. Be patient, be friendly, and focus on ideas. We're all here to learn and improve!
+This comment will be made public once posted.
+
+
+Post Comment
+Ali Ozan Memetoglu
+Posted 16 days ago
+
+· 14th in this Competition
+
+I think onnx also works just fine
+
+
+Reply
+
+React
+Navneet
+Posted 19 days ago
+
+Superb @ttahara
+
+
+Reply
+
+1
+Aic
+Posted 21 days ago
+
+· 407th in this Competition
+
+Good job！bro
+
+
+Reply
+
+1
+Wasiq Ali
+Posted 23 days ago
+
+very impressive information thanks for sharing with us
+
+

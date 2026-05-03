@@ -3,7 +3,19 @@ name = "birdclef-2026-workspace"
 version = "0.1.0"
 description = "Kaggle BirdCLEF workspace with Codex quality harness."
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "kaggle>=1.7.4.5",
+  "numpy>=2.3.4",
+  "pandas>=2.3.3",
+  "pyarrow>=22.0.0",
+  "scikit-learn>=1.7.2",
+  "scipy>=1.16.3",
+  "soundfile>=0.13.1",
+  "tensorflow>=2.20.0",
+  # Phase 0.5: train_audio MLP head
+  "joblib>=1.5.0",
+  "tqdm>=4.66.0",
+]
 
 [dependency-groups]
 dev = [
