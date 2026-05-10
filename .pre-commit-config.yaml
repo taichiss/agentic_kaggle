@@ -11,18 +11,18 @@ repos:
 
   - repo: local
     hooks:
-      - id: codex-lint
-        name: codex-lint
+      - id: project-lint
+        name: project-lint
         entry: uv run python scripts/quality_gate.py lint
         language: system
         pass_filenames: false
-      - id: codex-typecheck
-        name: codex-typecheck
+      - id: project-typecheck
+        name: project-typecheck
         entry: uv run python scripts/quality_gate.py typecheck
         language: system
         pass_filenames: false
-      - id: codex-arch
-        name: codex-arch
+      - id: project-arch
+        name: project-arch
         entry: uv run python scripts/quality_gate.py arch
         language: system
         pass_filenames: false
