@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>疑似ラベル検証ツール — BirdCLEF 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --danger: #f85149;
+    --warning: #d29922;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --correct: #238636;
+    --correct-hover: #2ea043;
+    --wrong: #da3633;
+    --wrong-hover: #f85149;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ── ヘッダー ── */
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .logo { font-size: 1rem; font-weight: 700; color: var(--accent); }
+  .logo span { color: var(--text-muted); font-weight: 400; }
+  .filter-bar { display: flex; gap: 5px; flex-wrap: wrap; }
+  .filter-chip {
+    padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text-muted); font-size: 0.73rem; cursor: pointer; transition: all 0.15s;
+  }
+  .filter-chip.active { border-color: var(--accent); background: rgba(88,166,255,0.1); color: var(--accent); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .stats-pill { display: flex; gap: 7px; }
+  .pill { display: flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; }
+  .pill-correct { background: rgba(35,134,54,0.2); color: var(--accent2); border: 1px solid rgba(35,134,54,0.4); }
+  .pill-wrong   { background: rgba(218,54,51,0.2);  color: var(--danger);  border: 1px solid rgba(218,54,51,0.4); }
+  .progress-wrap { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 6px 14px; }
+  .progress-text { font-size: 0.82rem; color: var(--text-muted); }
+  .progress-text strong { color: var(--text); }
+  .progress-bar-outer { width: 100px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .progress-bar-inner { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; transition: width 0.3s; }
+  .export-btn {
+    padding: 6px 13px; border-radius: 6px; border: 1px solid var(--accent2);
+    background: rgba(63,185,80,0.1); color: var(--accent2); font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
+  }
+  .export-btn:hover { background: rgba(63,185,80,0.25); }
+
+  /* ── Loading ── */
+  #loadScreen {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  }
+  .loading-spinner {
+    width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.4); border-radius: 8px; padding: 16px 24px; color: var(--danger); max-width: 480px; font-size: 0.85rem; }
+
+  /* ── メインレイアウト ── */
+  main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr auto; gap: 12px; padding: 12px 20px; max-width: 1440px; width: 100%; margin: 0 auto; }
+
+  /* ── カード ── */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+  .card-header { padding: 9px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 7px; background: var(--surface2); flex-wrap: wrap; }
+  .card-header h2 { font-size: 0.88rem; font-weight: 600; }
+  .badge { padding: 2px 7px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+  .badge-pseudo { background: rgba(88,166,255,0.2); color: var(--accent); border: 1px solid rgba(88,166,255,0.4); }
+  .badge-ref    { background: rgba(63,185,80,0.2); color: var(--accent2); border: 1px solid rgba(63,185,80,0.4); }
+  .tier-tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+  .tier-A { background: rgba(63,185,80,0.2); color: #3fb950; }
+  .tier-B { background: rgba(210,153,34,0.2); color: #d29922; }
+  .tier-C { background: rgba(88,166,255,0.2); color: #58a6ff; }
+  .tier-D { background: rgba(248,81,73,0.2); color: #f85149; }
+  .card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+
+  /* ── メタ ── */
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { font-size: 0.67rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .meta-value { font-size: 0.8rem; font-weight: 500; }
+
+  /* ── スコアバー ── */
+  .score-section { display: flex; flex-direction: column; gap: 5px; }
+  .score-row { display: flex; align-items: center; gap: 7px; }
+  .score-name { font-size: 0.72rem; color: var(--text-muted); width: 88px; flex-shrink: 0; }
+  .score-bar-outer { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .score-bar-inner { height: 100%; border-radius: 3px; transition: width 0.4s; }
+  .score-val { font-size: 0.72rem; font-weight: 600; width: 38px; text-align: right; }
+
+  /* ── プレイヤー ── */
+  .audio-section { display: flex; flex-direction: column; gap: 7px; }
+  .audio-label { font-size: 0.72rem; color: var(--text-muted); }
+  .audio-file-name { font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; word-break: break-all; color: var(--text); }
+  .player-custom { display: flex; align-items: center; gap: 9px; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 8px 12px; }
+  .play-btn { width: 34px; height: 34px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.95rem; flex-shrink: 0; transition: all 0.15s; }
+  .play-btn:hover { transform: scale(1.08); }
+  .play-btn-pseudo { background: var(--accent); color: #fff; }
+  .play-btn-ref    { background: var(--accent2); color: #fff; }
+  .seek-bar-wrap { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  input[type=range] { width: 100%; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px; background: var(--border); cursor: pointer; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); cursor: pointer; transition: transform 0.1s; }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  .time-display { display: flex; justify-content: space-between; font-size: 0.67rem; color: var(--text-muted); }
+
+  /* ── 波形 ── */
+  .waveform-wrap { position: relative; width: 100%; height: 68px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; cursor: pointer; }
+  .waveform-canvas { width: 100%; height: 100%; display: block; }
+  .waveform-playhead { position: absolute; top: 0; left: 0; width: 2px; height: 100%; pointer-events: none; }
+  .waveform-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--text-muted); background: var(--surface2); }
+
+  /* ── 参照ファイルリスト ── */
+  .ref-files { display: flex; flex-direction: column; gap: 5px; max-height: 140px; overflow-y: auto; }
+  .ref-file-btn { display: flex; align-items: center; gap: 7px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; cursor: pointer; transition: border-color 0.15s; font-size: 0.75rem; }
+  .ref-file-btn:hover { border-color: var(--accent2); }
+  .ref-file-btn.active { border-color: var(--accent2); background: rgba(63,185,80,0.08); }
+  .ref-file-info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+  .ref-file-name { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; }
+  .ref-file-window { color: var(--text-muted); font-size: 0.67rem; }
+
+  /* ── 判定エリア ── */
+  .judge-area {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 20px;
+  }
+  .judge-entity { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 200px; }
+  .judge-species { font-size: 1rem; font-weight: 700; }
+  .judge-file { font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); }
+  .nav-btns { display: flex; gap: 6px; }
+  .nav-btn { padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.82rem; cursor: pointer; transition: border-color 0.15s; }
+  .nav-btn:hover { border-color: var(--accent); }
+  .judge-btns { display: flex; gap: 10px; }
+  .judge-btn { display: flex; align-items: center; gap: 7px; padding: 9px 22px; border-radius: 8px; border: 2px solid transparent; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+  .judge-btn-correct { background: var(--correct); color: #fff; border-color: var(--correct); }
+  .judge-btn-correct:hover { background: var(--correct-hover); transform: translateY(-1px); }
+  .judge-btn-wrong   { background: var(--wrong);   color: #fff; border-color: var(--wrong); }
+  .judge-btn-wrong:hover { background: var(--wrong-hover); transform: translateY(-1px); }
+  .judge-btn-skip    { background: transparent; color: var(--text-muted); border-color: var(--border); }
+  .judge-btn-skip:hover { border-color: var(--text-muted); color: var(--text); }
+  .current-judgment { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+  .cj-correct { background: rgba(35,134,54,0.2); color: var(--accent2); }
+  .cj-wrong   { background: rgba(218,54,51,0.2);  color: var(--danger); }
+  .cj-skip    { background: rgba(139,148,158,0.2); color: var(--text-muted); }
+  kbd { display: inline-block; padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border); background: var(--surface2); font-size: 0.65rem; font-family: monospace; color: var(--text-muted); }
+  .kbd-hint { font-size: 0.7rem; color: var(--text-muted); display: flex; gap: 7px; flex-wrap: wrap; }
+
+  /* ── 保存インジケータ ── */
+  #saveIndicator { font-size: 0.72rem; color: var(--accent2); opacity: 0; transition: opacity 0.3s; }
+  #saveIndicator.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo">🐦 BirdCLEF 2026 <span>疑似ラベル検証</span></div>
+    <div class="filter-bar" id="filterBar"></div>
+  </div>
+  <div class="header-right">
+    <span id="saveIndicator">✓ 保存済み</span>
+    <div class="stats-pill">
+      <div class="pill pill-correct">○ <span id="countCorrect">0</span></div>
+      <div class="pill pill-wrong">×  <span id="countWrong">0</span></div>
+    </div>
+    <div class="progress-wrap">
+      <span class="progress-text">第 <strong id="curIdx">—</strong> / <strong id="totalIdx">—</strong> 件</span>
+      <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBar" style="width:0%"></div></div>
+    </div>
+    <a href="/api/export-csv" class="export-btn">📥 CSV出力</a>
+  </div>
+</header>
+
+<!-- Loading -->
+<div id="loadScreen">
+  <div class="loading-spinner"></div>
+  <div id="loadMsg" style="color:var(--text-muted);font-size:0.9rem;">データを読み込み中…</div>
+</div>
+
+<!-- Main -->
+<main id="appMain" style="display:none;">
+
+  <!-- 疑似ラベル音声 -->
+  <div class="card">
+    <div class="card-header">
+      <h2>疑似ラベル音声</h2>
+      <span class="badge badge-pseudo">PSEUDO</span>
+      <div id="tierTag" class="tier-tag"></div>
+    </div>
+    <div class="card-body">
+      <div class="meta-grid">
+        <div class="meta-item"><span class="meta-label">Species</span><span class="meta-value" id="metaLabel">—</span></div>
+        <div class="meta-item"><span class="meta-label">Common Name</span><span class="meta-value" id="metaCommonName">—</span></div>
+        <div class="meta-item"><span class="meta-label">Site</span><span class="meta-value" id="metaSite">—</span></div>
+        <div class="meta-item"><span class="meta-label">Hour / Season</span><span class="meta-value" id="metaHour">—</span></div>
+        <div class="meta-item" style="grid-column:1/-1;">
+          <span class="meta-label">Reason</span>
+          <span class="meta-value" id="metaReason" style="font-size:0.75rem;color:var(--text-muted);">—</span>
+        </div>
+      </div>
+
+      <div class="score-section">
+        <div class="score-row"><span class="score-name">IA max</span><div class="score-bar-outer"><div class="score-bar-inner" id="barIaMax" style="background:var(--accent)"></div></div><span class="score-val" id="valIaMax">—</span></div>
+        <div class="score-row"><span class="score-name">distilled max</span><div class="score-bar-outer"><div class="score-bar-inner" id="barDistMax" style="background:#a371f7"></div></div><span class="score-val" id="valDistMax">—</span></div>
+        <div class="score-row"><span class="score-name">karnak max</span><div class="score-bar-outer"><div class="score-bar-inner" id="barKarMax" style="background:#f78166"></div></div><span class="score-val" id="valKarMax">—</span></div>
+      </div>
+
+      <div class="audio-section">
+        <span class="audio-label">疑似ラベルファイル</span>
+        <span class="audio-file-name" id="pseudoFileName">—</span>
+        <div class="player-custom">
+          <button class="play-btn play-btn-pseudo" id="playPseudoBtn" onclick="togglePlay('pseudo')">▶</button>
+          <div class="seek-bar-wrap">
+            <input type="range" id="seekPseudo" min="0" max="100" value="0" step="0.1" oninput="seek('pseudo',this.value)">
+            <div class="time-display"><span id="timePseudoCur">0:00</span><span id="timePseudoDur">0:00</span></div>
+          </div>
+        </div>
+        <div class="waveform-wrap" id="waveformPseudoWrap" onclick="waveformClick('pseudo',event)">
+          <canvas class="waveform-canvas" id="waveformPseudo"></canvas>
+          <div class="waveform-playhead" id="playheadPseudo" style="background:rgba(88,166,255,0.85);"></div>
+          <div class="waveform-loading" id="waveformPseudoLoading">波形を読み込み中…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 参照音声 -->
+  <div class="card">
+    <div class="card-header">
+      <h2>参照音声（正解ラベル）</h2>
+      <span class="badge badge-ref">REFERENCE</span>
+      <span style="font-size:0.72rem;color:var(--text-muted);" id="refFileCount"></span>
+    </div>
+    <div class="card-body">
+      <div class="meta-grid">
+        <div class="meta-item"><span class="meta-label">正解 soundscape 窓数</span><span class="meta-value" id="metaGtWindowCount">—</span></div>
+        <div class="meta-item"><span class="meta-label">季節×時間帯</span><span class="meta-value" id="metaGtSeasonHours" style="font-size:0.75rem;">—</span></div>
+      </div>
+      <div class="audio-section">
+        <span class="audio-label">参照ファイル（クリックで再生）</span>
+        <div class="ref-files" id="refFileList"></div>
+      </div>
+      <div class="player-custom">
+        <button class="play-btn play-btn-ref" id="playRefBtn" onclick="togglePlay('ref')">▶</button>
+        <div class="seek-bar-wrap">
+          <input type="range" id="seekRef" min="0" max="100" value="0" step="0.1" oninput="seek('ref',this.value)">
+          <div class="time-display"><span id="timeRefCur">0:00</span><span id="timeRefDur">0:00</span></div>
+        </div>
+      </div>
+      <div class="waveform-wrap" id="waveformRefWrap" onclick="waveformClick('ref',event)">
+        <canvas class="waveform-canvas" id="waveformRef"></canvas>
+        <div class="waveform-playhead" id="playheadRef" style="background:rgba(63,185,80,0.85);"></div>
+        <div class="waveform-loading" id="waveformRefLoading">波形を読み込み中…</div>
+      </div>
+      <div class="audio-label" id="nowPlayingRef" style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;">—</div>
+    </div>
+  </div>
+
+  <!-- 判定エリア -->
+  <div class="judge-area">
+    <div class="judge-entity">
+      <div class="judge-species" id="judgeSpecies">—</div>
+      <div class="judge-file" id="judgeFile">—</div>
+    </div>
+    <div id="currentJudge"></div>
+    <div class="nav-btns">
+      <button class="nav-btn" onclick="navigate(-1)">◀ 前へ</button>
+      <button class="nav-btn" onclick="navigate(1)">次へ ▶</button>
+    </div>
+    <div class="judge-btns">
+      <button class="judge-btn judge-btn-correct" onclick="judge('correct')">○ 正しい</button>
+      <button class="judge-btn judge-btn-skip"    onclick="judge('skip')">— スキップ</button>
+      <button class="judge-btn judge-btn-wrong"   onclick="judge('wrong')">× 誤り</button>
+    </div>
+    <div class="kbd-hint">
+      <span><kbd>O</kbd> 正しい</span><span><kbd>X</kbd> 誤り</span><span><kbd>S</kbd> スキップ</span>
+      <span><kbd>←</kbd><kbd>→</kbd> 移動</span><span><kbd>Space</kbd> 再生</span>
+    </div>
+  </div>
+
+</main>
+
+<audio id="audioPseudo" preload="auto"></audio>
+<audio id="audioRef"    preload="auto"></audio>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  State
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let rows = [];
+let currentIdx = 0;
+let judgments = {};   // "row_index" → "correct"|"wrong"|"skip"
+let filterTier = 'all';
+let currentRefFiles = [];
+let activeRefIdx = 0;
+let saveTimer = null;
+
+const audioPseudo = document.getElementById('audioPseudo');
+const audioRef    = document.getElementById('audioRef');
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  起動: サーバーからデータ取得
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function boot() {
+  const msg = document.getElementById('loadMsg');
+  try {
+    msg.textContent = 'CSVデータを読み込み中…';
+    const [rowsRes, judgeRes] = await Promise.all([
+      fetch('/api/rows').then(r => r.json()),
+      fetch('/api/judgments').then(r => r.json()),
+    ]);
+    rows = rowsRes.rows || [];
+    judgments = judgeRes.judgments || {};
+    if (rows.length === 0) throw new Error('CSVに有効な行がありませんでした');
+
+    document.getElementById('loadScreen').style.display = 'none';
+    document.getElementById('appMain').style.display = 'grid';
+    buildFilterChips();
+    setupAudioListeners();
+    renderRow(currentIdx);
+    updateHeader();
+  } catch(e) {
+    msg.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'error-box';
+    box.textContent = '⚠ ' + (e.message || 'サーバーに接続できませんでした');
+    document.getElementById('loadScreen').appendChild(box);
+    console.error(e);
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Filter
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildFilterChips() {
+  const tiers = ['all', ...new Set(rows.map(r => r.priority_tier.charAt(0)))];
+  const bar = document.getElementById('filterBar');
+  bar.innerHTML = '';
+  tiers.forEach(t => {
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip' + (t === filterTier ? ' active' : '');
+    chip.textContent = t === 'all' ? '全て' : `Tier ${t}`;
+    chip.onclick = () => {
+      filterTier = t;
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentIdx = filteredRows()[0]?.origIdx ?? 0;
+      renderRow(currentIdx);
+    };
+    bar.appendChild(chip);
+  });
+}
+
+function filteredRows() {
+  return rows.map((r, i) => ({...r, origIdx: i}))
+    .filter(r => filterTier === 'all' || r.priority_tier.startsWith(filterTier));
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Render row
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderRow(idx) {
+  const row = rows[idx];
+  if (!row) return;
+  currentIdx = idx;
+  audioPseudo.pause(); audioRef.pause();
+
+  const tier = row.priority_tier.charAt(0);
+  const tierEl = document.getElementById('tierTag');
+  tierEl.textContent = `Tier ${tier}`;
+  tierEl.className = `tier-tag tier-${tier}`;
+
+  document.getElementById('metaLabel').textContent = row.label;
+  document.getElementById('metaCommonName').textContent = row.common_name;
+  document.getElementById('metaSite').textContent = row.site;
+  document.getElementById('metaHour').textContent = `${row.hour}h / ${row.season} / ${row.daynight}`;
+  document.getElementById('metaReason').textContent = row.reason;
+
+  setScore(parseFloat(row.ia_max)||0,        'barIaMax',  'valIaMax');
+  setScore(parseFloat(row.distilled_max)||0,  'barDistMax','valDistMax');
+  setScore(parseFloat(row.karnak_max)||0,     'barKarMax', 'valKarMax');
+
+  // 疑似音声
+  const pseudo = row.pseudo_soundscape_file;
+  document.getElementById('pseudoFileName').textContent = pseudo;
+  document.getElementById('judgeSpecies').textContent = `${row.label} — ${row.common_name}`;
+  document.getElementById('judgeFile').textContent = pseudo;
+  loadAudio('pseudo', pseudo);
+
+  // 参照
+  const refs = parseRefFiles(row.gt_soundscape_ref_files || '');
+  currentRefFiles = refs;
+  activeRefIdx = 0;
+  document.getElementById('refFileCount').textContent = `${refs.length} 件`;
+  document.getElementById('metaGtWindowCount').textContent = `${row.gt_soundscape_window_count} 窓`;
+  document.getElementById('metaGtSeasonHours').textContent = row.gt_season_hours;
+  buildRefFileList(refs);
+  if (refs.length > 0) loadRefAudio(0);
+
+  renderJudgeBadge(idx);
+  updateHeader();
+}
+
+function setScore(val, barId, valId) {
+  document.getElementById(barId).style.width = Math.min(100, val*100) + '%';
+  document.getElementById(valId).textContent = val.toFixed(3);
+}
+
+function parseRefFiles(raw) {
+  if (!raw) return [];
+  return raw.split('|').map(s => s.trim()).filter(Boolean).map(entry => {
+    const m = entry.match(/^(.+\.ogg)\[([^\]]+)\]/);
+    if (m) return { fname: m[1].trim(), window: m[2].trim(), start: parseTs(m[2]) };
+    return { fname: entry.trim(), window: '', start: 0 };
+  });
+}
+
+function parseTs(w) {
+  const m = w.match(/^(\d+):(\d+):(\d+)/);
+  return m ? +m[1]*3600 + +m[2]*60 + +m[3] : 0;
+}
+
+function buildRefFileList(refs) {
+  const list = document.getElementById('refFileList');
+  list.innerHTML = '';
+  const groups = {};
+  refs.forEach((r, i) => { (groups[r.fname] = groups[r.fname]||[]).push({idx:i,...r}); });
+  Object.keys(groups).forEach(fname => {
+    const wins = groups[fname];
+    const btn = document.createElement('div');
+    btn.className = 'ref-file-btn';
+    btn.innerHTML = `<span>🎵</span><div class="ref-file-info">
+      <span class="ref-file-name">${fname}</span>
+      <span class="ref-file-window">${wins.map(w=>w.window).join(' | ')}</span></div>`;
+    btn.onclick = () => {
+      activeRefIdx = wins[0].idx;
+      document.querySelectorAll('.ref-file-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadRefAudio(wins[0].idx);
+    };
+    list.appendChild(btn);
+  });
+  const first = list.querySelector('.ref-file-btn');
+  if (first) first.classList.add('active');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Waveform
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const waveformCache = {};
+let rafPseudo = null, rafRef = null;
+
+async function decodeWaveform(url, fname) {
+  if (waveformCache[fname]) return waveformCache[fname];
+  const resp = await fetch(url);
+  const ab   = await resp.arrayBuffer();
+  const decoded = await audioCtx.decodeAudioData(ab);
+  const raw = decoded.getChannelData(0);
+  const N = 1200, step = Math.floor(raw.length / N);
+  const peaks = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    let max = 0;
+    for (let j = 0; j < step; j++) { const v=Math.abs(raw[i*step+j]||0); if(v>max) max=v; }
+    peaks[i] = max;
+  }
+  waveformCache[fname] = { peaks, duration: decoded.duration };
+  return waveformCache[fname];
+}
+
+function drawWaveform(canvasId, peaks, color, regions) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio||1, W = canvas.parentElement.clientWidth, H = 68;
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#1c2128'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
+  if (regions?.length) {
+    const dur = regions._dur || 60;
+    regions.forEach(r => {
+      const x1=(r.start/dur)*W, x2=(r.end/dur)*W;
+      ctx.fillStyle='rgba(248,193,73,0.09)'; ctx.fillRect(x1,0,x2-x1,H);
+      ctx.strokeStyle='rgba(248,193,73,0.4)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x1,0); ctx.lineTo(x1,H); ctx.stroke();
+    });
+  }
+  const barW = W/peaks.length;
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0, color+'88'); grad.addColorStop(0.5, color); grad.addColorStop(1, color+'88');
+  ctx.fillStyle = grad;
+  for (let i=0; i<peaks.length; i++) {
+    const amp = Math.min(1, peaks[i]) * (H/2-2);
+    ctx.fillRect(i*barW, H/2-amp, Math.max(1,barW-0.5), amp*2);
+  }
+}
+
+function updatePlayhead(type, pct) {
+  const wrapId = type==='pseudo' ? 'waveformPseudoWrap' : 'waveformRefWrap';
+  const ph = document.getElementById(type==='pseudo' ? 'playheadPseudo' : 'playheadRef');
+  const wrap = document.getElementById(wrapId);
+  if (!ph || !wrap) return;
+  ph.style.left = (pct/100 * wrap.clientWidth) + 'px';
+}
+
+function startPlayheadRAF(type) {
+  const el = type==='pseudo' ? audioPseudo : audioRef;
+  if (type==='pseudo') { if(rafPseudo) cancelAnimationFrame(rafPseudo); }
+  else                 { if(rafRef)    cancelAnimationFrame(rafRef); }
+  const tick = () => {
+    if (!el.duration) return;
+    updatePlayhead(type, (el.currentTime/el.duration)*100);
+    if (!el.paused) {
+      if (type==='pseudo') rafPseudo = requestAnimationFrame(tick);
+      else                 rafRef    = requestAnimationFrame(tick);
+    }
+  };
+  if (type==='pseudo') rafPseudo = requestAnimationFrame(tick);
+  else                 rafRef    = requestAnimationFrame(tick);
+}
+
+function waveformClick(type, e) {
+  const wrapId = type==='pseudo' ? 'waveformPseudoWrap' : 'waveformRefWrap';
+  const wrap = document.getElementById(wrapId);
+  const el   = type==='pseudo' ? audioPseudo : audioRef;
+  if (!wrap || !el.duration) return;
+  const rect = wrap.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  el.currentTime = pct * el.duration;
+  updatePlayhead(type, pct*100);
+}
+
+async function loadWaveformForAudio(type, fname, regions) {
+  const loadingId = type==='pseudo' ? 'waveformPseudoLoading' : 'waveformRefLoading';
+  const canvasId  = type==='pseudo' ? 'waveformPseudo' : 'waveformRef';
+  const color     = type==='pseudo' ? '#58a6ff' : '#3fb950';
+  const loadingEl = document.getElementById(loadingId);
+  if (loadingEl) { loadingEl.style.display='flex'; loadingEl.textContent='波形を読み込み中…'; }
+  try {
+    const url = `/api/audio/${encodeURIComponent(fname)}`;
+    const { peaks } = await decodeWaveform(url, fname);
+    drawWaveform(canvasId, peaks, color, regions);
+    if (loadingEl) loadingEl.style.display='none';
+    updatePlayhead(type, 0);
+  } catch(err) {
+    if (loadingEl) loadingEl.textContent = '波形の読み込みに失敗';
+    console.warn('waveform err', err);
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Audio
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function loadAudio(type, fname) {
+  const el = type==='pseudo' ? audioPseudo : audioRef;
+  const url = `/api/audio/${encodeURIComponent(fname)}`;
+  const loadingEl = document.getElementById(type==='pseudo' ? 'waveformPseudoLoading' : 'waveformRefLoading');
+  el.src = url;
+  el.load();
+  if (type==='pseudo') {
+    document.getElementById('timePseudoDur').textContent = '—';
+    document.getElementById('seekPseudo').value = 0;
+  }
+  updatePlayhead(type, 0);
+  loadWaveformForAudio(type, fname, null);
+}
+
+function loadRefAudio(refIdx) {
+  const ref = currentRefFiles[refIdx];
+  if (!ref) return;
+  document.getElementById('nowPlayingRef').textContent = `▶ ${ref.fname} [${ref.window}]`;
+  const url = `/api/audio/${encodeURIComponent(ref.fname)}`;
+  audioRef.src = url;
+  audioRef.load();
+  audioRef.oncanplay = () => {
+    if (ref.start > 0) audioRef.currentTime = ref.start;
+    document.getElementById('seekRef').value = 0;
+    updatePlayhead('ref', ref.start && audioRef.duration ? ref.start/audioRef.duration*100 : 0);
+  };
+  const sameFile = currentRefFiles.filter(r => r.fname === ref.fname);
+  const regions = sameFile.map(r => ({ start: r.start, end: r.start+5 }));
+  regions._dur = 60;
+  loadWaveformForAudio('ref', ref.fname, regions);
+}
+
+function togglePlay(type) {
+  const el = type==='pseudo' ? audioPseudo : audioRef;
+  const btn = document.getElementById(type==='pseudo' ? 'playPseudoBtn' : 'playRefBtn');
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (el.paused) {
+    if (type==='pseudo') audioRef.pause(); else audioPseudo.pause();
+    el.play();
+  } else {
+    el.pause();
+  }
+}
+
+function seek(type, val) {
+  const el = type==='pseudo' ? audioPseudo : audioRef;
+  if (el.duration) { el.currentTime = el.duration * val/100; updatePlayhead(type, +val); }
+}
+
+function setupAudioListeners() {
+  const setup = (type, el, seekId, curId, durId, btnId) => {
+    el.addEventListener('timeupdate', () => {
+      if (!el.duration) return;
+      const pct = (el.currentTime/el.duration)*100;
+      document.getElementById(seekId).value = pct;
+      document.getElementById(curId).textContent = fmtTime(el.currentTime);
+      updatePlayhead(type, pct);
+    });
+    el.addEventListener('durationchange', () => {
+      document.getElementById(durId).textContent = fmtTime(el.duration);
+    });
+    el.addEventListener('play', () => {
+      document.getElementById(btnId).textContent = '⏸';
+      startPlayheadRAF(type);
+    });
+    el.addEventListener('pause', () => {
+      document.getElementById(btnId).textContent = '▶';
+    });
+    el.addEventListener('ended', () => {
+      document.getElementById(btnId).textContent = '▶';
+      updatePlayhead(type, 100);
+      if (type==='ref') {
+        const next = activeRefIdx+1;
+        if (next<currentRefFiles.length && currentRefFiles[next].fname===currentRefFiles[activeRefIdx].fname) {
+          activeRefIdx = next;
+          audioRef.currentTime = currentRefFiles[next].start;
+          audioRef.play();
+        }
+      }
+    });
+  };
+  setup('pseudo', audioPseudo, 'seekPseudo', 'timePseudoCur', 'timePseudoDur', 'playPseudoBtn');
+  setup('ref',    audioRef,    'seekRef',    'timeRefCur',    'timeRefDur',    'playRefBtn');
+}
+
+function fmtTime(s) {
+  if (!isFinite(s)) return '—';
+  return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Judgment
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function judge(verdict) {
+  judgments[String(currentIdx)] = verdict;
+  renderJudgeBadge(currentIdx);
+  updateHeader();
+  scheduleSave();
+  const filtered = filteredRows();
+  const pos = filtered.findIndex(r => r.origIdx === currentIdx);
+  if (pos < filtered.length-1) navigate(1);
+}
+
+function renderJudgeBadge(idx) {
+  const j = judgments[String(idx)];
+  const el = document.getElementById('currentJudge');
+  if (!j) { el.innerHTML=''; return; }
+  const cls = j==='correct'?'cj-correct':j==='wrong'?'cj-wrong':'cj-skip';
+  const icon= j==='correct'?'○':j==='wrong'?'×':'—';
+  const label=j==='correct'?'正しい':j==='wrong'?'誤り':'スキップ';
+  el.innerHTML = `<div class="current-judgment ${cls}">${icon} ${label}</div>`;
+}
+
+function navigate(dir) {
+  audioPseudo.pause(); audioRef.pause();
+  const filtered = filteredRows();
+  const pos = filtered.findIndex(r => r.origIdx === currentIdx);
+  const next = pos + dir;
+  if (next>=0 && next<filtered.length) renderRow(filtered[next].origIdx);
+}
+
+function updateHeader() {
+  const filtered = filteredRows();
+  const pos = filtered.findIndex(r => r.origIdx === currentIdx);
+  document.getElementById('curIdx').textContent   = pos+1;
+  document.getElementById('totalIdx').textContent = filtered.length;
+  document.getElementById('progressBar').style.width = ((pos+1)/filtered.length*100)+'%';
+  const vals = Object.values(judgments);
+  document.getElementById('countCorrect').textContent = vals.filter(v=>v==='correct').length;
+  document.getElementById('countWrong').textContent   = vals.filter(v=>v==='wrong').length;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Server save (debounced)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushJudgments, 800);
+}
+
+async function pushJudgments() {
+  try {
+    await fetch('/api/judgments', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ judgments }),
+    });
+    const ind = document.getElementById('saveIndicator');
+    ind.classList.add('show');
+    setTimeout(() => ind.classList.remove('show'), 1800);
+  } catch(e) {
+    console.warn('save failed', e);
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Keyboard
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+document.addEventListener('keydown', e => {
+  if (!rows.length) return;
+  if (['input','textarea'].includes(e.target.tagName.toLowerCase())) return;
+  switch(e.key.toLowerCase()) {
+    case 'o': judge('correct'); break;
+    case 'x': judge('wrong');   break;
+    case 's': judge('skip');    break;
+    case 'arrowleft':  navigate(-1); break;
+    case 'arrowright': navigate(1);  break;
+    case ' ': e.preventDefault(); togglePlay('pseudo'); break;
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Boot
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+boot();
+</script>
+</body>
+</html>
