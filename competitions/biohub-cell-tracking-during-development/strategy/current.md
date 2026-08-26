@@ -14,6 +14,9 @@
 - Linking quality dominates the score weight; division Jaccard contributes 0.1.
 - Over-predicting the total node count reduces the adjusted edge score.
 - Train annotations are sparse, so unlabeled cells are not confirmed negatives.
+- Inference must track all cells even though evaluation uses a random sparse subset.
+- The four public test clips are dummy notebook smoke inputs; the larger hidden test does not overlap
+  train according to the organizer.
 - Submission rows mix nodes and edges and must include every test dataset.
 - Official overview and organizer metric repository were checked on 2026-08-26.
 
@@ -32,14 +35,18 @@
 | H001 | The organizer baseline provides the safest first end-to-end contract test | organizer-maintained code implements graph I/O and metric | it cannot round-trip one downloaded sample into a valid CSV within resource limits | proposed |
 | H002 | Physical-distance linking is a higher-priority first baseline than division tuning | edge term has 10x division weight and matching is anisotropic | simple linking fails structurally or division omission dominates observed error | proposed |
 | H003 | Node-count calibration must be tracked per dataset | official metric penalizes over-prediction per sample | local metric and first LB probes show no sensitivity in the relevant range | proposed |
+| H004 | Sparse-positive supervision is safer than treating unlabeled voxels/nodes as negatives | organizer states GT is sparse while inference must cover all cells | a controlled PU/semi-supervised alternative consistently improves hidden-LB evidence | accepted |
+| H005 | Public dummy test success only predicts packaging reliability | organizer clarification says public clips may duplicate train and hidden test is larger/disjoint | organizer changes the public/hidden contract | accepted |
 
 ## Priority Plan
 
 1. Acquire and inventory the official data without loading full volumes.
 2. Run the organizer baseline on one dataset/frame window and validate graph/CSV round trip.
-3. Package the smallest notebook that processes every test dataset and emits a schema-valid file.
-4. Establish an LB anchor, then vary one detection/linking decision per experiment.
-5. Add division logic only after edge/linking and node-count failure modes are measured.
+3. Establish the pinned Zarr/GEFF/tracksdata environment before adding external trackers.
+4. Package the smallest notebook that processes every test dataset and emits a schema-valid file.
+5. Establish an LB anchor, then vary one detection/linking decision per experiment.
+6. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
+7. Add division logic after edge/linking and node-count failure modes are measured.
 
 ## Validation Plan
 
@@ -52,7 +59,8 @@
 
 ## Next Actions
 
-- [ ] Authenticate Kaggle CLI and accept Rules.
-- [ ] Run `fetch_assets.py data` and `inspect_data.py`.
+- [x] Authenticate Kaggle CLI and start `fetch_assets.py data`.
+- [ ] Complete data extraction and run `inspect_data.py`.
+- [x] Sync the pinned BioHub core environment and smoke-test Zarr/tracksdata imports.
 - [ ] Record baseline dependency/runtime constraints as `EXP-0001`.
 - [ ] Build a competition notebook only after the local one-sample round trip succeeds.

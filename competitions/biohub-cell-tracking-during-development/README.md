@@ -27,6 +27,16 @@ uv run python competitions/biohub-cell-tracking-during-development/scripts/inspe
 See [the acquisition guide](docs/overview/acquisition.md) for authentication and reproducibility
 details.
 
+Build the pinned BioHub inspection/I/O environment:
+
+```bash
+uv sync --project competitions/biohub-cell-tracking-during-development/environment
+```
+
+The package policy and organizer-recommended tracker candidates are documented in
+[the ecosystem decision](docs/overview/ecosystem.md) and the
+[organizer Discussion note](docs/discussion/organizer-welcome.md).
+
 ## Lightweight development loop
 
 The first implementation milestone is deliberately small: generate a graph for each test dataset,
