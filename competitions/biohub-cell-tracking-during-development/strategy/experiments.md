@@ -8,6 +8,7 @@ run ID, or checksum sufficient to identify them.
 | EXP-0001 | 2026-08-26 | H001 organizer baseline can establish an end-to-end contract | official 2026-08-26 inventory | `6f85aa7` | `configs/exp-0001-host-smoke.toml` | 20260826 / same-video smoke | 0.0000 (contract-only) | not_submitted | `artifacts/EXP-0001/result.json` | train/infer/GEFF/CSV/metric path passed | establish a real dataset-disjoint baseline run |
 | EXP-0002 | 2026-08-26 | H006 a longer traced smoke exposes the next limiting stage | official 2026-08-26 inventory | `159c452` | `configs/exp-0002-wandb-extended.toml` | 20260826 / same-video trend check | 0.0000 (contract-only) | not_submitted | W&B `iyrrz897` | optimization improved, inference calibration failed | calibrate node and edge thresholds before adding epochs |
 | EXP-0003 | 2026-08-26 | Code Competition submission works end to end through Kaggle CLI | official sample submission / public test | `9a80bb8` | private Notebook v1 | not applicable | not run | 0.000 public | Kaggle ref `55785839` | Notebook push/run/output/submit/score path passed | replace sample graph with calibrated inference |
+| EXP-0004 | 2026-08-26 | H006 the full organizer baseline can establish a model-based LB anchor | official 2026-08-26 inventory | `9c3eba8` | `configs/exp-0004-host-baseline-fold0-50e.toml` | 20260826 / embryo fold 0 (`44b6` held out) | 0.9258 (epoch-5 proxy) | 0.787 public | W&B `ud8rmowz`; Kaggle ref `55790493` | model Notebook contract passed; fixed thresholds leave calibration headroom | calibrate checkpoint-specific detection counts and linking thresholds |
 
 ## Detailed Notes
 
@@ -80,3 +81,28 @@ Checkpoint SHA-256:
   four submissions remained for the day after this submission.
 - This is a submission-transport anchor, not a model baseline. A zero score is expected from the
   organizer sample graph and does not change the EXP-0002 calibration conclusion.
+
+### EXP-0004
+
+- Training uses the pinned organizer UNet+transformer at revision
+  `075fc5f5a52d11077f9dc2b074644618f26939e2`, embryo-grouped fold 0, seed 20260826, batch size 8,
+  BF16, and the versioned 50-epoch configuration. The submitted snapshot is the periodic checkpoint
+  after five completed epochs; its best held-out `accuracy * node_recall` proxy was 0.9258.
+- W&B run: <https://wandb.ai/salax0116-private-email/biohub-cell-tracking/runs/ud8rmowz>.
+- Private model Dataset: <https://www.kaggle.com/datasets/suzukitaichi/biohub-exp-0004-host-baseline>,
+  version 2. Private submission Notebook:
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0004-host-baseline-submit>, version 2, T4,
+  internet disabled, competition source attached.
+- Kaggle inference completed in 263.963 seconds and emitted all four public test datasets:
+  178,301 nodes, 135,077 edges, and 313,378 total rows. The downloaded CSV passed the exact column,
+  dataset coverage, row-sentinel, and edge-reference checks.
+- CLI submission ref: `55790493`; status `COMPLETE`; public score `0.787`; private score unavailable.
+- Periodic checkpoint SHA-256:
+  `5af742c54fdbacaa458872ee9cbc66bed15c61bc0ec1090843fbacc1680840cc`.
+  Flattened inference-weight SHA-256:
+  `9f71b74210b568b282d6310f3bbea4c47a099861fa9446b033a22f3605ee992c`.
+  Submission CSV SHA-256:
+  `5149b67e28057c144e7e5ba7001c83e5cb71548fafb95910aa6b00c49f21d643`.
+- `Biohub Harness 0926 Probe` version 1 scored 0.926 publicly. It is retained only as a public
+  Notebook reference and is not recorded as an EXP-0004 result or treated as the optimization
+  target for this baseline.

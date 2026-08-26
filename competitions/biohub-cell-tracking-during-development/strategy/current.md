@@ -30,16 +30,22 @@
   produced 7,711 nodes and zero edges; more epochs are not the next bottleneck.
 - EXP-0003 verified private Notebook push, execution, output download, Code Competition submission,
   and public-score retrieval using Kaggle CLI only.
-- The live submission command reported four submissions remaining after EXP-0003, implying a
-  five-submission daily allowance at the time checked on 2026-08-26.
+- EXP-0004 established the first model-based LB anchor: the epoch-5 organizer checkpoint scored
+  0.787 public with fixed detection threshold 0.99 and edge threshold 0.5.
+- EXP-0004 processed all four public test clips in 263.963 seconds and emitted 178,301 nodes plus
+  135,077 edges, confirming that full offline model inference fits the Notebook contract.
+- `Biohub Harness 0926 Probe` version 1 scored 0.926 publicly, but is an independent public
+  Notebook reference rather than an EXP-0004 result.
+- The live submission command reported two submissions remaining after EXP-0004 and the separate
+  public-Notebook probe on 2026-08-26.
 
 ## Open Questions
 
 - [x] Confirm the downloaded train/test file inventory and array metadata.
 - [ ] Inspect estimated total-node metadata for node-count calibration.
-- [ ] Choose dataset-disjoint validation after inspecting dataset identities.
+- [x] Choose dataset-disjoint validation after inspecting dataset identities.
 - [x] Confirm the live daily submission quota and final notebook packaging requirements.
-- [ ] Measure public baseline runtime and memory on a small real subset.
+- [x] Measure public baseline runtime on all four public test clips.
 
 ## Working Hypotheses
 
@@ -54,16 +60,16 @@
 
 ## Priority Plan
 
-1. Inspect estimated total-node metadata and calibrate detection/edge thresholds on EXP-0002.
-2. Establish a dataset-disjoint validation split and run one complete held-out dataset.
-3. Package the smallest notebook that processes every test dataset and emits a schema-valid file.
-4. Establish an LB anchor, then vary one detection/linking decision per experiment.
-5. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
-6. Add division logic after edge/linking and node-count failure modes are measured.
+1. Inspect estimated total-node metadata and calibrate detection/edge thresholds for the EXP-0004
+   checkpoint without changing the model.
+2. Complete the 50-epoch checkpoint series while preserving the embryo-grouped validation contract.
+3. Vary one detection-count or linking decision per LB experiment from the 0.787 anchor.
+4. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
+5. Add division logic after edge/linking and node-count failure modes are measured.
 
 ## Validation Plan
 
-- split: dataset-disjoint; exact folds pending data inventory
+- split: embryo-prefix grouped fold 0; train group `6bba`, validation group `44b6`
 - local metric: organizer `tracking_cellmot` implementation
 - leakage checks: no frames from the same dataset across train/validation; no test-derived labels
 - submission checks: exact header, consecutive IDs, row sentinel values, node references scoped by
@@ -80,5 +86,6 @@
 - [x] Run the organizer baseline train/infer/GEFF/CSV/metric smoke path on three real frames.
 - [x] Trace five epochs and five updates per epoch in W&B as `EXP-0002`.
 - [x] Submit private Notebook version 1 through Kaggle CLI and record public score as `EXP-0003`.
-- [ ] Calibrate node count and edge thresholds for the EXP-0002 checkpoint.
-- [ ] Establish a dataset-disjoint baseline run before building the competition notebook.
+- [x] Run the embryo-grouped organizer baseline and save five-epoch checkpoints as `EXP-0004`.
+- [x] Package epoch 5 as an offline GPU Notebook and record the 0.787 public LB anchor.
+- [ ] Calibrate node count and edge thresholds for the EXP-0004 checkpoint.

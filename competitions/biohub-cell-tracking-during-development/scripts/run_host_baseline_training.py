@@ -225,7 +225,7 @@ def run(config_path: Path) -> dict[str, object]:
         encoding="utf-8",
     )
     wandb_run = _init_wandb(config, artifact_dir)
-    if wandb_run is not None:
+    if wandb_run is not None and not getattr(wandb_run, "resumed", False):
         for item in retained_history:
             wandb_run.log(item)
     started = time.monotonic()

@@ -13,6 +13,7 @@
 - [x] Run graph I/O and metric smoke checks on one training dataset.
 - [x] Adapt the organizer detector/linker for bounded local smoke runs.
 - [x] Generate and validate a complete sample-based test submission locally.
-- [ ] Package the pipeline for an offline Kaggle Notebook.
+- [x] Package the pipeline for an offline Kaggle Notebook.
 - [x] Push the notebook with explicit user approval and log the LB result.
-- [ ] Calibrate detection counts and edge thresholds before the first model-based submission.
+- [x] Submit the epoch-5 organizer checkpoint as the first model-based LB anchor.
+- [ ] Calibrate detection counts and edge thresholds from the 0.787 model-based anchor.
