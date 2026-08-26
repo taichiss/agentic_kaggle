@@ -1,9 +1,47 @@
-kaggle.json
+# credentials and local environments
 .env
+.env.*
+!.env.example
+kaggle.json
+**/kaggle.json
 .venv/
-*.zip
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
 
-data/*
-!data/input/
-data/input/*
-!data/input/.gitkeep
+# notebooks and editor state
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# Kaggle data and generated artifacts
+data/**
+competitions/*/data/**
+competitions/*/artifacts/**
+competitions/*/submissions/**
+output/**
+artifacts/**
+submissions/**
+
+# common large/generated files
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.parquet
+*.feather
+*.npy
+*.npz
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.joblib
+*.pkl
+
+# operating system files
+.DS_Store
+Thumbs.db
+*:Zone.Identifier

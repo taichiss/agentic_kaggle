@@ -1,0 +1,31 @@
+{
+  "task_id": "example",
+  "competition": "competition-slug-or-platform",
+  "status": "planned",
+  "branch": "",
+  "related_adrs": [],
+  "last_verified_at": "",
+  "plan": [
+    {
+      "step": "Inspect official facts, ADRs, and current strategy",
+      "status": "pending"
+    },
+    {
+      "step": "Implement a narrow change and tests",
+      "status": "pending"
+    },
+    {
+      "step": "Run standard validation and update experiment records",
+      "status": "pending"
+    }
+  ],
+  "validation": {
+    "commands": [
+      "uv run ruff check .",
+      "uv run harness_check",
+      "uv run pytest"
+    ],
+    "latest_result": ""
+  },
+  "notes": []
+}

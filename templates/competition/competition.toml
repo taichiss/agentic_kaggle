@@ -1,0 +1,34 @@
+schema_version = 1
+
+[competition]
+slug = "{{SLUG}}"
+title = "{{TITLE}}"
+status = "active"
+competition_url = "{{COMPETITION_URL}}"
+metric = "{{METRIC}}"
+metric_direction = "{{METRIC_DIRECTION}}"
+
+[official]
+checked_at = "unverified"
+rules_url = "unknown"
+data_url = "unknown"
+evaluation_url = "unknown"
+
+[submission]
+file_name = "submission.csv"
+id_columns = []
+prediction_columns = []
+expected_rows = 0
+
+[constraints]
+external_data = "unknown"
+pretrained_models = "unknown"
+internet = "unknown"
+notebook_runtime = "unknown"
+submission_limit = "unknown"
+
+[data]
+local_root = "data"
+train = "unknown"
+test = "unknown"
+sample_submission = "unknown"
