@@ -14,6 +14,10 @@ from pathlib import Path
 COMPETITION_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = COMPETITION_ROOT / "configs/exp-0004-host-baseline-fold0-50e.toml"
 DEFAULT_OUTPUT = COMPETITION_ROOT / "data/kaggle-submission-EXP-0004"
+DEFAULT_DATASET_ID = "suzukitaichi/biohub-exp-0004-host-baseline"
+DEFAULT_KERNEL_ID = "suzukitaichi/biohub-exp-0004-host-baseline-submit"
+DEFAULT_DATASET_TITLE = "Biohub EXP-0004 Host Baseline"
+DEFAULT_KERNEL_TITLE = "Biohub EXP-0004 Host Baseline Submit"
 
 
 def _sha256(path: Path) -> str:
@@ -24,7 +28,7 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _notebook(dataset_id: str) -> dict[str, object]:
+def _notebook(dataset_id: str, title: str) -> dict[str, object]:
     source = [
         "from pathlib import Path\n",
         "import subprocess\n",
@@ -54,7 +58,7 @@ def _notebook(dataset_id: str) -> dict[str, object]:
                 "cell_type": "markdown",
                 "metadata": {},
                 "source": [
-                    "# Biohub host baseline — EXP-0004\n",
+                    f"# {title}\n",
                     "\n",
                     "Offline inference with the locally trained organizer "
                     "UNet+transformer checkpoint."
@@ -86,6 +90,10 @@ def prepare(
     config_path: Path,
     output_root: Path,
     trained_dir_override: Path | None = None,
+    dataset_id: str = DEFAULT_DATASET_ID,
+    kernel_id: str = DEFAULT_KERNEL_ID,
+    dataset_title: str = DEFAULT_DATASET_TITLE,
+    kernel_title: str = DEFAULT_KERNEL_TITLE,
 ) -> dict[str, object]:
     with config_path.open("rb") as file:
         config = tomllib.load(file)
@@ -102,8 +110,6 @@ def prepare(
     if not weights_path.is_file() or not model_config_path.is_file():
         raise FileNotFoundError(f"completed checkpoint is missing from {trained_dir}")
 
-    dataset_id = "suzukitaichi/biohub-exp-0004-host-baseline"
-    kernel_id = "suzukitaichi/biohub-exp-0004-host-baseline-submit"
     dataset_dir = output_root / "dataset"
     kernel_dir = output_root / "kernel"
     dataset_dir.mkdir(parents=True, exist_ok=True)
@@ -119,6 +125,11 @@ def prepare(
         ),
         (source_repo / "LICENSE", dataset_dir / "ORGANIZER-LICENSE"),
     ]
+    checkpoint_metadata = trained_dir / "checkpoint-metadata.json"
+    if checkpoint_metadata.is_file():
+        copy_pairs.append(
+            (checkpoint_metadata, dataset_dir / checkpoint_metadata.name)
+        )
     for source, destination in copy_pairs:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
@@ -159,7 +170,7 @@ def prepare(
     (dataset_dir / "dataset-metadata.json").write_text(
         json.dumps(
             {
-                "title": "Biohub EXP-0004 Host Baseline",
+                "title": dataset_title,
                 "id": dataset_id,
                 "licenses": [{"name": "other"}],
             },
@@ -169,15 +180,16 @@ def prepare(
         encoding="utf-8",
     )
 
-    notebook_name = "biohub-exp-0004-host-baseline-submit.ipynb"
+    notebook_name = f"{kernel_id.split('/', 1)[-1]}.ipynb"
     (kernel_dir / notebook_name).write_text(
-        json.dumps(_notebook(dataset_id), indent=2) + "\n", encoding="utf-8"
+        json.dumps(_notebook(dataset_id, kernel_title), indent=2) + "\n",
+        encoding="utf-8",
     )
     (kernel_dir / "kernel-metadata.json").write_text(
         json.dumps(
             {
                 "id": kernel_id,
-                "title": "Biohub EXP-0004 Host Baseline Submit",
+                "title": kernel_title,
                 "code_file": notebook_name,
                 "language": "python",
                 "kernel_type": "notebook",
@@ -212,11 +224,19 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--trained-dir", type=Path, default=None)
+    parser.add_argument("--dataset-id", default=DEFAULT_DATASET_ID)
+    parser.add_argument("--kernel-id", default=DEFAULT_KERNEL_ID)
+    parser.add_argument("--dataset-title", default=DEFAULT_DATASET_TITLE)
+    parser.add_argument("--kernel-title", default=DEFAULT_KERNEL_TITLE)
     args = parser.parse_args()
     prepare(
         args.config.resolve(),
         args.output_root.resolve(),
         args.trained_dir.resolve() if args.trained_dir is not None else None,
+        dataset_id=args.dataset_id,
+        kernel_id=args.kernel_id,
+        dataset_title=args.dataset_title,
+        kernel_title=args.kernel_title,
     )
     return 0
 
