@@ -38,7 +38,7 @@
 
 | id | hypothesis | evidence | falsification | status |
 | --- | --- | --- | --- | --- |
-| H001 | The organizer baseline provides the safest first end-to-end contract test | organizer-maintained code implements graph I/O and metric | it cannot round-trip one downloaded sample into a valid CSV within resource limits | proposed |
+| H001 | The organizer baseline provides the safest first end-to-end contract test | organizer-maintained code plus EXP-0001 train/infer/GEFF/CSV/metric pass | it cannot scale beyond the deliberately tiny smoke configuration within resource limits | accepted |
 | H002 | Physical-distance linking is a higher-priority first baseline than division tuning | edge term has 10x division weight and matching is anisotropic | simple linking fails structurally or division omission dominates observed error | proposed |
 | H003 | Node-count calibration must be tracked per dataset | official metric penalizes over-prediction per sample | local metric and first LB probes show no sensitivity in the relevant range | proposed |
 | H004 | Sparse-positive supervision is safer than treating unlabeled voxels/nodes as negatives | organizer states GT is sparse while inference must cover all cells | a controlled PU/semi-supervised alternative consistently improves hidden-LB evidence | accepted |
@@ -46,8 +46,8 @@
 
 ## Priority Plan
 
-1. Run the organizer baseline on one dataset/frame window and validate graph/CSV round trip.
-2. Inspect estimated total-node metadata and establish a dataset-disjoint validation split.
+1. Inspect estimated total-node metadata and establish a dataset-disjoint validation split.
+2. Scale the organizer baseline from the verified three-frame smoke to one complete held-out dataset.
 3. Package the smallest notebook that processes every test dataset and emits a schema-valid file.
 4. Establish an LB anchor, then vary one detection/linking decision per experiment.
 5. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
@@ -68,5 +68,6 @@
 - [x] Complete data extraction and run `inspect_data.py`.
 - [x] Sync the pinned BioHub core environment and smoke-test Zarr/tracksdata imports.
 - [x] Validate the official sample submission against all four public test dataset names.
-- [ ] Record baseline dependency/runtime constraints as `EXP-0001`.
-- [ ] Build a competition notebook only after the local one-sample round trip succeeds.
+- [x] Record baseline dependency/runtime constraints as `EXP-0001`.
+- [x] Run the organizer baseline train/infer/GEFF/CSV/metric smoke path on three real frames.
+- [ ] Establish a dataset-disjoint baseline run before building the competition notebook.

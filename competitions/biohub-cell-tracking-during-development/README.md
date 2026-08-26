@@ -37,6 +37,27 @@ The package policy and organizer-recommended tracker candidates are documented i
 [the ecosystem decision](docs/overview/ecosystem.md) and the
 [organizer Discussion note](docs/discussion/organizer-welcome.md).
 
+## Organizer baseline smoke run
+
+The pinned organizer repository provides the joint 3D U-Net/temporal-attention detector and
+cross-attention linker, sparse-supervision training, GEFF graph I/O, CSV conversion, metrics, and
+Napari visualization. Run its smallest reproducible real-data contract check with:
+
+```bash
+uv sync \
+  --project competitions/biohub-cell-tracking-during-development/environment \
+  --extra baseline
+uv run \
+  --project competitions/biohub-cell-tracking-during-development/environment \
+  --extra baseline \
+  python competitions/biohub-cell-tracking-during-development/scripts/run_host_baseline_smoke.py
+```
+
+The smoke config uses one dataset, three frames, one training iteration, and a reduced model. It
+checks CUDA training, checkpoint reload, inference, GEFF → CSV → GEFF, submission validation, and
+the organizer metric. Outputs remain under ignored `artifacts/`, `submissions/`, and the ignored
+organizer checkout's `weights/` directory.
+
 ## Lightweight development loop
 
 The first implementation milestone is deliberately small: generate a graph for each test dataset,
