@@ -189,6 +189,11 @@ def _load_model(
     bundled_models = bundle_dir / "tracking_cellmot_models.zip"
     if bundled_models.exists():
         sys.path.insert(0, str(bundled_models))
+    # Kaggle expands uploaded ZIP files into a same-named directory. Support
+    # both the local ZIP bundle and its Dataset-mounted representation.
+    expanded_models = bundle_dir / "tracking_cellmot_models"
+    if expanded_models.is_dir():
+        sys.path.insert(0, str(expanded_models))
     from tracking_cellmot.models import TemporalUNet3D
 
     config = json.loads((bundle_dir / "config.json").read_text(encoding="utf-8"))
