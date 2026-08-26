@@ -21,6 +21,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from scipy.optimize import linear_sum_assignment
+from scipy.spatial import cKDTree
 
 POS_EMBED_DIM = 8
 CSV_COLUMNS = (
@@ -234,7 +236,7 @@ def predict_dataset(
     pool_kernel_um: float,
     detection_tta: bool,
     max_frames: int | None = None,
-) -> tuple[np.ndarray, list[tuple[int, int]]]:
+) -> tuple[np.ndarray, list[tuple[int, int, float]]]:
     metadata = _zarr_metadata(dataset)
     shape = metadata["shape"]
     frames = int(shape[0]) if max_frames is None else min(int(shape[0]), max_frames)
@@ -267,7 +269,7 @@ def predict_dataset(
     coord_lists: list[np.ndarray] = []
     offsets: dict[int, tuple[int, int]] = {}
     node_count = 0
-    edges: list[tuple[int, int]] = []
+    edges: list[tuple[int, int, float]] = []
 
     for window_number, start in enumerate(starts):
         frame_indices = list(range(start, start + window_size))
@@ -378,7 +380,11 @@ def predict_dataset(
                 if children.get(source_index, 0) >= 2 or parents.get(target_index, 0) >= 1:
                     continue
                 edges.append(
-                    (source_start + source_index, target_start + target_index)
+                    (
+                        source_start + source_index,
+                        target_start + target_index,
+                        float(probabilities[source_index, target_index]),
+                    )
                 )
                 children[source_index] = children.get(source_index, 0) + 1
                 parents[target_index] = parents.get(target_index, 0) + 1
@@ -399,8 +405,283 @@ def predict_dataset(
     return coords.astype(np.int64), edges
 
 
+def postprocess_prediction(
+    coords: np.ndarray,
+    raw_edges: list[tuple[int, int, float]],
+    voxel_size_um: tuple[float, float, float],
+) -> tuple[np.ndarray, list[tuple[int, int]], dict[str, int | float]]:
+    """Apply the artifact-free topology repairs used by the public 0.926 harness.
+
+    This intentionally excludes its second-seed ensemble, DeepCenter detector, synthetic
+    gap nodes, and eight-view TTA. Those are additional models or inference changes rather
+    than post-processing that can be applied to this checkpoint's frozen predictions.
+    """
+    if len(coords) == 0:
+        return coords, [], {"raw_nodes": 0, "raw_edges": len(raw_edges)}
+
+    scale = np.asarray(voxel_size_um, dtype=np.float64)
+    positions_um = coords[:, 1:].astype(np.float64) * scale
+    ids_by_time = {
+        int(frame): np.flatnonzero(coords[:, 0] == frame).astype(np.int64).tolist()
+        for frame in np.unique(coords[:, 0])
+    }
+    learned_prob = {
+        (int(source), int(target)): float(np.clip(probability, 0.0, 1.0))
+        for source, target, probability in raw_edges
+    }
+    learned_by_time: dict[int, list[tuple[int, int, float]]] = {}
+    for (source, target), probability in learned_prob.items():
+        source_time = int(coords[source, 0])
+        if int(coords[target, 0]) == source_time + 1:
+            learned_by_time.setdefault(source_time, []).append(
+                (source, target, probability)
+            )
+
+    predecessor_position: dict[int, np.ndarray] = {}
+    motion_edges: list[tuple[int, int, float]] = []
+    tight_edges = 0
+    relaxed_edges = 0
+
+    def assign_pass(
+        source_ids: list[int],
+        target_ids: list[int],
+        frame: int,
+        gate_um: float,
+    ) -> list[tuple[int, int, float]]:
+        if not source_ids or not target_ids:
+            return []
+        source_pos = positions_um[source_ids]
+        target_pos = positions_um[target_ids]
+        predicted = source_pos.copy()
+        for index, source_id in enumerate(source_ids):
+            previous = predecessor_position.get(source_id)
+            if previous is not None:
+                predicted[index] += 0.5 * (source_pos[index] - previous)
+        raw_distance = np.linalg.norm(
+            source_pos[:, None, :] - target_pos[None, :, :], axis=2
+        )
+        motion_distance = np.linalg.norm(
+            predicted[:, None, :] - target_pos[None, :, :], axis=2
+        )
+        probability = np.zeros_like(raw_distance)
+        source_index = {node_id: index for index, node_id in enumerate(source_ids)}
+        target_index = {node_id: index for index, node_id in enumerate(target_ids)}
+        for source, target, value in learned_by_time.get(frame, []):
+            row = source_index.get(source)
+            column = target_index.get(target)
+            if row is not None and column is not None:
+                probability[row, column] = value
+        big = gate_um * 1000.0 + 1.0
+        cost = motion_distance + 0.05 * raw_distance - probability
+        cost[raw_distance > gate_um] = big
+        rows, columns = linear_sum_assignment(cost)
+        return [
+            (
+                source_ids[int(row)],
+                target_ids[int(column)],
+                float(probability[row, column]),
+            )
+            for row, column in zip(rows, columns, strict=True)
+            if cost[row, column] < big
+        ]
+
+    for frame in sorted(ids_by_time):
+        source_ids = ids_by_time.get(frame, [])
+        target_ids = ids_by_time.get(frame + 1, [])
+        unmatched_sources = set(source_ids)
+        unmatched_targets = set(target_ids)
+        frame_edges: list[tuple[int, int, float]] = []
+        for gate_um, is_tight in ((6.0, True), (10.0, False)):
+            candidates = assign_pass(
+                [node for node in source_ids if node in unmatched_sources],
+                [node for node in target_ids if node in unmatched_targets],
+                frame,
+                gate_um,
+            )
+            for source, target, probability in candidates:
+                if source not in unmatched_sources or target not in unmatched_targets:
+                    continue
+                unmatched_sources.remove(source)
+                unmatched_targets.remove(target)
+                frame_edges.append((source, target, probability))
+                if is_tight:
+                    tight_edges += 1
+                else:
+                    relaxed_edges += 1
+        for source, target, probability in frame_edges:
+            motion_edges.append((source, target, probability))
+            predecessor_position[target] = positions_um[source]
+
+    outgoing: dict[int, list[int]] = {}
+    incoming: set[int] = set()
+    for source, target, _ in motion_edges:
+        outgoing.setdefault(source, []).append(target)
+        incoming.add(target)
+    global_division_cap = max(1, round(max(1, len(motion_edges)) * 0.00375))
+    division_edges: list[tuple[int, int, float]] = []
+    used_targets: set[int] = set()
+    for frame in sorted(ids_by_time):
+        child_ids = ids_by_time.get(frame + 1, [])
+        source_ids = [
+            node_id
+            for node_id in ids_by_time.get(frame, [])
+            if len(outgoing.get(node_id, [])) == 1 and node_id in incoming
+        ]
+        orphan_ids = [
+            node_id
+            for node_id in child_ids
+            if node_id not in incoming and node_id not in used_targets
+        ]
+        if not source_ids or not orphan_ids:
+            continue
+        orphan_tree = cKDTree(positions_um[orphan_ids])
+        frame_cap = max(1, round(len(source_ids) * 0.0076))
+        proposals: list[tuple[float, int, int]] = []
+        for source in source_ids:
+            existing_child = outgoing[source][0]
+            if np.linalg.norm(positions_um[source] - positions_um[existing_child]) > 10.0:
+                continue
+            _, nearest_index = orphan_tree.query(positions_um[existing_child])
+            candidate = orphan_ids[int(nearest_index)]
+            parent_distance = float(
+                np.linalg.norm(positions_um[source] - positions_um[candidate])
+            )
+            sister_distance = float(
+                np.linalg.norm(positions_um[existing_child] - positions_um[candidate])
+            )
+            if parent_distance > 8.0 or sister_distance > 11.0:
+                continue
+            first_successors = outgoing.get(existing_child, [])
+            second_successors = outgoing.get(candidate, [])
+            if len(first_successors) != 1 or len(second_successors) != 1:
+                continue
+            first_next = first_successors[0]
+            second_next = second_successors[0]
+            if (
+                int(coords[first_next, 0]) != frame + 2
+                or int(coords[second_next, 0]) != frame + 2
+            ):
+                continue
+            next_sister_distance = float(
+                np.linalg.norm(positions_um[first_next] - positions_um[second_next])
+            )
+            if next_sister_distance - sister_distance < 2.25:
+                continue
+            proposals.append(
+                (parent_distance + 0.15 * sister_distance, source, candidate)
+            )
+        proposals.sort()
+        added_this_frame = 0
+        used_sources: set[int] = set()
+        for _, source, candidate in proposals:
+            if len(division_edges) >= global_division_cap or added_this_frame >= frame_cap:
+                break
+            if source in used_sources or candidate in used_targets or candidate in incoming:
+                continue
+            division_edges.append((source, candidate, 0.0))
+            outgoing[source].append(candidate)
+            incoming.add(candidate)
+            used_sources.add(source)
+            used_targets.add(candidate)
+            added_this_frame += 1
+
+    combined_edges = [*motion_edges, *division_edges]
+    incident = {
+        node_id
+        for source, target, _ in combined_edges
+        for node_id in (source, target)
+    }
+
+    parent = {node_id: node_id for node_id in incident}
+
+    def find(node_id: int) -> int:
+        while parent[node_id] != node_id:
+            parent[node_id] = parent[parent[node_id]]
+            node_id = parent[node_id]
+        return node_id
+
+    def union(left: int, right: int) -> None:
+        left_root, right_root = find(left), find(right)
+        if left_root != right_root:
+            parent[left_root] = right_root
+
+    outdegree: dict[int, int] = {}
+    for source, target, _ in combined_edges:
+        union(source, target)
+        outdegree[source] = outdegree.get(source, 0) + 1
+    components: dict[int, list[int]] = {}
+    for node_id in incident:
+        components.setdefault(find(node_id), []).append(node_id)
+    kept_ids: set[int] = set()
+    for members in components.values():
+        has_division = any(outdegree.get(node_id, 0) >= 2 for node_id in members)
+        if len(members) >= 6 or has_division:
+            kept_ids.update(members)
+    if not kept_ids:
+        kept_ids = incident
+    kept_edges = [
+        (source, target)
+        for source, target, _ in combined_edges
+        if source in kept_ids and target in kept_ids
+    ]
+
+    predecessor: dict[int, list[int]] = {}
+    successor: dict[int, list[int]] = {}
+    for source, target in kept_edges:
+        predecessor.setdefault(target, []).append(source)
+        successor.setdefault(source, []).append(target)
+    smoothed = coords.astype(np.float64, copy=True)
+    for node_id in sorted(kept_ids):
+        if len(predecessor.get(node_id, [])) != 1 or len(successor.get(node_id, [])) != 1:
+            continue
+        neighborhood = [(0, node_id)]
+        current = node_id
+        for step in range(1, 3):
+            previous = predecessor.get(current, [])
+            if len(previous) != 1:
+                break
+            current = previous[0]
+            neighborhood.append((-step, current))
+        current = node_id
+        for step in range(1, 3):
+            following = successor.get(current, [])
+            if len(following) != 1:
+                break
+            current = following[0]
+            neighborhood.append((step, current))
+        if len(neighborhood) < 3:
+            continue
+        times = np.asarray([time for time, _ in neighborhood], dtype=np.float64)
+        points = np.asarray(
+            [coords[member, 1:] for _, member in neighborhood], dtype=np.float64
+        )
+        fitted = np.asarray(
+            [np.polyval(np.polyfit(times, points[:, axis], 1), 0.0) for axis in range(3)]
+        )
+        smoothed[node_id, 1:] = 0.2 * coords[node_id, 1:] + 0.8 * fitted
+
+    ordered_ids = sorted(kept_ids)
+    remap = {old: new for new, old in enumerate(ordered_ids)}
+    output_coords = smoothed[ordered_ids]
+    output_coords[:, 1:] = np.maximum(0, np.rint(output_coords[:, 1:]))
+    output_edges = [(remap[source], remap[target]) for source, target in kept_edges]
+    stats: dict[str, int | float] = {
+        "raw_nodes": len(coords),
+        "raw_edges": len(raw_edges),
+        "motion_edges": len(motion_edges),
+        "motion_tight_edges": tight_edges,
+        "motion_relaxed_edges": relaxed_edges,
+        "safe_divisions_added": len(division_edges),
+        "short_or_isolated_nodes_removed": len(coords) - len(output_coords),
+        "nodes": len(output_coords),
+        "edges": len(output_edges),
+        "edge_node_ratio": round(len(output_edges) / max(len(output_coords), 1), 6),
+    }
+    return output_coords.astype(np.int64), output_edges, stats
+
+
 def write_submission(
-    predictions: list[tuple[str, np.ndarray, list[tuple[int, int]]]],
+    predictions: list[tuple[str, np.ndarray, list[tuple[int, int] | tuple[int, int, float]]]],
     output_path: Path,
 ) -> dict[str, int]:
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -417,7 +698,8 @@ def write_submission(
                 )
                 row_id += 1
                 node_total += 1
-            for source_id, target_id in edges:
+            for edge in edges:
+                source_id, target_id = int(edge[0]), int(edge[1])
                 writer.writerow(
                     [row_id, dataset, "edge", -1, -1, -1, -1, -1, source_id, target_id]
                 )
@@ -437,6 +719,11 @@ def main() -> int:
     parser.add_argument("--no-detection-tta", action="store_true")
     parser.add_argument("--max-datasets", type=int, default=None)
     parser.add_argument("--max-frames", type=int, default=None)
+    parser.add_argument(
+        "--postprocess-profile",
+        choices=("none", "public-applicable-v1"),
+        default="none",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -475,6 +762,22 @@ def main() -> int:
         if len(coords) == 0:
             raise RuntimeError(
                 f"{dataset.stem} produced zero detections at threshold {args.det_threshold}"
+            )
+        if args.postprocess_profile == "public-applicable-v1":
+            metadata = _zarr_metadata(dataset)
+            coords, edges, postprocess_stats = postprocess_prediction(
+                coords,
+                edges,
+                tuple(float(value) for value in metadata["scale"]),
+            )
+            if len(coords) == 0 or len(edges) == 0:
+                raise RuntimeError(
+                    f"{dataset.stem} post-processing produced an empty graph"
+                )
+            print(
+                f"{dataset.stem} postprocess: "
+                + json.dumps(postprocess_stats, sort_keys=True),
+                flush=True,
             )
         predictions.append((dataset.stem, coords, edges))
         print(f"{dataset.stem}: {len(coords)} nodes, {len(edges)} edges", flush=True)

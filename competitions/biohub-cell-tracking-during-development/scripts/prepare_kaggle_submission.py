@@ -28,7 +28,11 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _notebook(dataset_id: str, title: str) -> dict[str, object]:
+def _notebook(
+    dataset_id: str,
+    title: str,
+    postprocess_profile: str = "none",
+) -> dict[str, object]:
     source = [
         "from pathlib import Path\n",
         "import subprocess\n",
@@ -52,6 +56,12 @@ def _notebook(dataset_id: str, title: str) -> dict[str, object]:
         "assert output.exists() and output.stat().st_size > 0\n",
         "print(f'submission ready: {output} ({output.stat().st_size:,} bytes)')\n",
     ]
+    if postprocess_profile != "none":
+        command_end = source.index("]\n")
+        source.insert(
+            command_end,
+            f"    '--postprocess-profile', '{postprocess_profile}',\n",
+        )
     return {
         "cells": [
             {
@@ -94,6 +104,7 @@ def prepare(
     kernel_id: str = DEFAULT_KERNEL_ID,
     dataset_title: str = DEFAULT_DATASET_TITLE,
     kernel_title: str = DEFAULT_KERNEL_TITLE,
+    postprocess_profile: str = "none",
 ) -> dict[str, object]:
     with config_path.open("rb") as file:
         config = tomllib.load(file)
@@ -156,6 +167,7 @@ def prepare(
         "train_parameters": config["train"],
         "runtime": config.get("runtime", {}),
         "checkpoint": config.get("checkpoint", {}),
+        "postprocess_profile": postprocess_profile,
         "files": {
             str(path.relative_to(dataset_dir)): {
                 "bytes": path.stat().st_size,
@@ -182,7 +194,10 @@ def prepare(
 
     notebook_name = f"{kernel_id.split('/', 1)[-1]}.ipynb"
     (kernel_dir / notebook_name).write_text(
-        json.dumps(_notebook(dataset_id, kernel_title), indent=2) + "\n",
+        json.dumps(
+            _notebook(dataset_id, kernel_title, postprocess_profile), indent=2
+        )
+        + "\n",
         encoding="utf-8",
     )
     (kernel_dir / "kernel-metadata.json").write_text(
@@ -228,6 +243,11 @@ def main() -> int:
     parser.add_argument("--kernel-id", default=DEFAULT_KERNEL_ID)
     parser.add_argument("--dataset-title", default=DEFAULT_DATASET_TITLE)
     parser.add_argument("--kernel-title", default=DEFAULT_KERNEL_TITLE)
+    parser.add_argument(
+        "--postprocess-profile",
+        choices=("none", "public-applicable-v1"),
+        default="none",
+    )
     args = parser.parse_args()
     prepare(
         args.config.resolve(),
@@ -237,6 +257,7 @@ def main() -> int:
         kernel_id=args.kernel_id,
         dataset_title=args.dataset_title,
         kernel_title=args.kernel_title,
+        postprocess_profile=args.postprocess_profile,
     )
     return 0
 
