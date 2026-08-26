@@ -1,0 +1,25 @@
+schema_version = 1
+
+[competition]
+slug = "biohub-cell-tracking-during-development"
+
+[organizer_baseline]
+repository = "https://github.com/royerlab/kaggle-cell-tracking-competition.git"
+revision = "075fc5f5a52d11077f9dc2b074644618f26939e2"
+destination = "data/external/royerlab-kaggle-cell-tracking-competition"
+license = "BSD-3-Clause"
+retrieved_on = "2026-08-26"
+
+[[public_notebooks]]
+ref = "inversion/cell-tracking-getting-started-w-nearest-neighbor"
+destination = "data/public-notebooks/inversion-cell-tracking-getting-started-w-nearest-neighbor"
+role = "community starter baseline linked to this competition; not an official rule source"
+api_url = "https://www.kaggle.com/api/v1/kernels/pull/inversion/cell-tracking-getting-started-w-nearest-neighbor"
+expected_version = 3
+
+[[public_notebooks]]
+ref = "busyaprime/biohub-cell-tracking-getting-started"
+destination = "data/public-notebooks/busyaprime-biohub-cell-tracking-getting-started"
+role = "community getting-started notebook; not an official rule source"
+api_url = "https://www.kaggle.com/api/v1/kernels/pull/busyaprime/biohub-cell-tracking-getting-started"
+expected_version = 1

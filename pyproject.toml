@@ -27,8 +27,9 @@ harness_check = "agentic_kaggle.harness.checks:main"
 where = ["src"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "competitions"]
 pythonpath = ["src"]
+norecursedirs = [".git", ".venv", "data", "artifacts", "submissions"]
 
 [tool.ruff]
 line-length = 100

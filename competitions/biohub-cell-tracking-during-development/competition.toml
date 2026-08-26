@@ -1,0 +1,55 @@
+schema_version = 1
+
+[competition]
+slug = "biohub-cell-tracking-during-development"
+title = "Biohub - Cell Tracking During Development"
+status = "active"
+competition_url = "https://www.kaggle.com/competitions/biohub-cell-tracking-during-development"
+metric = "adjusted_edge_jaccard + 0.1 * division_jaccard"
+metric_direction = "maximize"
+
+[official]
+checked_at = "2026-08-26"
+rules_url = "https://www.kaggle.com/competitions/biohub-cell-tracking-during-development/rules"
+data_url = "https://www.kaggle.com/competitions/biohub-cell-tracking-during-development/data"
+evaluation_url = "https://www.kaggle.com/competitions/biohub-cell-tracking-during-development/overview/evaluation"
+organizer_baseline_url = "https://github.com/royerlab/kaggle-cell-tracking-competition"
+metric_spec_url = "https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/metrics.md"
+
+[submission]
+kind = "code_competition"
+file_name = "submission.csv"
+id_columns = ["id", "dataset", "row_type"]
+prediction_columns = ["node_id", "t", "z", "y", "x", "source_id", "target_id"]
+all_columns = ["id", "dataset", "row_type", "node_id", "t", "z", "y", "x", "source_id", "target_id"]
+expected_rows = 0
+required_row_types = ["node", "edge"]
+
+[constraints]
+external_data = "freely and publicly available external data is allowed"
+pretrained_models = "freely and publicly available pretrained models are allowed"
+internet = "disabled during submitted notebook execution"
+notebook_runtime = "CPU <= 12 hours; GPU <= 12 hours"
+submission_limit = "unverified; check the live Rules page before submitting"
+deadline_utc = "2026-09-29T23:59:00Z"
+
+[data]
+local_root = "data/raw"
+train = "data/raw/train"
+test = "data/raw/test"
+sample_submission = "data/raw/sample_submission.csv"
+catalog_size = "87.61 GB"
+catalog_file_count = 24886
+license = "CC0: Public Domain"
+image_format = "Zarr v3"
+track_format = "GEFF"
+image_axes = ["t", "z", "y", "x"]
+typical_image_shape = [100, 64, 256, 256]
+image_dtype = "uint16"
+voxel_scale_micrometers = [1.625, 0.40625, 0.40625]
+
+[acquisition]
+source_file = "asset-sources.toml"
+downloads = "data/downloads"
+public_notebooks = "data/public-notebooks"
+external_code = "data/external"
