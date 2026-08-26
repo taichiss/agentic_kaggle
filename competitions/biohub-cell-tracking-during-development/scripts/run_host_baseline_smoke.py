@@ -1,10 +1,14 @@
 #!/usr/bin/env python
-"""Run the pinned organizer baseline on a tiny real-data slice."""
+"""Run the pinned organizer baseline from a bounded real-data experiment config."""
 
 from __future__ import annotations
 
 import argparse
+import contextlib
+import hashlib
+import io
 import json
+import re
 import subprocess
 import sys
 import time
@@ -13,6 +17,30 @@ from pathlib import Path
 
 COMPETITION_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = COMPETITION_ROOT / "configs/exp-0001-host-smoke.toml"
+
+EPOCH_PATTERN = re.compile(
+    r"Epoch\s+(?P<epoch>\d+)/(?P<epochs>\d+)\s+\|\s+"
+    r"edge=(?P<edge>[-+0-9.eE]+)\s+\|\s+det=(?P<det>[-+0-9.eE]+)\s+\|\s+"
+    r"test_loss=(?P<test_loss>[-+0-9.eE]+)\s+\|\s+acc=(?P<acc>[-+0-9.eE]+)\s+\|\s+"
+    r"recall=(?P<recall>[-+0-9.eE]+)\s+\|\s+best=(?P<best>[-+0-9.eE]+).*?\|\s+"
+    r"train=(?P<train_seconds>[-+0-9.eE]+)s\s+test=(?P<test_seconds>[-+0-9.eE]+)s"
+)
+
+
+class _Tee(io.TextIOBase):
+    """Mirror organizer stdout while retaining it for epoch metric parsing."""
+
+    def __init__(self, *streams: io.TextIOBase) -> None:
+        self.streams = streams
+
+    def write(self, text: str) -> int:
+        for stream in self.streams:
+            stream.write(text)
+        return len(text)
+
+    def flush(self) -> None:
+        for stream in self.streams:
+            stream.flush()
 
 
 def _load_config(path: Path) -> dict:
@@ -28,6 +56,73 @@ def _host_revision(repository: Path) -> str:
         ["git", "-C", str(repository), "rev-parse", "HEAD"],
         text=True,
     ).strip()
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for block in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _epoch_history(stdout: str) -> list[dict[str, float | int]]:
+    history: list[dict[str, float | int]] = []
+    for match in EPOCH_PATTERN.finditer(stdout):
+        history.append(
+            {
+                "epoch": int(match["epoch"]),
+                "train/edge_loss": float(match["edge"]),
+                "train/detection_loss": float(match["det"]),
+                "validation/loss": float(match["test_loss"]),
+                "validation/accuracy": float(match["acc"]),
+                "validation/node_recall": float(match["recall"]),
+                "validation/best_acc_recall": float(match["best"]),
+                "runtime/epoch_train_seconds": float(match["train_seconds"]),
+                "runtime/epoch_validation_seconds": float(match["test_seconds"]),
+            }
+        )
+    return history
+
+
+def _init_wandb(config: dict, artifact_dir: Path):
+    tracking = config.get("tracking")
+    if not tracking:
+        return None
+    if tracking.get("provider") != "wandb":
+        raise ValueError(f"unsupported tracking provider: {tracking.get('provider')}")
+
+    import wandb
+
+    wandb_dir = artifact_dir / "wandb"
+    wandb_dir.mkdir(parents=True, exist_ok=True)
+    run = wandb.init(
+        project=tracking["project"],
+        entity=tracking.get("entity"),
+        name=tracking.get("name"),
+        group=tracking.get("group"),
+        job_type=tracking.get("job_type", "train-eval"),
+        tags=tracking.get("tags", []),
+        notes=tracking.get("notes"),
+        config=config,
+        dir=str(wandb_dir),
+        mode=tracking.get("mode", "online"),
+        force=tracking.get("mode", "online") == "online",
+        save_code=False,
+    )
+    run.define_metric("epoch")
+    for metric in (
+        "train/edge_loss",
+        "train/detection_loss",
+        "validation/loss",
+        "validation/accuracy",
+        "validation/node_recall",
+        "validation/best_acc_recall",
+        "runtime/epoch_train_seconds",
+        "runtime/epoch_validation_seconds",
+    ):
+        run.define_metric(metric, step_metric="epoch")
+    return run
 
 
 def run(config_path: Path) -> dict:
@@ -83,32 +178,43 @@ def run(config_path: Path) -> dict:
     roundtrip_dir = artifact_dir / "roundtrip"
     submission_path = COMPETITION_ROOT / output["submission_file"]
     pred_dir.mkdir(parents=True, exist_ok=True)
+    wandb_run = _init_wandb(config, artifact_dir)
 
     started = time.monotonic()
-    train(
-        data_dir=train_dir,
-        fold=0,
-        splits_file=artifact_dir / "unused-splits.json",
-        method=train_cfg["method"],
-        n_epochs=int(train_cfg["epochs"]),
-        lr=float(train_cfg["learning_rate"]),
-        batch_size=int(train_cfg["batch_size"]),
-        num_workers=int(train_cfg["num_workers"]),
-        unet_out_channels=int(train_cfg["unet_out_channels"]),
-        unet_layers=[int(value) for value in train_cfg["unet_layers"]],
-        downsample=tuple(int(value) for value in train_cfg["downsample"]),
-        det_loss_weight=float(train_cfg["det_loss_weight"]),
-        det_neg_weight=float(train_cfg["det_neg_weight"]),
-        max_iters=int(train_cfg["max_iters"]),
-        debug_video=dataset_path,
-        seed=seed,
-        max_frames=int(data["max_frames"]),
-        window_size=int(data["window_size"]),
-        augmentations=[],
-        pool_kernel_um=float(train_cfg["pool_kernel_um"]),
-        data_parallel=False,
-    )
+    captured_stdout = io.StringIO()
+    with contextlib.redirect_stdout(_Tee(sys.stdout, captured_stdout)):
+        train(
+            data_dir=train_dir,
+            fold=0,
+            splits_file=artifact_dir / "unused-splits.json",
+            method=train_cfg["method"],
+            n_epochs=int(train_cfg["epochs"]),
+            lr=float(train_cfg["learning_rate"]),
+            batch_size=int(train_cfg["batch_size"]),
+            num_workers=int(train_cfg["num_workers"]),
+            unet_out_channels=int(train_cfg["unet_out_channels"]),
+            unet_layers=[int(value) for value in train_cfg["unet_layers"]],
+            downsample=tuple(int(value) for value in train_cfg["downsample"]),
+            det_loss_weight=float(train_cfg["det_loss_weight"]),
+            det_neg_weight=float(train_cfg["det_neg_weight"]),
+            max_iters=int(train_cfg["max_iters"]),
+            debug_video=dataset_path,
+            seed=seed,
+            max_frames=int(data["max_frames"]),
+            window_size=int(data["window_size"]),
+            augmentations=[],
+            pool_kernel_um=float(train_cfg["pool_kernel_um"]),
+            data_parallel=False,
+        )
     train_seconds = time.monotonic() - started
+    epoch_history = _epoch_history(captured_stdout.getvalue())
+    if len(epoch_history) != int(train_cfg["epochs"]):
+        raise RuntimeError(
+            f"expected {train_cfg['epochs']} parsed epoch records, got {len(epoch_history)}"
+        )
+    if wandb_run is not None:
+        for epoch_metrics in epoch_history:
+            wandb_run.log(epoch_metrics)
 
     weights_path = (
         host_repo
@@ -146,6 +252,9 @@ def run(config_path: Path) -> dict:
     csv_to_geffs(submission_path, roundtrip_dir, overwrite=True)
     metric_rows, skipped = evaluate_pairs(roundtrip_dir, train_dir)
     metric = summarise(metric_rows)
+    weights_sha256 = _sha256(weights_path)
+    wandb_url = wandb_run.url if wandb_run is not None else None
+    wandb_run_id = wandb_run.id if wandb_run is not None else None
 
     result = {
         "experiment_id": config["experiment_id"],
@@ -155,19 +264,36 @@ def run(config_path: Path) -> dict:
         "device": torch.cuda.get_device_name(0),
         "train_seconds": round(train_seconds, 3),
         "inference_seconds": round(inference_seconds, 3),
+        "epoch_history": epoch_history,
         "nodes": graph.num_nodes(),
         "edges": graph.num_edges(),
         "submission": validation,
         "score": metric["score"],
         "skipped": skipped,
         "weights_path": str(weights_path),
+        "weights_sha256": weights_sha256,
         "submission_path": str(submission_path),
+        "wandb_run_id": wandb_run_id,
+        "wandb_url": wandb_url,
     }
     artifact_dir.mkdir(parents=True, exist_ok=True)
     (artifact_dir / "result.json").write_text(
         json.dumps(result, indent=2, allow_nan=True) + "\n",
         encoding="utf-8",
     )
+    if wandb_run is not None:
+        final_metrics = {
+            "runtime/train_seconds": result["train_seconds"],
+            "runtime/inference_seconds": result["inference_seconds"],
+            "output/nodes": result["nodes"],
+            "output/edges": result["edges"],
+            "output/submission_rows": validation["nodes"] + validation["edges"],
+            "metric/local_score": result["score"],
+        }
+        wandb_run.log(final_metrics)
+        wandb_run.summary["checkpoint/sha256"] = weights_sha256
+        wandb_run.summary["source/revision"] = revision
+        wandb_run.finish()
     print(json.dumps(result, indent=2, allow_nan=True))
     return result
 

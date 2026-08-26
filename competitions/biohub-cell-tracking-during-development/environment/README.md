@@ -12,6 +12,17 @@ Add the organizer-style PyTorch baseline only when training or inference is requ
 uv sync --project competitions/biohub-cell-tracking-during-development/environment --extra baseline
 ```
 
+Add online W&B experiment tracking together with the baseline when requested:
+
+```bash
+uv sync \
+  --project competitions/biohub-cell-tracking-during-development/environment \
+  --extra baseline --extra tracking
+```
+
+W&B credentials remain in the user's standard credential store. Never place an API key in this
+repository or an experiment config.
+
 Local native visualization is optional:
 
 ```bash

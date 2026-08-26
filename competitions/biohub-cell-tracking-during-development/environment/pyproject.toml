@@ -17,6 +17,9 @@ dependencies = [
 baseline = [
   "torch>=2.9.1",
 ]
+tracking = [
+  "wandb>=0.28.1,<0.29",
+]
 viz = [
   "napari>=0.5",
   "ndv>=0.3",

@@ -25,6 +25,9 @@
   `(1, 64, 256, 256)`.
 - The downloaded `sample_submission.csv` passes the local schema/reference validator: four
   datasets, 12 nodes, and eight edges.
+- EXP-0002 confirmed online W&B tracing and a five-epoch optimizer trend on ten real frames.
+- EXP-0002 improved detection loss and validation node recall, but its fixed inference thresholds
+  produced 7,711 nodes and zero edges; more epochs are not the next bottleneck.
 
 ## Open Questions
 
@@ -43,11 +46,12 @@
 | H003 | Node-count calibration must be tracked per dataset | official metric penalizes over-prediction per sample | local metric and first LB probes show no sensitivity in the relevant range | proposed |
 | H004 | Sparse-positive supervision is safer than treating unlabeled voxels/nodes as negatives | organizer states GT is sparse while inference must cover all cells | a controlled PU/semi-supervised alternative consistently improves hidden-LB evidence | accepted |
 | H005 | Public dummy test success only predicts packaging reliability | organizer clarification says public clips may duplicate train and hidden test is larger/disjoint | organizer changes the public/hidden contract | accepted |
+| H006 | Checkpoint-specific node/edge calibration is required before longer training | EXP-0002 improved training recall but emitted 7,711 nodes and zero edges under fixed thresholds | a broad checkpoint sweep yields stable counts and non-empty edges without calibration | accepted |
 
 ## Priority Plan
 
-1. Inspect estimated total-node metadata and establish a dataset-disjoint validation split.
-2. Scale the organizer baseline from the verified three-frame smoke to one complete held-out dataset.
+1. Inspect estimated total-node metadata and calibrate detection/edge thresholds on EXP-0002.
+2. Establish a dataset-disjoint validation split and run one complete held-out dataset.
 3. Package the smallest notebook that processes every test dataset and emits a schema-valid file.
 4. Establish an LB anchor, then vary one detection/linking decision per experiment.
 5. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
@@ -70,4 +74,6 @@
 - [x] Validate the official sample submission against all four public test dataset names.
 - [x] Record baseline dependency/runtime constraints as `EXP-0001`.
 - [x] Run the organizer baseline train/infer/GEFF/CSV/metric smoke path on three real frames.
+- [x] Trace five epochs and five updates per epoch in W&B as `EXP-0002`.
+- [ ] Calibrate node count and edge thresholds for the EXP-0002 checkpoint.
 - [ ] Establish a dataset-disjoint baseline run before building the competition notebook.

@@ -6,6 +6,7 @@ run ID, or checksum sufficient to identify them.
 | id | date | hypothesis | data version | commit | config | seed/fold | CV | LB | artifact/run | takeaway | next |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | EXP-0001 | 2026-08-26 | H001 organizer baseline can establish an end-to-end contract | official 2026-08-26 inventory | `6f85aa7` | `configs/exp-0001-host-smoke.toml` | 20260826 / same-video smoke | 0.0000 (contract-only) | not_submitted | `artifacts/EXP-0001/result.json` | train/infer/GEFF/CSV/metric path passed | establish a real dataset-disjoint baseline run |
+| EXP-0002 | 2026-08-26 | H006 a longer traced smoke exposes the next limiting stage | official 2026-08-26 inventory | pending | `configs/exp-0002-wandb-extended.toml` | 20260826 / same-video trend check | 0.0000 (contract-only) | not_submitted | W&B `iyrrz897` | optimization improved, inference calibration failed | calibrate node and edge thresholds before adding epochs |
 
 ## Detailed Notes
 
@@ -41,3 +42,25 @@ uv run \
   --extra baseline \
   python competitions/biohub-cell-tracking-during-development/scripts/run_host_baseline_smoke.py
 ```
+
+### EXP-0002
+
+- W&B run: <https://wandb.ai/salax0116-private-email/biohub-cell-tracking/runs/iyrrz897>
+  (`biohub-cell-tracking`, run ID `iyrrz897`, online sync completed).
+- Runtime: NVIDIA GeForce RTX 5070 Ti, PyTorch 2.13.0+cu130 and W&B 0.28.2. The run used
+  `6bba_09961292`, first ten frames, nine annotated windows, five epochs with five optimizer updates
+  each, and the same 582,022-parameter reduced architecture as EXP-0001.
+- Training took 6.404 seconds. Detection loss decreased from 0.5129 to 0.4415. Validation node
+  recall increased from 0.0000 to 0.3148, accuracy reached 0.9962, and the organizer training proxy
+  `accuracy * recall` reached 0.3136.
+- Edge loss moved from 0.0082 to 0.0153 as detections began to match annotations; the initially zero
+  validation edge signal means this should not be interpreted as a clean degradation curve.
+- Inference with the predeclared smoke thresholds produced 7,711 nodes and zero edges. The GEFF →
+  CSV → GEFF path and local metric still completed, but score remained 0.0000. This confirms the
+  checkpoint needs detection-count and edge-softmax threshold calibration before adding epochs.
+- W&B received five epoch records, system/runtime metrics, output counts, local score, source
+  revision, and checkpoint SHA-256. Sync reported zero media and zero artifacts; data, predictions,
+  CSV, and checkpoint contents remained local.
+
+Checkpoint SHA-256:
+`a17a387878822bededd8cd66def96a05829d8efa4ce7a1f41508974bda0007c8`.

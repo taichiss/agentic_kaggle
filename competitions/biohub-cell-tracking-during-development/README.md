@@ -58,6 +58,20 @@ checks CUDA training, checkpoint reload, inference, GEFF → CSV → GEFF, submi
 the organizer metric. Outputs remain under ignored `artifacts/`, `submissions/`, and the ignored
 organizer checkout's `weights/` directory.
 
+To run the slightly longer W&B-traced check:
+
+```bash
+uv run \
+  --project competitions/biohub-cell-tracking-during-development/environment \
+  --extra baseline --extra tracking \
+  python competitions/biohub-cell-tracking-during-development/scripts/run_host_baseline_smoke.py \
+  --config competitions/biohub-cell-tracking-during-development/configs/exp-0002-wandb-extended.toml
+```
+
+W&B receives configuration, parsed epoch metrics, runtime/system metrics, output counts, the local
+score, and a checkpoint checksum. Competition data, predictions, submissions, and checkpoint files
+remain local.
+
 ## Lightweight development loop
 
 The first implementation milestone is deliberately small: generate a graph for each test dataset,
