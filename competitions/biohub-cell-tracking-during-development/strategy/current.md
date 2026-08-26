@@ -19,11 +19,17 @@
   train according to the organizer.
 - Submission rows mix nodes and edges and must include every test dataset.
 - Official overview and organizer metric repository were checked on 2026-08-26.
+- The 2026-08-26 local inventory matches the catalog: 24,886 files and 87,609,892,618 bytes.
+- The extracted tree contains 199 train Zarr/GEFF pairs and four public test Zarr datasets.
+- All 203 image arrays have shape `(100, 64, 256, 256)`, dtype `uint16`, and chunks
+  `(1, 64, 256, 256)`.
+- The downloaded `sample_submission.csv` passes the local schema/reference validator: four
+  datasets, 12 nodes, and eight edges.
 
 ## Open Questions
 
-- [ ] Confirm the downloaded train/test file inventory and array metadata.
-- [ ] Confirm dataset counts, volume shapes, dtypes, chunks, and estimated total-node metadata.
+- [x] Confirm the downloaded train/test file inventory and array metadata.
+- [ ] Inspect estimated total-node metadata for node-count calibration.
 - [ ] Choose dataset-disjoint validation after inspecting dataset identities.
 - [ ] Confirm the live daily submission quota and final notebook packaging requirements.
 - [ ] Measure public baseline runtime and memory on a small real subset.
@@ -40,13 +46,12 @@
 
 ## Priority Plan
 
-1. Acquire and inventory the official data without loading full volumes.
-2. Run the organizer baseline on one dataset/frame window and validate graph/CSV round trip.
-3. Establish the pinned Zarr/GEFF/tracksdata environment before adding external trackers.
-4. Package the smallest notebook that processes every test dataset and emits a schema-valid file.
-5. Establish an LB anchor, then vary one detection/linking decision per experiment.
-6. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
-7. Add division logic after edge/linking and node-count failure modes are measured.
+1. Run the organizer baseline on one dataset/frame window and validate graph/CSV round trip.
+2. Inspect estimated total-node metadata and establish a dataset-disjoint validation split.
+3. Package the smallest notebook that processes every test dataset and emits a schema-valid file.
+4. Establish an LB anchor, then vary one detection/linking decision per experiment.
+5. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
+6. Add division logic after edge/linking and node-count failure modes are measured.
 
 ## Validation Plan
 
@@ -60,7 +65,8 @@
 ## Next Actions
 
 - [x] Authenticate Kaggle CLI and start `fetch_assets.py data`.
-- [ ] Complete data extraction and run `inspect_data.py`.
+- [x] Complete data extraction and run `inspect_data.py`.
 - [x] Sync the pinned BioHub core environment and smoke-test Zarr/tracksdata imports.
+- [x] Validate the official sample submission against all four public test dataset names.
 - [ ] Record baseline dependency/runtime constraints as `EXP-0001`.
 - [ ] Build a competition notebook only after the local one-sample round trip succeeds.

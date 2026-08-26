@@ -61,3 +61,15 @@ git status --short --ignored
 ```
 
 Only ignored `data/` paths should contain downloaded assets.
+
+## Verified local acquisition (2026-08-26)
+
+- Extracted size: 87,609,892,618 bytes across 24,886 files.
+- Image inventory: 199 train Zarr datasets and four public test Zarr datasets.
+- Annotation inventory: 199 train GEFF datasets.
+- Array metadata: all 203 arrays are `(100, 64, 256, 256)`, `uint16`, chunked by
+  `(1, 64, 256, 256)`.
+- Submission smoke check: the official sample is valid for all four public test datasets.
+
+The downloaded ZIP, extracted data, organizer checkout, and public notebooks remain ignored and are
+not branch artifacts.

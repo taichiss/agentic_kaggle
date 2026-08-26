@@ -2,11 +2,11 @@
 
 ## Bootstrap
 
-- [ ] Authenticate Kaggle CLI without placing credentials in the repository.
+- [x] Authenticate Kaggle CLI without placing credentials in the repository.
 - [ ] Accept the live competition Rules.
-- [ ] Download and inventory official data.
-- [ ] Pull the versioned public notebook references.
-- [ ] Record the organizer baseline commit revision.
+- [x] Download and inventory official data.
+- [x] Pull the versioned public notebook references.
+- [x] Record the organizer baseline commit revision.
 
 ## Baseline
 
