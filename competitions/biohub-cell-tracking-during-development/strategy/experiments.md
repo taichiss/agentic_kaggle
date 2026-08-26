@@ -106,3 +106,15 @@ Checkpoint SHA-256:
 - `Biohub Harness 0926 Probe` version 1 scored 0.926 publicly. It is retained only as a public
   Notebook reference and is not recorded as an EXP-0004 result or treated as the optimization
   target for this baseline.
+- Through the first 25 completed epochs, the maximum held-out proxy was 0.9362 at zero-based
+  epoch 19. The corresponding `checkpoint_epoch_0020.pth` was packaged separately rather than
+  replacing the epoch-5 anchor. Kaggle Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0004-best-through-epoch-25-submit>, version 1,
+  completed in 297.728 seconds and emitted 200,201 nodes, 156,758 edges, and 356,959 total rows.
+  Submission ref `55797775` is pending public scoring.
+- Best-through-25 checkpoint SHA-256:
+  `c68d5ddbbfd98089dba2feed646a81fff3d281f48b54e3b383d7213d2e75b69e`.
+  Flattened inference-weight SHA-256:
+  `7b19745d320a5aa96c2369df215e24a31c68ecdc017d3face36bcce09dc93322`.
+  Submission CSV SHA-256:
+  `80c7962c09fca84015abf54043011b2f9f9a70c797a9b281ce6eed9d96207913`.

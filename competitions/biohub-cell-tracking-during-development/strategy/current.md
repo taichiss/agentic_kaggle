@@ -34,6 +34,8 @@
   0.787 public with fixed detection threshold 0.99 and edge threshold 0.5.
 - EXP-0004 processed all four public test clips in 263.963 seconds and emitted 178,301 nodes plus
   135,077 edges, confirming that full offline model inference fits the Notebook contract.
+- The best validation checkpoint through 25 completed epochs is zero-based epoch 19 (completed
+  epoch 20), with proxy 0.9362. Its LB submission ref `55797775` is pending scoring.
 - `Biohub Harness 0926 Probe` version 1 scored 0.926 publicly, but is an independent public
   Notebook reference rather than an EXP-0004 result.
 - The live submission command reported two submissions remaining after EXP-0004 and the separate
