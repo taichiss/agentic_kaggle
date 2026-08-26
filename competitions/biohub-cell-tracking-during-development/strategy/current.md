@@ -35,10 +35,13 @@
 - EXP-0004 processed all four public test clips in 263.963 seconds and emitted 178,301 nodes plus
   135,077 edges, confirming that full offline model inference fits the Notebook contract.
 - The best validation checkpoint through 25 completed epochs is zero-based epoch 19 (completed
-  epoch 20), with proxy 0.9362. Its LB submission ref `55797775` is pending scoring.
+  epoch 20), with proxy 0.9362. Its raw LB submission ref `55797775` scored 0.805 public.
 - Artifact-free public-harness post-processing reduced that checkpoint from 200,201 to 179,571
   nodes, increased edge/node ratio from 0.783 to 0.953, and reduced division-like sources from
-  5,898 to 681. Submission ref `55798388` is pending scoring.
+  5,898 to 681. Submission ref `55798388` scored 0.869 public: +0.064 over the identical raw
+  checkpoint and +0.082 over the epoch-5 anchor.
+- EXP-0004 completed all 50 epochs and wrote periodic checkpoints through completed epoch 50. The
+  best full-run held-out proxy was 0.9381 at zero-based epoch 33 (completed epoch 34).
 - `Biohub Harness 0926 Probe` version 1 scored 0.926 publicly, but is an independent public
   Notebook reference rather than an EXP-0004 result.
 - The live submission command reported zero submissions remaining after the post-processed
@@ -63,13 +66,14 @@
 | H005 | Public dummy test success only predicts packaging reliability | organizer clarification says public clips may duplicate train and hidden test is larger/disjoint | organizer changes the public/hidden contract | accepted |
 | H006 | Checkpoint-specific node/edge calibration is required before longer training | EXP-0002 improved training recall but emitted 7,711 nodes and zero edges under fixed thresholds | a broad checkpoint sweep yields stable counts and non-empty edges without calibration | accepted |
 | H007 | An nnU-Net-configured spatial backbone improves difficult endpoint recall at a fixed detection budget | controlled configs keep target, loss, feature dimension, transformer, split, inference, and ILP fixed | EXP-0005B does not improve the recall-versus-node-count curve or downstream edge/division metrics over EXP-0005A | proposed |
+| H008 | Artifact-free topology post-processing materially improves a fixed checkpoint | identical epoch-19 weights scored 0.805 raw and 0.869 with post-processing (+0.064) | a repeat on another checkpoint or hidden/private evidence removes the gain | accepted |
 
 ## Priority Plan
 
 1. Inspect estimated total-node metadata and calibrate detection/edge thresholds for the EXP-0004
-   checkpoint without changing the model.
-2. Complete the 50-epoch checkpoint series while preserving the embryo-grouped validation contract.
-3. Vary one detection-count or linking decision per LB experiment from the 0.787 anchor.
+   checkpoint while preserving the successful post-processing profile.
+2. Evaluate the completed-epoch-34 checkpoint locally against the selected epoch-19 checkpoint.
+3. Vary one detection-count or linking decision per LB experiment from the 0.869 anchor.
 4. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
 5. Add division logic after edge/linking and node-count failure modes are measured.
 
@@ -94,5 +98,7 @@
 - [x] Submit private Notebook version 1 through Kaggle CLI and record public score as `EXP-0003`.
 - [x] Run the embryo-grouped organizer baseline and save five-epoch checkpoints as `EXP-0004`.
 - [x] Package epoch 5 as an offline GPU Notebook and record the 0.787 public LB anchor.
+- [x] Complete all 50 EXP-0004 epochs; best held-out proxy 0.9381 at completed epoch 34.
+- [x] Confirm post-processing improves the identical epoch-19 checkpoint from 0.805 to 0.869 public.
 - [ ] Calibrate node count and edge thresholds for the EXP-0004 checkpoint.
 - [ ] Run the paired EXP-0005A/EXP-0005B backbone comparison after the shared GPU is available.

@@ -16,4 +16,6 @@
 - [x] Package the pipeline for an offline Kaggle Notebook.
 - [x] Push the notebook with explicit user approval and log the LB result.
 - [x] Submit the epoch-5 organizer checkpoint as the first model-based LB anchor.
-- [ ] Calibrate detection counts and edge thresholds from the 0.787 model-based anchor.
+- [x] Compare epoch-19 raw and artifact-free post-processed submissions: 0.805 to 0.869 public.
+- [x] Complete the 50-epoch training series with checkpoints every five completed epochs.
+- [ ] Calibrate detection counts and edge thresholds from the 0.869 model-based anchor.

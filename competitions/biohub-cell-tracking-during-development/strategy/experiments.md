@@ -8,7 +8,7 @@ run ID, or checksum sufficient to identify them.
 | EXP-0001 | 2026-08-26 | H001 organizer baseline can establish an end-to-end contract | official 2026-08-26 inventory | `6f85aa7` | `configs/exp-0001-host-smoke.toml` | 20260826 / same-video smoke | 0.0000 (contract-only) | not_submitted | `artifacts/EXP-0001/result.json` | train/infer/GEFF/CSV/metric path passed | establish a real dataset-disjoint baseline run |
 | EXP-0002 | 2026-08-26 | H006 a longer traced smoke exposes the next limiting stage | official 2026-08-26 inventory | `159c452` | `configs/exp-0002-wandb-extended.toml` | 20260826 / same-video trend check | 0.0000 (contract-only) | not_submitted | W&B `iyrrz897` | optimization improved, inference calibration failed | calibrate node and edge thresholds before adding epochs |
 | EXP-0003 | 2026-08-26 | Code Competition submission works end to end through Kaggle CLI | official sample submission / public test | `9a80bb8` | private Notebook v1 | not applicable | not run | 0.000 public | Kaggle ref `55785839` | Notebook push/run/output/submit/score path passed | replace sample graph with calibrated inference |
-| EXP-0004 | 2026-08-26 | H006 the full organizer baseline can establish a model-based LB anchor | official 2026-08-26 inventory | `9c3eba8` | `configs/exp-0004-host-baseline-fold0-50e.toml` | 20260826 / embryo fold 0 (`44b6` held out) | 0.9258 (epoch-5 proxy) | 0.787 public | W&B `ud8rmowz`; Kaggle ref `55790493` | model Notebook contract passed; fixed thresholds leave calibration headroom | calibrate checkpoint-specific detection counts and linking thresholds |
+| EXP-0004 | 2026-08-26 | H006/H008 full organizer baseline plus topology post-processing | official 2026-08-26 inventory | `9c3eba8` | `configs/exp-0004-host-baseline-fold0-50e.toml` | 20260826 / embryo fold 0 (`44b6` held out) | 0.9381 (50e best; completed epoch 34) | 0.787 e5; 0.805 e19 raw; 0.869 e19 post | W&B `ud8rmowz`; Kaggle refs `55790493`, `55797775`, `55798388` | artifact-free post-processing added +0.064 on identical weights | preserve post-processing and calibrate checkpoint-specific detection counts |
 
 ## Detailed Notes
 
@@ -86,8 +86,11 @@ Checkpoint SHA-256:
 
 - Training uses the pinned organizer UNet+transformer at revision
   `075fc5f5a52d11077f9dc2b074644618f26939e2`, embryo-grouped fold 0, seed 20260826, batch size 8,
-  BF16, and the versioned 50-epoch configuration. The submitted snapshot is the periodic checkpoint
-  after five completed epochs; its best held-out `accuracy * node_recall` proxy was 0.9258.
+  BF16, and the versioned 50-epoch configuration. Training completed all 50 epochs and saved the
+  requested five-epoch checkpoint series through `checkpoint_epoch_0050.pth`. The best full-run
+  held-out `accuracy * node_recall` proxy was 0.9381 at zero-based epoch 33 (completed epoch 34).
+  The first submitted snapshot was the periodic checkpoint after five completed epochs; its best
+  held-out proxy was 0.9258.
 - W&B run: <https://wandb.ai/salax0116-private-email/biohub-cell-tracking/runs/ud8rmowz>.
 - Private model Dataset: <https://www.kaggle.com/datasets/suzukitaichi/biohub-exp-0004-host-baseline>,
   version 2. Private submission Notebook:
@@ -111,7 +114,7 @@ Checkpoint SHA-256:
   replacing the epoch-5 anchor. Kaggle Notebook
   <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0004-best-through-epoch-25-submit>, version 1,
   completed in 297.728 seconds and emitted 200,201 nodes, 156,758 edges, and 356,959 total rows.
-  Submission ref `55797775` is pending public scoring.
+  Submission ref `55797775` completed with public score 0.805.
 - Best-through-25 checkpoint SHA-256:
   `c68d5ddbbfd98089dba2feed646a81fff3d281f48b54e3b383d7213d2e75b69e`.
   Flattened inference-weight SHA-256:
@@ -126,5 +129,7 @@ Checkpoint SHA-256:
 - Post-processed Notebook:
   <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0004-best19-postprocess-v1-submit>, version 1.
   It completed in 334.181 seconds and emitted 179,571 nodes, 171,093 edges, and 350,664 total rows.
-  Submission ref `55798388` is pending public scoring. Submission CSV SHA-256:
+  Submission ref `55798388` completed with public score 0.869. Because the weights and base
+  inference were identical to ref `55797775`, this is a +0.064 absolute post-processing gain; it is
+  also +0.082 over the epoch-5 anchor. Submission CSV SHA-256:
   `b2a71f53a1994a40f63abd0ff16a96ee305fee78a7f8c7e02b58c77cbff78dab`.
