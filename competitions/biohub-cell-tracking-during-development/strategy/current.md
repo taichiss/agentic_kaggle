@@ -36,10 +36,13 @@
   135,077 edges, confirming that full offline model inference fits the Notebook contract.
 - The best validation checkpoint through 25 completed epochs is zero-based epoch 19 (completed
   epoch 20), with proxy 0.9362. Its LB submission ref `55797775` is pending scoring.
+- Artifact-free public-harness post-processing reduced that checkpoint from 200,201 to 179,571
+  nodes, increased edge/node ratio from 0.783 to 0.953, and reduced division-like sources from
+  5,898 to 681. Submission ref `55798388` is pending scoring.
 - `Biohub Harness 0926 Probe` version 1 scored 0.926 publicly, but is an independent public
   Notebook reference rather than an EXP-0004 result.
-- The live submission command reported two submissions remaining after EXP-0004 and the separate
-  public-Notebook probe on 2026-08-26.
+- The live submission command reported zero submissions remaining after the post-processed
+  epoch-19 submission on 2026-08-26 UTC.
 
 ## Open Questions
 
@@ -59,6 +62,7 @@
 | H004 | Sparse-positive supervision is safer than treating unlabeled voxels/nodes as negatives | organizer states GT is sparse while inference must cover all cells | a controlled PU/semi-supervised alternative consistently improves hidden-LB evidence | accepted |
 | H005 | Public dummy test success only predicts packaging reliability | organizer clarification says public clips may duplicate train and hidden test is larger/disjoint | organizer changes the public/hidden contract | accepted |
 | H006 | Checkpoint-specific node/edge calibration is required before longer training | EXP-0002 improved training recall but emitted 7,711 nodes and zero edges under fixed thresholds | a broad checkpoint sweep yields stable counts and non-empty edges without calibration | accepted |
+| H007 | An nnU-Net-configured spatial backbone improves difficult endpoint recall at a fixed detection budget | controlled configs keep target, loss, feature dimension, transformer, split, inference, and ILP fixed | EXP-0005B does not improve the recall-versus-node-count curve or downstream edge/division metrics over EXP-0005A | proposed |
 
 ## Priority Plan
 
@@ -91,3 +95,4 @@
 - [x] Run the embryo-grouped organizer baseline and save five-epoch checkpoints as `EXP-0004`.
 - [x] Package epoch 5 as an offline GPU Notebook and record the 0.787 public LB anchor.
 - [ ] Calibrate node count and edge thresholds for the EXP-0004 checkpoint.
+- [ ] Run the paired EXP-0005A/EXP-0005B backbone comparison after the shared GPU is available.

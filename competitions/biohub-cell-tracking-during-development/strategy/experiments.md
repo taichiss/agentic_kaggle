@@ -118,3 +118,13 @@ Checkpoint SHA-256:
   `7b19745d320a5aa96c2369df215e24a31c68ecdc017d3face36bcce09dc93322`.
   Submission CSV SHA-256:
   `80c7962c09fca84015abf54043011b2f9f9a70c797a9b281ce6eed9d96207913`.
+- The same selected epoch-19 model was submitted again with only artifact-free post-processing
+  adapted from the public harness: 6/10 µm two-pass Hungarian motion relinking, conservative
+  divergence-confirmed divisions with frame/global caps, isolated and sub-six-node component
+  pruning, and two-frame line-fit coordinate smoothing. The second-seed model, eight-view TTA,
+  DeepCenter gate, and synthetic gap nodes were deliberately excluded.
+- Post-processed Notebook:
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0004-best19-postprocess-v1-submit>, version 1.
+  It completed in 334.181 seconds and emitted 179,571 nodes, 171,093 edges, and 350,664 total rows.
+  Submission ref `55798388` is pending public scoring. Submission CSV SHA-256:
+  `b2a71f53a1994a40f63abd0ff16a96ee305fee78a7f8c7e02b58c77cbff78dab`.
