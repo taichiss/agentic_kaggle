@@ -15,6 +15,8 @@ uv run kaggle competitions files biohub-cell-tracking-during-development
 
 If the final command returns an authentication or permission error, complete Kaggle authentication
 and join the competition before retrying. The fetch script does not attempt to accept Rules.
+When OAuth credentials and an older `kaggle.json` coexist, the fetch script obtains the OAuth access
+token in-memory and gives it precedence without printing or copying the token.
 
 ## 2. Competition data
 

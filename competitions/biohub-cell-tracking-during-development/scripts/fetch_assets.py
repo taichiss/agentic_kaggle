@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import tomllib
@@ -16,9 +17,25 @@ WORKSPACE = Path(__file__).resolve().parents[1]
 SOURCES = WORKSPACE / "asset-sources.toml"
 
 
-def _run(command: list[str]) -> None:
+def _run(command: list[str], *, env: dict[str, str] | None = None) -> None:
     print("+", " ".join(command), flush=True)
-    subprocess.run(command, check=True)
+    subprocess.run(command, check=True, env=env)
+
+
+def _kaggle_environment() -> dict[str, str]:
+    """Prefer the OAuth token when a stale legacy kaggle.json is also present."""
+    environment = os.environ.copy()
+    if environment.get("KAGGLE_API_TOKEN"):
+        return environment
+    result = subprocess.run(
+        ["kaggle", "auth", "print-access-token"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        environment["KAGGLE_API_TOKEN"] = result.stdout.strip()
+    return environment
 
 
 def _load_sources() -> dict:
@@ -71,7 +88,7 @@ def fetch_data(config: dict, *, force: bool) -> None:
     command = ["kaggle", "competitions", "download", slug, "-p", str(downloads)]
     if force:
         command.append("--force")
-    _run(command)
+    _run(command, env=_kaggle_environment())
     archives = sorted(downloads.glob("*.zip"))
     if not archives:
         print(f"no ZIP archive found in {downloads}; inspect the Kaggle CLI output")
