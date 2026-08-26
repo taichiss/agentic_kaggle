@@ -3,15 +3,16 @@
 ## Bootstrap
 
 - [x] Authenticate Kaggle CLI without placing credentials in the repository.
-- [ ] Accept the live competition Rules.
+- [x] Accept the live competition Rules.
 - [x] Download and inventory official data.
 - [x] Pull the versioned public notebook references.
 - [x] Record the organizer baseline commit revision.
 
 ## Baseline
 
-- [ ] Run graph I/O and metric smoke checks on one training dataset.
-- [ ] Implement or adapt a minimal detector and physical-distance linker.
-- [ ] Generate and validate a complete test submission locally.
+- [x] Run graph I/O and metric smoke checks on one training dataset.
+- [x] Adapt the organizer detector/linker for bounded local smoke runs.
+- [x] Generate and validate a complete sample-based test submission locally.
 - [ ] Package the pipeline for an offline Kaggle Notebook.
-- [ ] Push the notebook only with explicit user approval and log the LB result.
+- [x] Push the notebook with explicit user approval and log the LB result.
+- [ ] Calibrate detection counts and edge thresholds before the first model-based submission.

@@ -7,6 +7,7 @@ run ID, or checksum sufficient to identify them.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | EXP-0001 | 2026-08-26 | H001 organizer baseline can establish an end-to-end contract | official 2026-08-26 inventory | `6f85aa7` | `configs/exp-0001-host-smoke.toml` | 20260826 / same-video smoke | 0.0000 (contract-only) | not_submitted | `artifacts/EXP-0001/result.json` | train/infer/GEFF/CSV/metric path passed | establish a real dataset-disjoint baseline run |
 | EXP-0002 | 2026-08-26 | H006 a longer traced smoke exposes the next limiting stage | official 2026-08-26 inventory | `159c452` | `configs/exp-0002-wandb-extended.toml` | 20260826 / same-video trend check | 0.0000 (contract-only) | not_submitted | W&B `iyrrz897` | optimization improved, inference calibration failed | calibrate node and edge thresholds before adding epochs |
+| EXP-0003 | 2026-08-26 | Code Competition submission works end to end through Kaggle CLI | official sample submission / public test | `9a80bb8` | private Notebook v1 | not applicable | not run | 0.000 public | Kaggle ref `55785839` | Notebook push/run/output/submit/score path passed | replace sample graph with calibrated inference |
 
 ## Detailed Notes
 
@@ -64,3 +65,18 @@ uv run \
 
 Checkpoint SHA-256:
 `a17a387878822bededd8cd66def96a05829d8efa4ce7a1f41508974bda0007c8`.
+
+### EXP-0003
+
+- Private Notebook: <https://www.kaggle.com/code/suzukitaichi/biohub-cli-submission-smoke>,
+  version 1, CPU, internet disabled, competition source attached.
+- The Notebook copied the organizer-provided `sample_submission.csv` after checking the exact
+  columns, consecutive IDs, both row types, and all four public test dataset names.
+- Kaggle execution status: `COMPLETE`. The downloaded output passed the local validator with four
+  datasets, 12 nodes, eight edges, and 20 total rows.
+- Output SHA-256:
+  `263dec32a126192f0ce4d5443b7432940fbeedf0d7ae4130156bf83657defc40`.
+- CLI submission ref: `55785839`; status `COMPLETE`; public score `0.000`; private score unavailable;
+  four submissions remained for the day after this submission.
+- This is a submission-transport anchor, not a model baseline. A zero score is expected from the
+  organizer sample graph and does not change the EXP-0002 calibration conclusion.

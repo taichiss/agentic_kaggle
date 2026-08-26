@@ -28,13 +28,17 @@
 - EXP-0002 confirmed online W&B tracing and a five-epoch optimizer trend on ten real frames.
 - EXP-0002 improved detection loss and validation node recall, but its fixed inference thresholds
   produced 7,711 nodes and zero edges; more epochs are not the next bottleneck.
+- EXP-0003 verified private Notebook push, execution, output download, Code Competition submission,
+  and public-score retrieval using Kaggle CLI only.
+- The live submission command reported four submissions remaining after EXP-0003, implying a
+  five-submission daily allowance at the time checked on 2026-08-26.
 
 ## Open Questions
 
 - [x] Confirm the downloaded train/test file inventory and array metadata.
 - [ ] Inspect estimated total-node metadata for node-count calibration.
 - [ ] Choose dataset-disjoint validation after inspecting dataset identities.
-- [ ] Confirm the live daily submission quota and final notebook packaging requirements.
+- [x] Confirm the live daily submission quota and final notebook packaging requirements.
 - [ ] Measure public baseline runtime and memory on a small real subset.
 
 ## Working Hypotheses
@@ -75,5 +79,6 @@
 - [x] Record baseline dependency/runtime constraints as `EXP-0001`.
 - [x] Run the organizer baseline train/infer/GEFF/CSV/metric smoke path on three real frames.
 - [x] Trace five epochs and five updates per epoch in W&B as `EXP-0002`.
+- [x] Submit private Notebook version 1 through Kaggle CLI and record public score as `EXP-0003`.
 - [ ] Calibrate node count and edge thresholds for the EXP-0002 checkpoint.
 - [ ] Establish a dataset-disjoint baseline run before building the competition notebook.
