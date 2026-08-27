@@ -8,7 +8,7 @@ run ID, or checksum sufficient to identify them.
 | EXP-0001 | 2026-08-26 | H001 organizer baseline can establish an end-to-end contract | official 2026-08-26 inventory | `6f85aa7` | `configs/exp-0001-host-smoke.toml` | 20260826 / same-video smoke | 0.0000 (contract-only) | not_submitted | `artifacts/EXP-0001/result.json` | train/infer/GEFF/CSV/metric path passed | establish a real dataset-disjoint baseline run |
 | EXP-0002 | 2026-08-26 | H006 a longer traced smoke exposes the next limiting stage | official 2026-08-26 inventory | `159c452` | `configs/exp-0002-wandb-extended.toml` | 20260826 / same-video trend check | 0.0000 (contract-only) | not_submitted | W&B `iyrrz897` | optimization improved, inference calibration failed | calibrate node and edge thresholds before adding epochs |
 | EXP-0003 | 2026-08-26 | Code Competition submission works end to end through Kaggle CLI | official sample submission / public test | `9a80bb8` | private Notebook v1 | not applicable | not run | 0.000 public | Kaggle ref `55785839` | Notebook push/run/output/submit/score path passed | replace sample graph with calibrated inference |
-| EXP-0004 | 2026-08-26 | H006/H008 full organizer baseline plus topology post-processing | official 2026-08-26 inventory | `9c3eba8` | `configs/exp-0004-host-baseline-fold0-50e.toml` | 20260826 / embryo fold 0 (`44b6` held out) | 0.9381 (50e best; completed epoch 34) | 0.787 e5; 0.805 e19 raw; 0.869 e19 post | W&B `ud8rmowz`; Kaggle refs `55790493`, `55797775`, `55798388` | artifact-free post-processing added +0.064 on identical weights | preserve post-processing and calibrate checkpoint-specific detection counts |
+| EXP-0004 | 2026-08-26 | H006/H008 full organizer baseline plus topology post-processing | official 2026-08-26 inventory | `9c3eba8` | `configs/exp-0004-host-baseline-fold0-50e.toml` | 20260826 / embryo fold 0 (`44b6` held out) | 0.9381 (50e best; completed epoch 34) | 0.787 e5; 0.805 e19 raw; 0.869 e19 post; e34/e50 pending | W&B `ud8rmowz`; Kaggle refs `55790493`, `55797775`, `55798388`, `55805307`, `55805308` | artifact-free post-processing added +0.064 on identical weights | compare e34/e50 and calibrate checkpoint-specific detection counts |
 
 ## Detailed Notes
 
@@ -133,3 +133,14 @@ Checkpoint SHA-256:
   inference were identical to ref `55797775`, this is a +0.064 absolute post-processing gain; it is
   also +0.082 over the epoch-5 anchor. Submission CSV SHA-256:
   `b2a71f53a1994a40f63abd0ff16a96ee305fee78a7f8c7e02b58c77cbff78dab`.
+- The best checkpoint across all 50 epochs was zero-based epoch 33 (completed epoch 34), proxy
+  0.9381. Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0004-best34-postprocess-v1-submit>, version 1,
+  completed with the proven post-processing profile in 379.807 seconds. Its validated output has
+  171,542 nodes, 163,578 edges, and 335,120 rows. Submission ref `55805307` is pending scoring;
+  CSV SHA-256 `dc534edb2d3cfebf6c88210c101c99d1f2b0e33e3df34dcd495b6cd3d74f3539`.
+- The final completed-epoch-50 checkpoint was exported from `checkpoint_epoch_0050.pth`. Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0004-final50-postprocess-v1-submit>, version 1,
+  completed with the same post-processing profile in 333.480 seconds. Its validated output has
+  169,362 nodes, 161,631 edges, and 330,993 rows. Submission ref `55805308` is pending scoring;
+  CSV SHA-256 `93e258699a86ea80e7ff807681d6337548023383062a92729ece9ddd17e5825a`.

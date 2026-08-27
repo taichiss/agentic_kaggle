@@ -42,6 +42,9 @@
   checkpoint and +0.082 over the epoch-5 anchor.
 - EXP-0004 completed all 50 epochs and wrote periodic checkpoints through completed epoch 50. The
   best full-run held-out proxy was 0.9381 at zero-based epoch 33 (completed epoch 34).
+- The completed-epoch-34 best checkpoint and completed-epoch-50 final checkpoint were submitted
+  with the same artifact-free post-processing profile as refs `55805307` and `55805308`; both are
+  pending public scoring.
 - `Biohub Harness 0926 Probe` version 1 scored 0.926 publicly, but is an independent public
   Notebook reference rather than an EXP-0004 result.
 - The live submission command reported zero submissions remaining after the post-processed
@@ -72,7 +75,7 @@
 
 1. Inspect estimated total-node metadata and calibrate detection/edge thresholds for the EXP-0004
    checkpoint while preserving the successful post-processing profile.
-2. Evaluate the completed-epoch-34 checkpoint locally against the selected epoch-19 checkpoint.
+2. Compare the pending completed-epoch-34 and completed-epoch-50 LB results against epoch 19.
 3. Vary one detection-count or linking decision per LB experiment from the 0.869 anchor.
 4. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
 5. Add division logic after edge/linking and node-count failure modes are measured.
@@ -100,5 +103,6 @@
 - [x] Package epoch 5 as an offline GPU Notebook and record the 0.787 public LB anchor.
 - [x] Complete all 50 EXP-0004 epochs; best held-out proxy 0.9381 at completed epoch 34.
 - [x] Confirm post-processing improves the identical epoch-19 checkpoint from 0.805 to 0.869 public.
+- [x] Submit completed epochs 34 and 50 with the proven post-processing profile.
 - [ ] Calibrate node count and edge thresholds for the EXP-0004 checkpoint.
 - [ ] Run the paired EXP-0005A/EXP-0005B backbone comparison after the shared GPU is available.
