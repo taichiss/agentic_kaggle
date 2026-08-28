@@ -234,6 +234,19 @@ def test_cache_detection_tta_must_equal_deployment():
             "inference": {"detection_tta": True},
         }
     )
+
+
+def test_shared_cache_manifest_requires_pinned_sha256(tmp_path):
+    module = _load_script()
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "manifest.json").write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="manifest SHA-256 mismatch"):
+        module._cache_datasets(
+            cache_dir,
+            expected_manifest_sha256="0" * 64,
+        )
     with pytest.raises(ValueError, match="must match deployment"):
         module._cache_detection_tta(
             {

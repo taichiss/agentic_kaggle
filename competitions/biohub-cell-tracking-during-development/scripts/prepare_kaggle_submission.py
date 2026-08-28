@@ -41,8 +41,20 @@ def _notebook(
         "weights = list(Path('/kaggle/input').rglob('edge_predictor_best.pth'))\n",
         "assert len(weights) == 1, f'expected one model checkpoint, found {weights}'\n",
         "bundle = weights[0].parent\n",
-        "competition = Path('/kaggle/input/competitions')\n",
-        "test_dir = competition / 'biohub-cell-tracking-during-development/test'\n",
+        "test_candidates = [\n",
+        "    Path('/kaggle/input/competitions/biohub-cell-tracking-during-development/test'),\n",
+        "    Path('/kaggle/input/biohub-cell-tracking-during-development/test'),\n",
+        "]\n",
+        "test_dirs = [p for p in test_candidates if p.is_dir() and any(p.glob('*.zarr'))]\n",
+        "if not test_dirs:\n",
+        "    test_dirs = sorted(\n",
+        "        {p.parent for p in Path('/kaggle/input').rglob('*.zarr')\n",
+        "         if p.parent.name == 'test'}\n",
+        "    )\n",
+        "assert len(test_dirs) == 1, (\n",
+        "    f'expected one competition test directory, found {test_dirs}'\n",
+        ")\n",
+        "test_dir = test_dirs[0]\n",
         "output = Path('/kaggle/working/submission.csv')\n",
         "command = [\n",
         "    sys.executable, str(bundle / 'run_kaggle_inference.py'),\n",
@@ -57,7 +69,8 @@ def _notebook(
         "print(f'submission ready: {output} ({output.stat().st_size:,} bytes)')\n",
     ]
     if postprocess_profile != "none":
-        command_end = source.index("]\n")
+        command_start = source.index("command = [\n")
+        command_end = source.index("]\n", command_start)
         source.insert(
             command_end,
             f"    '--postprocess-profile', '{postprocess_profile}',\n",

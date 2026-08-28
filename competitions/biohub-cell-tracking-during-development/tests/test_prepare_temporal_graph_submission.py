@@ -257,6 +257,11 @@ def test_prepare_uses_milestone_ids_and_builds_verified_offline_bundle(
     notebook = json.loads(next((output / "kernel").glob("*.ipynb")).read_text())
     notebook_source = "".join(notebook["cells"][1]["source"])
     assert "--temporal-graph-checkpoint" in notebook_source
+    test_candidates_source, command_source = notebook_source.split("command = [", 1)
+    assert "--postprocess-profile" not in test_candidates_source
+    assert "--temporal-graph-checkpoint" not in test_candidates_source
+    assert "--postprocess-profile" in command_source
+    assert "--temporal-graph-checkpoint" in command_source
     assert "manifest['files']" in notebook_source
     assert result["manifest_sha256"] in notebook_source
 

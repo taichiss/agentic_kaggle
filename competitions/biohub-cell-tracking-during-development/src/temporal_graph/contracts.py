@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Any
@@ -279,6 +280,9 @@ class TemporalGraphConfig:
     middle_coord_atol: float = 1.0e-4
     image_window_size: int = 2
     graph_window_size: int = 3
+    architecture: str = "mlp"
+    attention_heads: int = 4
+    residual_logit_bound: float | None = None
     ownership: str = "right_transition"
     schema_version: int = 1
 
@@ -297,13 +301,44 @@ class TemporalGraphConfig:
             raise ValueError("the frozen host contract requires image_window_size=2")
         if self.graph_window_size != 3:
             raise ValueError("the temporal graph contract requires graph_window_size=3")
+        if self.architecture not in {"mlp", "candidate_attention"}:
+            raise ValueError(
+                "architecture must be 'mlp' or 'candidate_attention'"
+            )
+        if (
+            isinstance(self.attention_heads, bool)
+            or not isinstance(self.attention_heads, int)
+            or self.attention_heads <= 0
+        ):
+            raise ValueError("attention_heads must be a positive integer")
+        if self.architecture == "candidate_attention" and (
+            self.hidden_dim % self.attention_heads
+        ):
+            raise ValueError(
+                "hidden_dim must be divisible by attention_heads for candidate attention"
+            )
+        if self.residual_logit_bound is not None and (
+            not isinstance(self.residual_logit_bound, (int, float))
+            or isinstance(self.residual_logit_bound, bool)
+            or not math.isfinite(float(self.residual_logit_bound))
+            or float(self.residual_logit_bound) <= 0.0
+        ):
+            raise ValueError("residual_logit_bound must be a finite positive number")
         if self.ownership != "right_transition":
             raise ValueError("the temporal graph contract requires right_transition ownership")
         if self.schema_version != 1:
             raise ValueError("unsupported temporal-graph config schema")
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        # Preserve byte-for-byte compatibility with schema-v1 MLP checkpoints
+        # written before experimental architecture selection was introduced.
+        if self.architecture == "mlp":
+            payload.pop("architecture")
+            payload.pop("attention_heads")
+        if self.residual_logit_bound is None:
+            payload.pop("residual_logit_bound")
+        return payload
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> TemporalGraphConfig:

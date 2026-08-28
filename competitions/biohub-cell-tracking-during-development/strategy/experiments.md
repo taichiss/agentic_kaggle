@@ -10,8 +10,10 @@ run ID, or checksum sufficient to identify them.
 | EXP-0003 | 2026-08-26 | Code Competition submission works end to end through Kaggle CLI | official sample submission / public test | `9a80bb8` | private Notebook v1 | not applicable | not run | 0.000 public | Kaggle ref `55785839` | Notebook push/run/output/submit/score path passed | replace sample graph with calibrated inference |
 | EXP-0004 | 2026-08-26 | H006/H008 full organizer baseline plus topology post-processing | official 2026-08-26 inventory | `9c3eba8` | `configs/exp-0004-host-baseline-fold0-50e.toml` | 20260826 / embryo fold 0 (`44b6` held out) | 0.9381 (50e best; completed epoch 34); metric screen selected e30 | 0.787 e5; 0.805 e20 raw; 0.869 e20 post; 0.874 e34; 0.877 e50; **0.890 e30** | W&B `ud8rmowz`; Kaggle refs `55790493`, `55797775`, `55798388`, `55805307`, `55805308`, `55810126` | checkpoint selection plus post-processing established the 0.890 fixed control | calibrate post-processing one factor at a time |
 | EXP-0007 | 2026-08-27 | H007 controlled spatial/temporal/proposal backbone comparison | official 2026-08-26 inventory | `6b88560` | `configs/exp-0007{a,b,c}-*.toml` | 20260827 / fold 0 disjoint calibration/report | report: A 0.568826; B 0.556438; C 0.457876; host 0.691999 | A e5 0.626 public | `artifacts/EXP-0007{A,B,C}/`; Kaggle ref `55823762` | spatial A won the corrected arms, but all arms trailed the host and missed report divisions | continue only A to 50e under the pinned selection/report gate |
-| EXP-0009 | 2026-08-28 | H011 three-frame residual improves continuation-edge selection over frozen e30 host logits | official 2026-08-26 inventory + frozen EXP-0004 e30 | `6b88560` | `configs/exp-0009-host-tgraph3-residual-30e.toml` | 20260828 / fold 0 calibration smoke | one dataset / two transitions: candidate recall 1.0 (contract-only) | not_submitted | `artifacts/EXP-0009/`; W&B `70f9278e` | smoke contracts passed; full cache plus 30e run is active | submit only the predefined e5/e30 milestones |
-| EXP-0010 | 2026-08-28 | H012/H013 remaining error can be separated into short false tracks versus missed long-displacement links | frozen EXP-0004 e30 model / public test | `6b88560` | `configs/exp-0010-postprocess-ab.toml` | fixed checkpoint and inference profile | structural gate only; no new heavy CV | corrected min7 ref `55829542` pending; gate12 ref `55828801` pending | private Notebook v1 outputs under `artifacts/EXP-0010/` | both variants move the graph in the intended opposite direction without changing weights | compare each score directly with 0.890 |
+| EXP-0009 | 2026-08-28 | H011 three-frame residual improves continuation-edge selection over frozen e30 host logits | official 2026-08-26 inventory + frozen EXP-0004 e30 | `6b88560` | `configs/exp-0009-host-tgraph3-residual-30e.toml` | 20260828 / embryo fold 0 (`44b6` held out) | base 0.922163; best 0.922684 at e3 (+0.000521); e30 0.920704 (-0.001459) | e30 ref `55843163`: **0.891**; e3 ref `55854853` pending | `artifacts/EXP-0009/`; W&B `70f9278e`; e30 Notebook v2 `345596422` | e30 improves the 0.890 LB control despite lower local top-1, confirming proxy/LB mismatch | compare e3 with e30 after scoring |
+| EXP-0011 | 2026-08-28 | H014 candidate-set self-attention improves parent choice by modelling competition among the nearest eight candidates | frozen EXP-0009 cache `c5e97a56`; frozen EXP-0004 e30 logits | `7277812` + experiment working tree | `configs/exp-0011-tgraph3-candidate-attention-10e.toml` | 20260828 / identical EXP-0009 calibration split | base 0.922163; best 0.922372 at e1 (+2 links); e10 0.920704 (-14 links); MLP best 0.922684 (+5 links) | not_submitted | `artifacts/EXP-0011/`; W&B `693a7de8` | attention lowers CE more but does not beat the independent MLP; residual magnitude, not candidate interaction capacity, is the immediate limiter | test a bounded residual scale/gate before any cache-v2 temporal GNN/GRU |
+| EXP-0012 | 2026-08-29 | H015 centered, smoothly bounded attention residuals preserve host-correct links while fixing ambiguous links | frozen EXP-0009 cache `c5e97a56`; frozen EXP-0004 e30 logits | `7277812` + experiment working tree | `configs/exp-0012-tgraph3-bounded-attention-10e.toml` | 20260828 / identical EXP-0009 calibration split | base 0.922163; best **0.923101 at e3** (+9 links); e10 0.922476 (+3 links); MLP best 0.922684 (+5 links) | not_submitted | `artifacts/EXP-0012/`; W&B `9d75368c` | valid-candidate centering plus ±0.15 tanh bound converts Attention from net regression to the best local parent-accuracy result | retain e3 best; verify on independent report/LB only after explicit submission request |
+| EXP-0010 | 2026-08-28 | H012/H013 remaining error can be separated into short false tracks versus missed long-displacement links | frozen EXP-0004 e30 model / public test | `6b88560` | `configs/exp-0010-postprocess-ab.toml` | fixed checkpoint and inference profile | structural gate only; no new heavy CV | corrected min7 ref `55829542`: **0.893**; gate12 ref `55828801`: 0.884 | private Notebook v1 outputs under `artifacts/EXP-0010/` | pruning six-node tracks improves the fixed 0.890 control; widening the relink gate hurts | adopt min7 and reject gate12 |
 
 ## Detailed Notes
 
@@ -167,7 +169,8 @@ Checkpoint SHA-256:
 
 - See `docs/overview/temporal-graph-residual.md` for the frozen-source, candidate-graph, sparse-label,
   checkpoint, and submission contracts.
-- Status: running. W&B run:
+- Status: 30 epochs completed; completed epoch 30 scored 0.891 public as Kaggle ref `55843163`,
+  +0.001 over the frozen 0.890 control. W&B run:
   <https://wandb.ai/salax0116-private-email/biohub-cell-tracking/runs/70f9278e>.
 - The completed-epoch-30 organizer baseline is frozen at weights SHA-256
   `9e068669b861b0dd993483e3ce6fc636fde604004011d5ec1e08039ae2843337`, source
@@ -181,9 +184,68 @@ Checkpoint SHA-256:
   threshold 0.99 (raw logit approximately 4.59512). A two-transition GPU smoke peaked at
   805,580,800 allocated bytes and 1,182,793,728 reserved bytes; candidate recall was 1.0 for the
   one available sparse parent.
-- The full cache plus 30-epoch run started under tmux session `biohub-exp0009` on 2026-08-28.
-  Periodic checkpoints are written every five completed epochs; completed epochs 5 and 30 are
-  predeclared Kaggle Notebook/LB milestones.
+- The full cache produced 105,327 training and 9,597 validation examples. Cache construction took
+  1,975.8 seconds and the 30 residual-head epochs took 35.6 seconds. Periodic checkpoints were
+  written at completed epochs 5, 10, 15, 20, 25, and 30.
+- Frozen-host validation top-1 accuracy was 0.922163. The best refined result was 0.922684 at epoch
+  3 (+0.000521, about +0.052 percentage points). Epoch 30 fell to 0.920704 (-0.001459, about
+  -0.146 percentage points), while training accuracy rose from 0.954019 to 0.955643. This is a
+  small early signal followed by mild overfitting, not a local validation improvement at epoch 30.
+- Kaggle Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0009-tgraph3-e30-submit>, version 2,
+  completed public-test inference and produced a valid four-dataset CSV with 167,116 nodes and
+  159,438 edges. CSV SHA-256:
+  `47e07feb66b1a92c1a6fe176017492738d22442ff796beab3d6ae49e15b9baa5`.
+- Best-epoch Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0009-tgraph3-best-e3-submit>, version 2,
+  completed public-test inference and produced a valid four-dataset CSV with 167,087 nodes and
+  159,380 edges. CSV SHA-256:
+  `2037bffd71aebe44f98c3823a20ff06ec4aac4aad94fcd76a0367c25de6f0a68`.
+  Code Competition submission ref `55854853` is pending.
+
+### EXP-0011
+
+- This is a controlled ten-epoch architecture probe over the immutable EXP-0009 cache, not a new
+  image or graph cache. The shared cache manifest SHA-256 is
+  `6296240ca44fa9b6b9ce3d98ba56e774621b67b2e460a2b0f26ece6264f56542`; its 105,327 training and
+  9,597 validation rows, seed, split, base logits, candidates, loss, optimizer settings, and
+  checkpoint cadence are unchanged.
+- One four-head candidate-set attention block replaces only the independent residual MLP. It has
+  40,597 trainable parameters versus 11,285 for the MLP and attends over the nearest-eight parent
+  candidates. The attention axis is candidate competition, not time; explicit node identities and
+  transition boundaries are not present in cache schema v1.
+- The ten epochs completed in 23.6 seconds. W&B run:
+  <https://wandb.ai/salax0116-private-email/biohub-cell-tracking/runs/693a7de8>.
+  Checkpoints were written at epochs 5 and 10, with the best checkpoint at epoch 1.
+- Best attention accuracy was 0.922372: seven frozen-host mistakes were fixed and five host-correct
+  links regressed, for a net gain of two links. The EXP-0009 MLP best fixed 14 and regressed nine,
+  for a net gain of five links and higher accuracy 0.922684.
+- At attention epoch 10, validation CE improved to 0.28930, but 52 host mistakes fixed were offset
+  by 66 regressions, leaving 0.920704 accuracy. A diagnostic residual multiplier of 0.2 recovered
+  0.922580 (18 fixed, 14 regressed), still below the MLP best. The tested attention architecture is
+  therefore rejected as the next capacity increase; a bounded residual gate is the next local test.
+- A true temporal GRU or global spatiotemporal GNN remains out of scope for this cache. Cache schema
+  v2 must retain `t_start`, node identities, candidate source indices, transition grouping, and a
+  genuine previous-parent appearance token before those names are technically accurate.
+
+### EXP-0012
+
+- This rerun changes only the candidate-attention residual transform. For each target it subtracts
+  the valid-candidate mean, then applies `0.15 * tanh(centered / 0.15)`. Common offsets cannot alter
+  parent selection, and the bound limits the maximum pairwise logit change to 0.30 while retaining
+  unit slope at zero. Cache, split, seed, architecture, optimizer, and ten-epoch budget match
+  EXP-0011.
+- The run completed in 13.4 seconds and wrote best, epoch-5, epoch-10, and last checkpoints. W&B:
+  <https://wandb.ai/salax0116-private-email/biohub-cell-tracking/runs/9d75368c>.
+- The retained epoch-3 `best_model.pth` SHA-256 is
+  `f72a6446a73831f30795f8599f6e80b2e52ff3038367c7226ae5de045e66899d`.
+- Best epoch 3 reached 0.923101: it fixed 12 frozen-host mistakes and regressed three host-correct
+  links, a net gain of nine. This exceeds the EXP-0009 MLP best by four correct links and the
+  unbounded Attention best by seven. Epoch 10 remained above the host at 0.922476 (20 fixed, 17
+  regressed), rather than falling below it as unbounded Attention did.
+- The result supports bounded correction capacity as the immediate mechanism. It does not yet
+  establish a competition-metric gain because the local objective is sparse parent top-1 rather
+  than the post-processed graph metric.
 
 ### EXP-0010
 
@@ -201,20 +263,20 @@ Checkpoint SHA-256:
   produced a structurally valid four-dataset CSV with 162,863 nodes and 155,865 edges. Relative to
   the control output this removes 4,212 nodes and 3,510 edges. CSV SHA-256:
   `68e9ef756433c6778e7560027997e0a5b04a829807b285c8bd2cb0cc56abedba`.
-  Corrected submission ref `55829542` is pending public scoring.
+  Corrected submission ref `55829542` scored 0.893 public, +0.003 over the fixed control.
 - Recall/H013 changes only the relaxed Hungarian relink gate from 10 to 12 µm. Notebook
   <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0010-recall-gate12-submit>, version 1,
   produced a structurally valid four-dataset CSV with 171,734 nodes and 164,530 edges. Relative to
   control this adds 4,659 nodes and 5,155 edges; relaxed-pass links increase from 7,302 to 9,978.
   CSV SHA-256 `a41b3dd92aa9aa0cb7feed8f8bddf6cbc5ed565863554397169dd3c2b4ca4144`.
-  Submission ref `55828801` is pending public scoring.
+  Submission ref `55828801` scored 0.884 public, -0.006 below the fixed control.
 - The two submissions deliberately move in opposite precision/recall directions and must each be
   interpreted against the same 0.890 control, not only against one another.
 - The first precision attempt, ref `55828867`, was a CPU child Notebook over the public-test output.
   Kaggle correctly rejected it as `incorrect format` because a Code Competition submission must
   rerun inference on hidden test datasets; it carries no model-quality evidence and was replaced.
 - Ref `55829582` is an accidental concurrent duplicate of corrected precision ref `55829542` using
-  the identical Notebook version and condition. It consumes quota but is excluded from the A/B
+  the identical Notebook version and condition. Its identical 0.893 score is excluded from the A/B
   interpretation.
 - `scripts/prepare_postprocess_ab_notebooks.py` now reproduces both valid submitted execution modes
   as full GPU inference from the frozen model Dataset. The corrected min-7 public output is

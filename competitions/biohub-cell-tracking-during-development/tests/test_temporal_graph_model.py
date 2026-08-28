@@ -205,6 +205,155 @@ def test_zero_initialized_head_preserves_host_logits_and_detaches_host() -> None
     assert model.residual_mlp[-1].bias.grad is not None
 
 
+def test_candidate_attention_is_zero_initialized_and_handles_padding() -> None:
+    config = TemporalGraphConfig(
+        node_feature_dim=2,
+        hidden_dim=8,
+        top_k=3,
+        radius_um=10.0,
+        architecture="candidate_attention",
+        attention_heads=2,
+    )
+    model = TemporalGraphResidualHead(config)
+    features = torch.randn(2, 2, 3, candidate_feature_dim(2))
+    valid_mask = torch.tensor(
+        [
+            [[True, True, False], [False, False, False]],
+            [[True, True, True], [True, False, False]],
+        ]
+    )
+
+    residual = model.forward_candidate_features(features, valid_mask)
+
+    assert residual.shape == valid_mask.shape
+    assert torch.isfinite(residual).all()
+    assert not residual.any()
+    residual.sum().backward()
+    assert model.candidate_attention is not None
+    assert model.candidate_attention.output.weight.grad is not None
+
+
+def test_candidate_attention_checkpoint_round_trip() -> None:
+    model = TemporalGraphResidualHead(
+        TemporalGraphConfig(
+            node_feature_dim=2,
+            hidden_dim=8,
+            top_k=3,
+            architecture="candidate_attention",
+            attention_heads=2,
+        )
+    )
+    payload = model.checkpoint_payload(base_checkpoint_sha256="host-sha")
+
+    restored = TemporalGraphResidualHead.from_checkpoint_payload(payload)
+
+    assert restored.config.architecture == "candidate_attention"
+    assert restored.config.attention_heads == 2
+    for key, value in model.state_dict().items():
+        torch.testing.assert_close(restored.state_dict()[key], value)
+
+
+def test_bounded_residual_centers_common_offset_caps_and_round_trips() -> None:
+    model = TemporalGraphResidualHead(
+        TemporalGraphConfig(
+            node_feature_dim=2,
+            hidden_dim=8,
+            top_k=3,
+            architecture="candidate_attention",
+            attention_heads=2,
+            residual_logit_bound=0.3,
+        )
+    )
+    assert model.candidate_attention is not None
+    with torch.no_grad():
+        model.candidate_attention.output.weight.normal_(mean=0.0, std=3.0)
+        model.candidate_attention.output.bias.fill_(10.0)
+    features = torch.randn(1, 3, 3, candidate_feature_dim(2))
+    valid_mask = torch.tensor(
+        [[[True, True, False], [True, False, False], [False, False, False]]]
+    )
+
+    positive_bias = model.forward_candidate_features(features, valid_mask)
+    with torch.no_grad():
+        model.candidate_attention.output.bias.fill_(-7.0)
+    negative_bias = model.forward_candidate_features(features, valid_mask)
+
+    torch.testing.assert_close(positive_bias, negative_bias, atol=2.0e-5, rtol=0.0)
+    assert torch.isfinite(positive_bias).all()
+    assert float(positive_bias.detach().abs().max()) <= 0.3 + 1.0e-6
+    assert not positive_bias[~valid_mask].any()
+    assert not positive_bias[0, 1].any()
+    assert not positive_bias[0, 2].any()
+    payload = model.checkpoint_payload(base_checkpoint_sha256="host-sha")
+    restored = TemporalGraphResidualHead.from_checkpoint_payload(payload)
+    assert restored.config.residual_logit_bound == pytest.approx(0.3)
+
+
+def test_mlp_checkpoint_config_omits_new_default_architecture_fields() -> None:
+    config = TemporalGraphConfig(node_feature_dim=2, hidden_dim=4, top_k=2)
+
+    payload = config.to_dict()
+
+    assert "architecture" not in payload
+    assert "attention_heads" not in payload
+    assert "residual_logit_bound" not in payload
+
+
+def test_bounded_candidate_attention_is_permutation_equivariant() -> None:
+    model = TemporalGraphResidualHead(
+        TemporalGraphConfig(
+            node_feature_dim=2,
+            hidden_dim=8,
+            top_k=3,
+            architecture="candidate_attention",
+            attention_heads=2,
+            residual_logit_bound=0.15,
+        )
+    ).eval()
+    assert model.candidate_attention is not None
+    with torch.no_grad():
+        model.candidate_attention.output.weight.normal_()
+    features = torch.randn(2, 1, 3, candidate_feature_dim(2))
+    valid_mask = torch.tensor([[[True, True, False]], [[True, True, True]]])
+    permutation = torch.tensor([2, 0, 1])
+    inverse = torch.argsort(permutation)
+
+    original = model.forward_candidate_features(features, valid_mask)
+    permuted = model.forward_candidate_features(
+        features[:, :, permutation], valid_mask[:, :, permutation]
+    )
+
+    torch.testing.assert_close(original, permuted[:, :, inverse])
+
+
+def test_zero_initialized_bounded_attention_receives_nonzero_ce_gradient() -> None:
+    model = TemporalGraphResidualHead(
+        TemporalGraphConfig(
+            node_feature_dim=2,
+            hidden_dim=8,
+            top_k=3,
+            architecture="candidate_attention",
+            attention_heads=2,
+            residual_logit_bound=0.15,
+        )
+    )
+    assert model.candidate_attention is not None
+    features = torch.randn(4, 1, 3, candidate_feature_dim(2))
+    valid_mask = torch.ones(4, 1, 3, dtype=torch.bool)
+    base_logits = torch.tensor(
+        [[2.0, 0.0, -1.0], [1.0, 0.5, -0.5], [0.0, 1.0, -1.0], [1.0, -1.0, 0.0]]
+    )
+    labels = torch.tensor([1, 2, 0, 2])
+
+    residual = model.forward_candidate_features(features, valid_mask).squeeze(1)
+    loss = torch.nn.functional.cross_entropy(base_logits + residual, labels)
+    loss.backward()
+
+    gradient = model.candidate_attention.output.weight.grad
+    assert gradient is not None
+    assert float(gradient.abs().sum()) > 0.0
+
+
 def test_refine_logits_changes_only_candidate_entries() -> None:
     base = torch.arange(6, dtype=torch.float32).reshape(1, 3, 2).requires_grad_()
     candidates = ParentCandidates(

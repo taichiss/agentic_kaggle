@@ -51,22 +51,30 @@
   temporal arm B, and 0.457876 for temporal/predicted-proposal arm C, against 0.691999 for the
   frozen host reference. Arm A therefore won the controlled comparison but still trailed the host;
   its Kaggle submission scored 0.626 public as ref `55823762`.
-- EXP-0009's one-dataset/two-transition GPU smoke passed the frozen-host candidate-cache contract
-  with candidate recall 1.0 and a 1,182,793,728-byte peak CUDA reservation under deployment-matched
-  four-view TTA. The full cache plus 30-epoch run is active in tmux session `biohub-exp0009`; W&B
-  run <https://wandb.ai/salax0116-private-email/biohub-cell-tracking/runs/70f9278e> records it.
+- EXP-0009's full cache and 30-epoch residual-head run completed. Frozen-host validation accuracy
+  was 0.922163; the MLP peaked at 0.922684 at epoch 3 and fell to 0.920704 at epoch 30. Its epoch-30
+  Notebook submission ref `55843163` scored 0.891 public, +0.001 over the frozen 0.890 control.
+- The identical-profile EXP-0009 epoch-3 best Notebook completed with 167,087 nodes and 159,380
+  edges. Code Competition submission ref `55854853` is pending.
+- EXP-0011 reused the immutable EXP-0009 cache and trained a four-head candidate-set attention
+  residual for ten epochs. It peaked at 0.922372 at epoch 1 and ended at 0.920704, below the MLP
+  best. At epoch 10 it fixed 52 host mistakes but regressed 66 host-correct links; a diagnostic
+  0.2 residual multiplier reached 0.922580 but still did not beat the MLP best.
+- EXP-0012 centers candidate residuals and smoothly bounds them to ±0.15. Its epoch-3 best reached
+  0.923101 by fixing 12 host mistakes while regressing three host-correct links, exceeding the MLP
+  best by four correct links. Epoch 10 remained above the frozen host at 0.922476.
 - EXP-0010 holds checkpoint, detection threshold, edge threshold, TTA, smoothing, and division
   logic fixed and tests two one-factor post-processing hypotheses. Corrected precision arm ref
   `55829542` changes minimum component size from 6 to 7; recall arm ref `55828801` changes only the
-  relaxed Hungarian relink gate from 10 to 12 micrometers. Both are pending public scoring. An
-  earlier precision child-Notebook ref `55828867` was rejected because it could not rerun inference
-  on hidden test datasets and is packaging-failure evidence only.
+  relaxed Hungarian relink gate from 10 to 12 micrometers. Min-7 scored 0.893 (+0.003); gate-12
+  scored 0.884 (-0.006), so pruning is retained and the wider relink gate is rejected. An earlier
+  precision child-Notebook ref `55828867` could not rerun inference on hidden test datasets and is
+  packaging-failure evidence only.
 - `Biohub Harness 0926 Probe` version 1 scored 0.926 publicly, but is an independent public
   Notebook reference rather than an EXP-0004 result.
-- EXP-0010 straddled the 2026-08-28 00:00 UTC daily reset. The recall arm used the final pre-reset
-  slot. The rejected child Notebook, corrected precision ref `55829542`, and accidental concurrent
-  duplicate ref `55829582` consumed three post-reset slots; two submissions remain today. The
-  duplicate is the identical precision condition and is excluded from hypothesis interpretation.
+- EXP-0010 straddled the 2026-08-28 00:00 UTC daily reset. The duplicate ref `55829582` is the
+  identical precision condition and is excluded from hypothesis interpretation. EXP-0009 e3 ref
+  `55854853` consumed the final slot before the next daily reset.
 
 ## Open Questions
 
@@ -88,17 +96,20 @@
 | H006 | Checkpoint-specific node/edge calibration is required before longer training | EXP-0002 improved training recall but emitted 7,711 nodes and zero edges under fixed thresholds | a broad checkpoint sweep yields stable counts and non-empty edges without calibration | accepted |
 | H007 | An nnU-Net-configured spatial backbone improves difficult endpoint recall at a fixed detection budget | EXP-0007 keeps detector/linker contracts and the calibration/report split fixed across arms | EXP-0007A fails to improve the fixed report or LB result over the host baseline | rejected at epoch 5 |
 | H008 | Artifact-free topology post-processing materially improves a fixed checkpoint | identical epoch-19 weights scored 0.805 raw and 0.869 with post-processing (+0.064) | a repeat on another checkpoint or hidden/private evidence removes the gain | accepted |
-| H011 | A three-frame candidate-graph residual improves continuation links without retraining detection | frozen EXP-0004 e30 logits plus a bounded local residual preserve the 0.890 control at zero initialization | completed-epoch-5 and epoch-30 EXP-0009 LB do not exceed 0.890 | running |
-| H012 | Remaining node-count penalty is driven partly by transient six-node tracks | epoch-30 control is penalized for excess nodes; min-7 removes 4,212 nodes while retaining division components | fixed-checkpoint public LB does not exceed 0.890 | submitted |
-| H013 | Remaining edge error is recall-limited and benefits from a wider relaxed motion gate | epoch-30 screen recall 0.7849 trails precision 0.8538; 12 µm adds 2,676 relaxed links on public test clips | fixed-checkpoint public LB does not exceed 0.890 | submitted |
+| H011 | A three-frame candidate-graph residual improves continuation links without retraining detection | frozen EXP-0004 e30 logits plus a bounded local residual preserve the 0.890 control at zero initialization | completed-epoch-5 and epoch-30 EXP-0009 LB do not exceed 0.890 | e30 accepted at 0.891; e3 ref `55854853` pending score |
+| H014 | Candidate-set attention improves ambiguous parent selection over independent candidate scoring | 97.5% of validation rows have multiple candidates and attention can compare their host margin and motion jointly | ten-epoch best does not exceed EXP-0009 MLP best 0.922684 | rejected in tested form |
+| H015 | Centering and bounding Attention residuals preserves confident host links while correcting ambiguous choices | unbounded e10 fixed 52 but regressed 66; a ±0.15 pairwise-safe correction limits destructive flips | bounded ten-epoch best does not exceed MLP best 0.922684 | locally accepted at 0.923101; report/LB unverified |
+| H012 | Remaining node-count penalty is driven partly by transient six-node tracks | epoch-30 control is penalized for excess nodes; min-7 removes 4,212 nodes while retaining division components | fixed-checkpoint public LB does not exceed 0.890 | accepted at 0.893 |
+| H013 | Remaining edge error is recall-limited and benefits from a wider relaxed motion gate | epoch-30 screen recall 0.7849 trails precision 0.8538; 12 µm adds 2,676 relaxed links on public test clips | fixed-checkpoint public LB does not exceed 0.890 | rejected at 0.884 |
 
 ## Priority Plan
 
-1. Complete the EXP-0009 cache/head run and submit the completed-epoch-5 and epoch-30 milestones.
-2. Compare EXP-0010 precision and recall arms against the fixed epoch-30 public score 0.890.
-3. Keep the winning direction and tune only one adjacent value after fresh quota is available.
-4. Inspect estimated total-node metadata before changing detection thresholds.
-5. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
+1. Read EXP-0009 best epoch-3 ref `55854853` and compare it with epoch-30 ref `55843163` at 0.891.
+2. Retain EXP-0012 epoch 3 and verify it on an independent report subset before increasing
+   temporal-head capacity.
+3. Adopt EXP-0010 min-component 7 as the post-processing control; do not retain the 12 µm gate.
+4. Design cache schema v2 before calling a future arm a temporal GRU or global GNN.
+5. Inspect estimated total-node metadata before changing detection thresholds.
 
 ## Validation Plan
 
@@ -130,4 +141,9 @@
 - [ ] Calibrate node count and edge thresholds for the EXP-0004 checkpoint.
 - [ ] Complete EXP-0007A to 50 epochs and apply its pinned checkpoint-selection/report gate.
 - [x] Start the W&B-traced EXP-0009 full cache plus 30-epoch run in a persistent tmux session.
-- [ ] Submit the EXP-0009 completed-epoch-5 and epoch-30 checkpoints through the guarded Notebook workflow.
+- [ ] Submit the EXP-0009 completed-epoch-5 checkpoint through the guarded Notebook workflow.
+- [x] Submit the EXP-0009 completed-epoch-30 checkpoint as Notebook version 2 (ref `55843163`).
+- [x] Submit the EXP-0009 best epoch-3 checkpoint as Notebook version 2 (ref `55854853`).
+- [x] Run the EXP-0011 candidate-set attention probe for ten epochs with W&B tracing.
+- [x] Retrain centered ±0.15 bounded Attention for ten epochs as EXP-0012.
+- [ ] Verify EXP-0012 best epoch 3 on an independent report subset or LB after explicit approval.

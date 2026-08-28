@@ -339,7 +339,8 @@ def _temporal_graph_notebook(
         "verification_module._verify_bundle_manifest(bundle)\n",
         f"graph_checkpoint = bundle / {GRAPH_CHECKPOINT_NAME!r}\n",
     ]
-    command_end = source.index("]\n")
+    command_start = source.index("command = [\n")
+    command_end = source.index("]\n", command_start)
     source.insert(
         command_end,
         "    '--temporal-graph-checkpoint', str(graph_checkpoint),\n",

@@ -1,6 +1,6 @@
 schema_version = 1
-experiment_id = "EXP-0009"
-hypothesis_id = "H011"
+experiment_id = "EXP-0012"
+hypothesis_id = "H015"
 seed = 20260828
 
 [source]
@@ -19,22 +19,24 @@ split_strategy = "embryo-prefix"
 group_delimiter = "_"
 fold = 0
 validation_group = "44b6"
-validation_manifest = "artifacts/EXP-0007/validation_split.json"
+validation_manifest = "artifacts/EXP-0009/validation_split_fallback.json"
 validation_partition = "calibration"
 image_window_size = 2
 graph_window_size = 3
 downsample = [1, 4, 4]
 
 [model]
-name = "host_tgraph3_residual"
-architecture = "candidate_temporal_graph_residual_mlp"
+name = "host_tgraph3_bounded_candidate_attention"
+architecture = "candidate_attention"
 trainable_scope = "temporal_graph_residual_only"
 base_edge_score = "frozen_host_logit"
-residual_output = "edge_logit_delta"
+residual_output = "bounded_edge_logit_delta"
 residual_gate_init = 0.0
+residual_logit_bound = 0.15
 node_feature_dim = 32
 hidden_dim = 64
-layers = 2
+attention_heads = 4
+layers = 1
 dropout = 0.1
 physical_coordinates = true
 continuation_edges_only = true
@@ -53,6 +55,8 @@ include_detection_confidence = false
 
 [cache]
 directory = "artifacts/EXP-0009/cache"
+source_experiment_id = "EXP-0009"
+source_manifest_sha256 = "6296240ca44fa9b6b9ce3d98ba56e774621b67b2e460a2b0f26ece6264f56542"
 host_pair_batch_size = 1
 detection_probability_threshold = 0.99
 detection_tta = true
@@ -61,7 +65,7 @@ reuse_when_fingerprint_matches = true
 store_device = "cpu"
 
 [train]
-epochs = 30
+epochs = 10
 learning_rate = 1e-4
 weight_decay = 1e-4
 batch_size = 2048
@@ -75,8 +79,6 @@ division_supervision = "disabled"
 cuda_deterministic = false
 cudnn_benchmark = true
 mixed_precision = "none"
-cache_smoke_max_datasets = 1
-cache_smoke_max_transitions = 2
 
 [checkpoint]
 every_epochs = 5
@@ -90,11 +92,11 @@ mode = "online"
 required = true
 entity = "salax0116-private-email"
 project = "biohub-cell-tracking"
-name = "EXP-0009-host-tgraph3-residual-30e"
-group = "temporal-graph-residual"
+name = "EXP-0012-tgraph3-bounded-attention-10e"
+group = "tgraph3-residual-control"
 job_type = "train-eval"
-tags = ["biohub", "host-epoch30", "t-image-2", "t-graph-3", "residual", "fold-0"]
-notes = "H011: add only a three-frame candidate-graph residual to the frozen EXP-0004 completed-epoch-30 host model; keep division and public-applicable-v1 post-processing fixed."
+tags = ["biohub", "host-epoch30", "t-image-2", "t-graph-3", "candidate-attention", "bounded-residual", "fold-0", "cache-exp0009"]
+notes = "H015: remove the per-target common residual offset, then smoothly bound each learned edge-logit correction to +/-0.15 while preserving unit slope at zero."
 
 [inference]
 detection_probability_threshold = 0.99
@@ -115,45 +117,9 @@ division_policy = "public-applicable-v1"
 postprocess_profile = "public-applicable-v1"
 allow_division_changes = false
 allow_postprocess_changes = false
-comparison_public_score = 0.890
-
-[submission]
-competition = "biohub-cell-tracking-during-development"
-requires_explicit_request = true
-output_name = "submission.csv"
-
-[[submission.milestones]]
-completed_epoch = 3
-checkpoint = "best_model.pth"
-variant = "best-local-validation"
-dataset_id = "suzukitaichi/biohub-exp-0009-tgraph3-residual-best-e3"
-kernel_id = "suzukitaichi/biohub-exp-0009-tgraph3-best-e3-submit"
-postprocess_profile = "public-applicable-v1"
-status = "submitted"
-kernel_version = 2
-submission_ref = 55854853
-
-[[submission.milestones]]
-completed_epoch = 5
-checkpoint = "checkpoint_epoch_0005.pth"
-variant = "early-lb-probe"
-dataset_id = "suzukitaichi/biohub-exp-0009-tgraph3-residual-e5"
-kernel_id = "suzukitaichi/biohub-exp-0009-tgraph3-e5-submit"
-postprocess_profile = "public-applicable-v1"
-status = "planned"
-
-[[submission.milestones]]
-completed_epoch = 30
-checkpoint = "checkpoint_epoch_0030.pth"
-variant = "final-30e"
-dataset_id = "suzukitaichi/biohub-exp-0009-tgraph3-residual-e30"
-kernel_id = "suzukitaichi/biohub-exp-0009-tgraph3-e30-submit"
-postprocess_profile = "public-applicable-v1"
-status = "complete"
-kernel_version = 2
-submission_ref = 55843163
-public_score = 0.891
+comparison_experiment_id = "EXP-0011"
+comparison_epochs = 10
 
 [output]
-artifact_dir = "artifacts/EXP-0009"
-submission_file = "submissions/EXP-0009.csv"
+artifact_dir = "artifacts/EXP-0012"
+submission_file = "submissions/EXP-0012.csv"

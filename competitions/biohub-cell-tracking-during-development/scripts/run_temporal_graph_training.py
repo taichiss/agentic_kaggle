@@ -294,6 +294,13 @@ def _graph_config(config: dict[str, Any], source: SourceBundle) -> TemporalGraph
         dropout=float(model.get("dropout", 0.1)),
         image_window_size=int(config["data"].get("image_window_size", 2)),
         graph_window_size=int(config["data"].get("graph_window_size", 3)),
+        architecture=str(model.get("architecture", "mlp")),
+        attention_heads=int(model.get("attention_heads", 4)),
+        residual_logit_bound=(
+            float(model["residual_logit_bound"])
+            if model.get("residual_logit_bound") is not None
+            else None
+        ),
     )
 
 
@@ -1205,10 +1212,17 @@ class CompactCacheDataset(Dataset):
 
 def _cache_datasets(
     cache_dir: Path,
+    *,
+    expected_manifest_sha256: str | None = None,
 ) -> tuple[CompactCacheDataset, CompactCacheDataset, dict[str, Any]]:
     manifest_path = cache_dir / "manifest.json"
     if not manifest_path.is_file():
         raise FileNotFoundError(f"cache manifest is missing: {manifest_path}")
+    if (
+        expected_manifest_sha256 is not None
+        and _sha256(manifest_path) != expected_manifest_sha256
+    ):
+        raise ValueError("shared cache manifest SHA-256 mismatch")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     fingerprint = str(manifest["fingerprint"])
     paths: dict[str, list[Path]] = {"train": [], "validation": []}
@@ -1421,7 +1435,12 @@ def train_head(
     cache_dir: Path,
     wandb_run,
 ) -> dict[str, Any]:
-    train_dataset, validation_dataset, cache_manifest = _cache_datasets(cache_dir)
+    train_dataset, validation_dataset, cache_manifest = _cache_datasets(
+        cache_dir,
+        expected_manifest_sha256=config.get("cache", {}).get(
+            "source_manifest_sha256"
+        ),
+    )
     cache_fingerprint = str(cache_manifest["fingerprint"])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     seed = int(config["seed"])

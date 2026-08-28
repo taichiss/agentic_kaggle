@@ -25,6 +25,69 @@ from .contracts import (
 )
 
 
+class CandidateAttentionResidual(nn.Module):
+    """Jointly score the bounded parent candidates for each target node.
+
+    The attention axis is the unordered candidate set, not time. Temporal
+    evidence remains encoded in each candidate's three-frame features.
+    """
+
+    def __init__(
+        self,
+        feature_dim: int,
+        hidden_dim: int,
+        attention_heads: int,
+        dropout: float,
+    ) -> None:
+        super().__init__()
+        self.input_norm = nn.LayerNorm(feature_dim)
+        self.input_projection = nn.Linear(feature_dim, hidden_dim)
+        self.attention = nn.MultiheadAttention(
+            hidden_dim,
+            attention_heads,
+            dropout=dropout,
+            batch_first=True,
+        )
+        self.attention_norm = nn.LayerNorm(hidden_dim)
+        self.feed_forward = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim * 2),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim * 2, hidden_dim),
+        )
+        self.output_norm = nn.LayerNorm(hidden_dim)
+        self.output = nn.Linear(hidden_dim, 1)
+        nn.init.zeros_(self.output.weight)
+        nn.init.zeros_(self.output.bias)
+
+    def forward(self, features: torch.Tensor, valid_mask: torch.Tensor) -> torch.Tensor:
+        batch, targets, candidates, width = features.shape
+        flat_features = features.reshape(batch * targets, candidates, width)
+        flat_valid = valid_mask.reshape(batch * targets, candidates)
+        padding_mask = ~flat_valid
+        all_invalid = ~flat_valid.any(dim=1)
+        if all_invalid.any():
+            # MultiheadAttention cannot consume a row whose every key is
+            # padded. The synthetic unmasked slot is zeroed again below.
+            padding_mask = padding_mask.clone()
+            padding_mask[all_invalid, 0] = False
+
+        hidden = self.input_projection(self.input_norm(flat_features.float()))
+        hidden = hidden * flat_valid.unsqueeze(-1).to(hidden.dtype)
+        attended, _ = self.attention(
+            hidden,
+            hidden,
+            hidden,
+            key_padding_mask=padding_mask,
+            need_weights=False,
+        )
+        hidden = self.attention_norm(hidden + attended)
+        hidden = self.output_norm(hidden + self.feed_forward(hidden))
+        residual = self.output(hidden).squeeze(-1)
+        residual = residual * flat_valid.to(residual.dtype)
+        return residual.reshape(batch, targets, candidates)
+
+
 class TemporalGraphResidualHead(nn.Module):
     """Refine frozen host logits with bounded three-frame graph context."""
 
@@ -58,26 +121,36 @@ class TemporalGraphResidualHead(nn.Module):
         self.config = config
 
         feature_dim = candidate_feature_dim(config.node_feature_dim)
-        layers: list[nn.Module] = [
-            nn.LayerNorm(feature_dim),
-            nn.Linear(feature_dim, config.hidden_dim),
-            nn.GELU(),
-        ]
-        if config.dropout:
-            layers.append(nn.Dropout(config.dropout))
-        layers.extend(
-            [
-                nn.Linear(config.hidden_dim, config.hidden_dim),
+        if config.architecture == "mlp":
+            layers: list[nn.Module] = [
+                nn.LayerNorm(feature_dim),
+                nn.Linear(feature_dim, config.hidden_dim),
                 nn.GELU(),
             ]
-        )
-        if config.dropout:
-            layers.append(nn.Dropout(config.dropout))
-        output = nn.Linear(config.hidden_dim, 1)
-        nn.init.zeros_(output.weight)
-        nn.init.zeros_(output.bias)
-        layers.append(output)
-        self.residual_mlp = nn.Sequential(*layers)
+            if config.dropout:
+                layers.append(nn.Dropout(config.dropout))
+            layers.extend(
+                [
+                    nn.Linear(config.hidden_dim, config.hidden_dim),
+                    nn.GELU(),
+                ]
+            )
+            if config.dropout:
+                layers.append(nn.Dropout(config.dropout))
+            output = nn.Linear(config.hidden_dim, 1)
+            nn.init.zeros_(output.weight)
+            nn.init.zeros_(output.bias)
+            layers.append(output)
+            self.residual_mlp: nn.Module | None = nn.Sequential(*layers)
+            self.candidate_attention: nn.Module | None = None
+        else:
+            self.residual_mlp = None
+            self.candidate_attention = CandidateAttentionResidual(
+                feature_dim,
+                config.hidden_dim,
+                config.attention_heads,
+                config.dropout,
+            )
 
     def forward_candidate_features(
         self,
@@ -100,7 +173,23 @@ class TemporalGraphResidualHead(nn.Module):
             raise ValueError("candidate feature width does not match the model config")
         if valid_mask.shape != features.shape[:3] or valid_mask.dtype != torch.bool:
             raise ValueError("valid_mask must be boolean with shape (B,N_target,K)")
-        residual = self.residual_mlp(features.float()).squeeze(-1)
+        if self.residual_mlp is not None:
+            residual = self.residual_mlp(features.float()).squeeze(-1)
+        else:
+            if self.candidate_attention is None:
+                raise RuntimeError("candidate-attention module is missing")
+            residual = self.candidate_attention(features, valid_mask)
+        if self.config.residual_logit_bound is not None:
+            bound = float(self.config.residual_logit_bound)
+            valid = valid_mask.to(residual.dtype)
+            candidate_mean = (residual * valid).sum(dim=-1, keepdim=True) / valid.sum(
+                dim=-1, keepdim=True
+            ).clamp_min(1.0)
+            centered = (residual - candidate_mean) * valid
+            # A common offset cannot change parent selection, so remove it
+            # before applying a smooth, non-compensable logit cap. The cap has
+            # unit slope at zero and preserves the exact frozen-host start.
+            residual = bound * torch.tanh(centered / bound)
         return residual * valid_mask.to(residual.dtype)
 
     def forward(
