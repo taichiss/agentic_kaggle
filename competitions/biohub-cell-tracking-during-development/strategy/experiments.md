@@ -8,7 +8,10 @@ run ID, or checksum sufficient to identify them.
 | EXP-0001 | 2026-08-26 | H001 organizer baseline can establish an end-to-end contract | official 2026-08-26 inventory | `6f85aa7` | `configs/exp-0001-host-smoke.toml` | 20260826 / same-video smoke | 0.0000 (contract-only) | not_submitted | `artifacts/EXP-0001/result.json` | train/infer/GEFF/CSV/metric path passed | establish a real dataset-disjoint baseline run |
 | EXP-0002 | 2026-08-26 | H006 a longer traced smoke exposes the next limiting stage | official 2026-08-26 inventory | `159c452` | `configs/exp-0002-wandb-extended.toml` | 20260826 / same-video trend check | 0.0000 (contract-only) | not_submitted | W&B `iyrrz897` | optimization improved, inference calibration failed | calibrate node and edge thresholds before adding epochs |
 | EXP-0003 | 2026-08-26 | Code Competition submission works end to end through Kaggle CLI | official sample submission / public test | `9a80bb8` | private Notebook v1 | not applicable | not run | 0.000 public | Kaggle ref `55785839` | Notebook push/run/output/submit/score path passed | replace sample graph with calibrated inference |
-| EXP-0004 | 2026-08-26 | H006/H008 full organizer baseline plus topology post-processing | official 2026-08-26 inventory | `9c3eba8` | `configs/exp-0004-host-baseline-fold0-50e.toml` | 20260826 / embryo fold 0 (`44b6` held out) | 0.9381 (50e best; completed epoch 34) | 0.787 e5; 0.805 e19 raw; 0.869 e19 post; e34/e50 pending | W&B `ud8rmowz`; Kaggle refs `55790493`, `55797775`, `55798388`, `55805307`, `55805308` | artifact-free post-processing added +0.064 on identical weights | compare e34/e50 and calibrate checkpoint-specific detection counts |
+| EXP-0004 | 2026-08-26 | H006/H008 full organizer baseline plus topology post-processing | official 2026-08-26 inventory | `9c3eba8` | `configs/exp-0004-host-baseline-fold0-50e.toml` | 20260826 / embryo fold 0 (`44b6` held out) | 0.9381 (50e best; completed epoch 34); metric screen selected e30 | 0.787 e5; 0.805 e20 raw; 0.869 e20 post; 0.874 e34; 0.877 e50; **0.890 e30** | W&B `ud8rmowz`; Kaggle refs `55790493`, `55797775`, `55798388`, `55805307`, `55805308`, `55810126` | checkpoint selection plus post-processing established the 0.890 fixed control | calibrate post-processing one factor at a time |
+| EXP-0007 | 2026-08-27 | H007 controlled spatial/temporal/proposal backbone comparison | official 2026-08-26 inventory | `6b88560` | `configs/exp-0007{a,b,c}-*.toml` | 20260827 / fold 0 disjoint calibration/report | report: A 0.568826; B 0.556438; C 0.457876; host 0.691999 | A e5 0.626 public | `artifacts/EXP-0007{A,B,C}/`; Kaggle ref `55823762` | spatial A won the corrected arms, but all arms trailed the host and missed report divisions | continue only A to 50e under the pinned selection/report gate |
+| EXP-0009 | 2026-08-28 | H011 three-frame residual improves continuation-edge selection over frozen e30 host logits | official 2026-08-26 inventory + frozen EXP-0004 e30 | `6b88560` | `configs/exp-0009-host-tgraph3-residual-30e.toml` | 20260828 / fold 0 calibration smoke | one dataset / two transitions: candidate recall 1.0 (contract-only) | not_submitted | `artifacts/EXP-0009/`; W&B `70f9278e` | smoke contracts passed; full cache plus 30e run is active | submit only the predefined e5/e30 milestones |
+| EXP-0010 | 2026-08-28 | H012/H013 remaining error can be separated into short false tracks versus missed long-displacement links | frozen EXP-0004 e30 model / public test | `6b88560` | `configs/exp-0010-postprocess-ab.toml` | fixed checkpoint and inference profile | structural gate only; no new heavy CV | corrected min7 ref `55829542` pending; gate12 ref `55828801` pending | private Notebook v1 outputs under `artifacts/EXP-0010/` | both variants move the graph in the intended opposite direction without changing weights | compare each score directly with 0.890 |
 
 ## Detailed Notes
 
@@ -137,10 +140,83 @@ Checkpoint SHA-256:
   0.9381. Notebook
   <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0004-best34-postprocess-v1-submit>, version 1,
   completed with the proven post-processing profile in 379.807 seconds. Its validated output has
-  171,542 nodes, 163,578 edges, and 335,120 rows. Submission ref `55805307` is pending scoring;
+  171,542 nodes, 163,578 edges, and 335,120 rows. Submission ref `55805307` completed with public
+  score 0.874;
   CSV SHA-256 `dc534edb2d3cfebf6c88210c101c99d1f2b0e33e3df34dcd495b6cd3d74f3539`.
 - The final completed-epoch-50 checkpoint was exported from `checkpoint_epoch_0050.pth`. Notebook
   <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0004-final50-postprocess-v1-submit>, version 1,
   completed with the same post-processing profile in 333.480 seconds. Its validated output has
-  169,362 nodes, 161,631 edges, and 330,993 rows. Submission ref `55805308` is pending scoring;
+  169,362 nodes, 161,631 edges, and 330,993 rows. Submission ref `55805308` completed with public
+  score 0.877;
   CSV SHA-256 `93e258699a86ea80e7ff807681d6337548023383062a92729ece9ddd17e5825a`.
+
+### EXP-0007
+
+- See `docs/overview/backbone-ab.md` for the corrected-v2 architecture, immutable split,
+  calibration/report protocol, checkpoint hashes, and finalization gate.
+- The epoch-5 report score was 0.568826 for spatial/GT-proposal arm A, 0.556438 for
+  temporal/GT-proposal arm B, and 0.457876 for temporal/mixed-proposal arm C. The fixed host
+  reference scored 0.691999 on the same report half.
+- Arm A was the corrected-arm winner and its private Kaggle Notebook scored 0.626 public as ref
+  `55823762`. This rejects an early benefit from the tested temporal MHA and aggressive predicted
+  proposal curriculum; it does not establish an improvement over the host model.
+- Only arm A is eligible for the 50-epoch continuation. Packaging remains blocked until the complete
+  ten-checkpoint calibration sweep and one fixed report evaluation pass the pinned strict gate.
+
+### EXP-0009
+
+- See `docs/overview/temporal-graph-residual.md` for the frozen-source, candidate-graph, sparse-label,
+  checkpoint, and submission contracts.
+- Status: running. W&B run:
+  <https://wandb.ai/salax0116-private-email/biohub-cell-tracking/runs/70f9278e>.
+- The completed-epoch-30 organizer baseline is frozen at weights SHA-256
+  `9e068669b861b0dd993483e3ce6fc636fde604004011d5ec1e08039ae2843337`, source
+  checkpoint SHA-256 `729836a33f485eb9e90ffd97f4ad6defdae916ac0e0affad04de649ade91b79e`, and
+  organizer revision `075fc5f5a52d11077f9dc2b074644618f26939e2`.
+- `T_image=2` is unchanged. Adjacent frozen pair windows provide `T_graph=3`; a zero-initialized
+  two-layer residual MLP refines only the right transition before softmax. Candidate parents are
+  bounded to top 8 within 15 micrometers, while division and `public-applicable-v1`
+  post-processing remain fixed.
+- Cache and deployment proposal generation both use four-view XY detection TTA and probability
+  threshold 0.99 (raw logit approximately 4.59512). A two-transition GPU smoke peaked at
+  805,580,800 allocated bytes and 1,182,793,728 reserved bytes; candidate recall was 1.0 for the
+  one available sparse parent.
+- The full cache plus 30-epoch run started under tmux session `biohub-exp0009` on 2026-08-28.
+  Periodic checkpoints are written every five completed epochs; completed epochs 5 and 30 are
+  predeclared Kaggle Notebook/LB milestones.
+
+### EXP-0010
+
+- Fixed control: completed epoch 30, checkpoint SHA-256
+  `9e068669b861b0dd993483e3ce6fc636fde604004011d5ec1e08039ae2843337`, detection
+  threshold 0.99, edge threshold 0.5, 5 µm pooling, four-view XY TTA, and
+  `public-applicable-v1`; public score 0.890 (ref `55810126`).
+- All hard-coded control parameters are enumerated in
+  `configs/exp-0010-postprocess-ab.toml`: 6/10 µm two-pass Hungarian relinking,
+  conservative capped division repair, division-preserving minimum-six component pruning, and
+  two-frame linear coordinate smoothing with fitted/raw weights 0.8/0.2.
+- Precision/H012 changes only the minimum retained component size from 6 to 7 and still preserves
+  any component containing a division. Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0010-precision-min7-full-submit>, version 1,
+  produced a structurally valid four-dataset CSV with 162,863 nodes and 155,865 edges. Relative to
+  the control output this removes 4,212 nodes and 3,510 edges. CSV SHA-256:
+  `68e9ef756433c6778e7560027997e0a5b04a829807b285c8bd2cb0cc56abedba`.
+  Corrected submission ref `55829542` is pending public scoring.
+- Recall/H013 changes only the relaxed Hungarian relink gate from 10 to 12 µm. Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0010-recall-gate12-submit>, version 1,
+  produced a structurally valid four-dataset CSV with 171,734 nodes and 164,530 edges. Relative to
+  control this adds 4,659 nodes and 5,155 edges; relaxed-pass links increase from 7,302 to 9,978.
+  CSV SHA-256 `a41b3dd92aa9aa0cb7feed8f8bddf6cbc5ed565863554397169dd3c2b4ca4144`.
+  Submission ref `55828801` is pending public scoring.
+- The two submissions deliberately move in opposite precision/recall directions and must each be
+  interpreted against the same 0.890 control, not only against one another.
+- The first precision attempt, ref `55828867`, was a CPU child Notebook over the public-test output.
+  Kaggle correctly rejected it as `incorrect format` because a Code Competition submission must
+  rerun inference on hidden test datasets; it carries no model-quality evidence and was replaced.
+- Ref `55829582` is an accidental concurrent duplicate of corrected precision ref `55829542` using
+  the identical Notebook version and condition. It consumes quota but is excluded from the A/B
+  interpretation.
+- `scripts/prepare_postprocess_ab_notebooks.py` now reproduces both valid submitted execution modes
+  as full GPU inference from the frozen model Dataset. The corrected min-7 public output is
+  byte-identical to the locally transformed control, and the gate-12 patched inference script is
+  byte-identical to its submitted artifact.

@@ -23,6 +23,17 @@ uv sync \
 W&B credentials remain in the user's standard credential store. Never place an API key in this
 repository or an experiment config.
 
+Install the pinned nnU-Net source for the controlled backbone A/B experiment:
+
+```bash
+uv sync \
+  --project competitions/biohub-cell-tracking-during-development/environment \
+  --extra baseline --extra nnunet
+```
+
+The `nnunet` extra is pinned to an exact MIC-DKFZ/nnUNet Git revision. It is used as a feature
+backbone, not as a standard dense-mask nnU-Net training pipeline.
+
 Local native visualization is optional:
 
 ```bash

@@ -1,0 +1,112 @@
+schema_version = 1
+experiment_id = "EXP-0007A"
+seed = 20260827
+
+[source]
+organizer_repository_path = "data/external/royerlab-kaggle-cell-tracking-competition"
+organizer_revision = "075fc5f5a52d11077f9dc2b074644618f26939e2"
+nnunet_repository = "https://github.com/MIC-DKFZ/nnUNet"
+nnunet_revision = "0e495086eb108ff79afe106291e8c15bd2f2bc3a"
+
+[data]
+train_dir = "data/raw/train"
+test_dir = "data/raw/test"
+split_strategy = "embryo-prefix"
+group_delimiter = "_"
+fold = 0
+validation_group = "44b6"
+window_size = 2
+validation_subset_manifest = "artifacts/EXP-0007/validation_split.json"
+validation_subset = "calibration"
+
+[backbone]
+name = "nnunet"
+contract = "corrected_v2"
+input_channels = 1
+feature_dim = 32
+common_head_seed = 20260827
+link_candidate_radius_um = 15.0
+link_candidate_top_k = 32
+
+[backbone.nnunet]
+architecture = "dynamic_network_architectures.architectures.unet.PlainConvUNet"
+n_stages = 4
+features_per_stage = [24, 48, 96, 192]
+kernel_sizes = [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]]
+strides = [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2]]
+n_conv_per_stage = [2, 2, 2, 2]
+n_conv_per_stage_decoder = [2, 2, 2]
+
+[backbone.temporal_fusion]
+mode = "identity"
+stages = [2, 3]
+heads = 4
+relative_time_embedding = true
+zero_init_residual_gate = true
+
+[sparse_heatmap]
+sigma = 1.0
+positive_threshold = 0.05
+background_quantile = 0.40
+positive_weight = 12.0
+background_weight = 1.0
+unknown_weight = 0.05
+
+[train]
+method = "corrected_v2_spatial"
+training_contract = "corrected_v2"
+node_proposal_strategy = "ground_truth"
+epochs = 5
+learning_rate = 1e-4
+batch_size = 8
+num_workers = 4
+downsample = [1, 4, 4]
+det_loss_weight = 1.0
+division_loss_weight = 0.1
+division_negative_weight = 0.1
+pool_kernel_um = 5.0
+validation_det_threshold = 0.03
+validation_every_epochs = 5
+
+[train.proposal_curriculum]
+predicted_ratios = [0.0, 0.25, 0.50, 0.75, 0.75]
+jitter_std_voxels = 0.5
+duplicate_probability = 0.05
+source_dropout_probability = 0.05
+detection_threshold = 0.03
+max_match_distance_um = 5.0
+max_proposals_per_frame = 96
+
+[runtime]
+cuda_deterministic = false
+cudnn_benchmark = true
+mixed_precision = "bfloat16"
+
+[checkpoint]
+every_epochs = 5
+auto_resume = true
+
+[inference]
+model_api = "corrected_v2"
+max_detections_per_frame = 1024
+det_threshold = 0.03
+det_tta = true
+pool_kernel_um = 5.0
+edge_activation = "parent_softmax_with_null"
+edge_threshold = 0.15
+use_ilp = false
+postprocess_profile = "none"
+ilp_edge_weight = -1.0
+ilp_appearance_weight = 0.1
+ilp_disappearance_weight = 0.1
+ilp_division_weight = 1.0
+
+[inference.decoder]
+max_parents_per_node = 1
+max_children_per_node = 2
+null_parent_threshold = 0.50
+division_threshold = 0.50
+
+[output]
+artifact_dir = "artifacts/EXP-0007A"
+submission_file = "submissions/EXP-0007A.csv"

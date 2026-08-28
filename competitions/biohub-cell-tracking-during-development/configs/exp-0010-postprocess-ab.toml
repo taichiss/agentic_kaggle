@@ -1,0 +1,105 @@
+schema_version = 1
+experiment_id = "EXP-0010"
+description = "Epoch-30 post-processing precision/recall one-factor TRUST-LB test"
+
+[base]
+checkpoint_completed_epochs = 30
+checkpoint_sha256 = "9e068669b861b0dd993483e3ce6fc636fde604004011d5ec1e08039ae2843337"
+kaggle_dataset = "suzukitaichi/biohub-exp-0004-epoch30-postprocess-v1"
+base_submission_kernel = "suzukitaichi/biohub-exp-0004-epoch30-postprocess-v1-submit"
+inference_script_sha256 = "1898f110171c73c888ae249424d0cacfedfd6474fd0fa8065185ee7a16327950"
+control_public_score = 0.890
+detection_threshold = 0.99
+edge_threshold = 0.5
+pool_kernel_um = 5.0
+detection_tta = "identity,xflip,yflip,xyflip"
+postprocess_profile = "public-applicable-v1"
+
+[postprocess.motion_relink]
+assignment = "two-pass Hungarian over consecutive frames"
+velocity_extrapolation_weight = 0.5
+raw_distance_cost_weight = 0.05
+learned_probability_cost_weight = -1.0
+tight_gate_um = 6.0
+relaxed_gate_um = 10.0
+
+[postprocess.division]
+existing_child_max_um = 10.0
+parent_candidate_max_um = 8.0
+sister_max_um = 11.0
+minimum_next_frame_separation_gain_um = 2.25
+sister_rank_weight = 0.15
+frame_cap_fraction = 0.0076
+global_cap_fraction = 0.00375
+requires_parent_predecessor = true
+requires_both_daughters_to_continue = true
+
+[postprocess.pruning]
+remove_isolated_nodes = true
+minimum_component_nodes = 6
+preserve_division_components = true
+
+[postprocess.smoothing]
+history_steps = 2
+future_steps = 2
+minimum_fit_points = 3
+polynomial_degree = 1
+fitted_coordinate_weight = 0.8
+raw_coordinate_weight = 0.2
+
+[variants.precision_min7]
+execution_mode = "inference_script_patch"
+hypothesis = "Transient false tracks dominate the remaining node-count penalty; pruning six-node components improves adjusted edge Jaccard more than it costs recall."
+falsification = "Public LB below 0.890 means valid short-track loss outweighs false-track and node-count reduction."
+kernel_id = "suzukitaichi/biohub-exp-0010-precision-min7-full-submit"
+kernel_title = "Biohub EXP-0010 Precision Min7 Full Submit"
+submission_message = "EXP-0010 precision min7 full hidden inference; fixes invalid child notebook"
+
+[[variants.precision_min7.patches]]
+parameter = "minimum_component_nodes"
+old_value = 6
+new_value = 7
+old = "if len(members) >= 6 or has_division:"
+new = "if len(members) >= 7 or has_division:"
+
+[variants.recall_gate12]
+execution_mode = "inference_script_patch"
+hypothesis = "The remaining graph error is recall-limited; a 12 um relaxed Hungarian gate recovers correct long-displacement links and track continuity."
+falsification = "Public LB below 0.890 means matches beyond 10 um are dominated by wrong identities or node over-retention."
+kernel_id = "suzukitaichi/biohub-exp-0010-recall-gate12-submit"
+kernel_title = "Biohub EXP-0010 Recall Gate12 Submit"
+submission_message = "EXP-0010 recall: epoch30 fixed, relaxed relink gate 10 to 12 um"
+
+[[variants.recall_gate12.patches]]
+parameter = "motion_relink_relaxed_um"
+old_value = 10.0
+new_value = 12.0
+old = "for gate_um, is_tight in ((6.0, True), (10.0, False)):"
+new = "for gate_um, is_tight in ((6.0, True), (12.0, False)):"
+
+[results.precision_min7]
+nodes = 162863
+edges = 155865
+rows = 318728
+submission_sha256 = "68e9ef756433c6778e7560027997e0a5b04a829807b285c8bd2cb0cc56abedba"
+patched_inference_script_sha256 = "4e6f89ef51410bbf52f18b11b09ccaddafe16a42687dc36ccc656191747e6267"
+submission_ref = 55829542
+status = "pending"
+
+[results.recall_gate12]
+nodes = 171734
+edges = 164530
+rows = 336264
+submission_sha256 = "a41b3dd92aa9aa0cb7feed8f8bddf6cbc5ed565863554397169dd3c2b4ca4144"
+submission_ref = 55828801
+status = "pending"
+
+[audit.invalid_child_notebook]
+submission_ref = 55828867
+status = "submission_scoring_error"
+reason = "fixed public-test CSV did not generate active hidden-test datasets"
+
+[audit.duplicate_precision_submission]
+submission_ref = 55829582
+status = "pending_duplicate"
+reason = "overlapping submit processes; identical kernel version and condition"

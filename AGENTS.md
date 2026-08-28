@@ -17,6 +17,11 @@
 対象コンペが未指定、または切り替わった場合は、古いコンペの前提を流用せず、コンペ名、
 評価指標、提出形式、制約、利用可能データを先に確定します。
 
+## コンペ別ポインター
+
+- BioHub の nnU-Net / temporal backbone A/B、EXP-0007 の評価・最終化手順:
+  [`competitions/biohub-cell-tracking-during-development/docs/overview/backbone-ab.md`](competitions/biohub-cell-tracking-during-development/docs/overview/backbone-ab.md)
+
 ## 必須ルール
 
 - Python の環境構築と実行には `uv` を使う。

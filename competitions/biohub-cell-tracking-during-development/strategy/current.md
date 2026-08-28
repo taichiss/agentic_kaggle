@@ -42,13 +42,31 @@
   checkpoint and +0.082 over the epoch-5 anchor.
 - EXP-0004 completed all 50 epochs and wrote periodic checkpoints through completed epoch 50. The
   best full-run held-out proxy was 0.9381 at zero-based epoch 33 (completed epoch 34).
-- The completed-epoch-34 best checkpoint and completed-epoch-50 final checkpoint were submitted
-  with the same artifact-free post-processing profile as refs `55805307` and `55805308`; both are
-  pending public scoring.
+- The completed-epoch-34 best checkpoint and completed-epoch-50 final checkpoint scored 0.874 and
+  0.877 public with the same artifact-free post-processing profile as refs `55805307` and
+  `55805308`.
+- The competition-metric-selected completed-epoch-30 checkpoint scored 0.890 public as ref
+  `55810126`; this is the fixed control for post-processing calibration.
+- EXP-0007's disjoint epoch-5 report screen scored 0.568826 for spatial arm A, 0.556438 for
+  temporal arm B, and 0.457876 for temporal/predicted-proposal arm C, against 0.691999 for the
+  frozen host reference. Arm A therefore won the controlled comparison but still trailed the host;
+  its Kaggle submission scored 0.626 public as ref `55823762`.
+- EXP-0009's one-dataset/two-transition GPU smoke passed the frozen-host candidate-cache contract
+  with candidate recall 1.0 and a 1,182,793,728-byte peak CUDA reservation under deployment-matched
+  four-view TTA. The full cache plus 30-epoch run is active in tmux session `biohub-exp0009`; W&B
+  run <https://wandb.ai/salax0116-private-email/biohub-cell-tracking/runs/70f9278e> records it.
+- EXP-0010 holds checkpoint, detection threshold, edge threshold, TTA, smoothing, and division
+  logic fixed and tests two one-factor post-processing hypotheses. Corrected precision arm ref
+  `55829542` changes minimum component size from 6 to 7; recall arm ref `55828801` changes only the
+  relaxed Hungarian relink gate from 10 to 12 micrometers. Both are pending public scoring. An
+  earlier precision child-Notebook ref `55828867` was rejected because it could not rerun inference
+  on hidden test datasets and is packaging-failure evidence only.
 - `Biohub Harness 0926 Probe` version 1 scored 0.926 publicly, but is an independent public
   Notebook reference rather than an EXP-0004 result.
-- The live submission command reported zero submissions remaining after the post-processed
-  epoch-19 submission on 2026-08-26 UTC.
+- EXP-0010 straddled the 2026-08-28 00:00 UTC daily reset. The recall arm used the final pre-reset
+  slot. The rejected child Notebook, corrected precision ref `55829542`, and accidental concurrent
+  duplicate ref `55829582` consumed three post-reset slots; two submissions remain today. The
+  duplicate is the identical precision condition and is excluded from hypothesis interpretation.
 
 ## Open Questions
 
@@ -68,17 +86,19 @@
 | H004 | Sparse-positive supervision is safer than treating unlabeled voxels/nodes as negatives | organizer states GT is sparse while inference must cover all cells | a controlled PU/semi-supervised alternative consistently improves hidden-LB evidence | accepted |
 | H005 | Public dummy test success only predicts packaging reliability | organizer clarification says public clips may duplicate train and hidden test is larger/disjoint | organizer changes the public/hidden contract | accepted |
 | H006 | Checkpoint-specific node/edge calibration is required before longer training | EXP-0002 improved training recall but emitted 7,711 nodes and zero edges under fixed thresholds | a broad checkpoint sweep yields stable counts and non-empty edges without calibration | accepted |
-| H007 | An nnU-Net-configured spatial backbone improves difficult endpoint recall at a fixed detection budget | controlled configs keep target, loss, feature dimension, transformer, split, inference, and ILP fixed | EXP-0005B does not improve the recall-versus-node-count curve or downstream edge/division metrics over EXP-0005A | proposed |
+| H007 | An nnU-Net-configured spatial backbone improves difficult endpoint recall at a fixed detection budget | EXP-0007 keeps detector/linker contracts and the calibration/report split fixed across arms | EXP-0007A fails to improve the fixed report or LB result over the host baseline | rejected at epoch 5 |
 | H008 | Artifact-free topology post-processing materially improves a fixed checkpoint | identical epoch-19 weights scored 0.805 raw and 0.869 with post-processing (+0.064) | a repeat on another checkpoint or hidden/private evidence removes the gain | accepted |
+| H011 | A three-frame candidate-graph residual improves continuation links without retraining detection | frozen EXP-0004 e30 logits plus a bounded local residual preserve the 0.890 control at zero initialization | completed-epoch-5 and epoch-30 EXP-0009 LB do not exceed 0.890 | running |
+| H012 | Remaining node-count penalty is driven partly by transient six-node tracks | epoch-30 control is penalized for excess nodes; min-7 removes 4,212 nodes while retaining division components | fixed-checkpoint public LB does not exceed 0.890 | submitted |
+| H013 | Remaining edge error is recall-limited and benefits from a wider relaxed motion gate | epoch-30 screen recall 0.7849 trails precision 0.8538; 12 µm adds 2,676 relaxed links on public test clips | fixed-checkpoint public LB does not exceed 0.890 | submitted |
 
 ## Priority Plan
 
-1. Inspect estimated total-node metadata and calibrate detection/edge thresholds for the EXP-0004
-   checkpoint while preserving the successful post-processing profile.
-2. Compare the pending completed-epoch-34 and completed-epoch-50 LB results against epoch 19.
-3. Vary one detection-count or linking decision per LB experiment from the 0.869 anchor.
-4. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
-5. Add division logic after edge/linking and node-count failure modes are measured.
+1. Complete the EXP-0009 cache/head run and submit the completed-epoch-5 and epoch-30 milestones.
+2. Compare EXP-0010 precision and recall arms against the fixed epoch-30 public score 0.890.
+3. Keep the winning direction and tune only one adjacent value after fresh quota is available.
+4. Inspect estimated total-node metadata before changing detection thresholds.
+5. Compare a single organizer-recommended tracker family only after the baseline failure is measured.
 
 ## Validation Plan
 
@@ -104,5 +124,10 @@
 - [x] Complete all 50 EXP-0004 epochs; best held-out proxy 0.9381 at completed epoch 34.
 - [x] Confirm post-processing improves the identical epoch-19 checkpoint from 0.805 to 0.869 public.
 - [x] Submit completed epochs 34 and 50 with the proven post-processing profile.
+- [x] Complete the EXP-0007A/B/C epoch-5 fixed report comparison and submit the winning A arm.
+- [x] Pass the EXP-0009 one-dataset/two-transition candidate-cache smoke gate.
+- [x] Submit the epoch-30 component-minimum 7 and relaxed-relink 12 µm one-factor hypotheses.
 - [ ] Calibrate node count and edge thresholds for the EXP-0004 checkpoint.
-- [ ] Run the paired EXP-0005A/EXP-0005B backbone comparison after the shared GPU is available.
+- [ ] Complete EXP-0007A to 50 epochs and apply its pinned checkpoint-selection/report gate.
+- [x] Start the W&B-traced EXP-0009 full cache plus 30-epoch run in a persistent tmux session.
+- [ ] Submit the EXP-0009 completed-epoch-5 and epoch-30 checkpoints through the guarded Notebook workflow.

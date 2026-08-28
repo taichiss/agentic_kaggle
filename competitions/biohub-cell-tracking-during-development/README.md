@@ -37,6 +37,9 @@ The package policy and organizer-recommended tracker candidates are documented i
 [the ecosystem decision](docs/overview/ecosystem.md) and the
 [organizer Discussion note](docs/discussion/organizer-welcome.md).
 
+The frozen topology-repair settings and the current precision/recall probes are
+summarized in [the post-processing parameter inventory](docs/overview/postprocessing.md).
+
 ## Organizer baseline smoke run
 
 The pinned organizer repository provides the joint 3D U-Net/temporal-attention detector and

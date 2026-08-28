@@ -20,6 +20,9 @@ baseline = [
 tracking = [
   "wandb>=0.28.1,<0.29",
 ]
+nnunet = [
+  "nnunetv2 @ git+https://github.com/MIC-DKFZ/nnUNet.git@0e495086eb108ff79afe106291e8c15bd2f2bc3a",
+]
 viz = [
   "napari>=0.5",
   "ndv>=0.3",

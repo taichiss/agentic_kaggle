@@ -1,0 +1,42 @@
+schema_version = 1
+experiment_id = "EXP-0007A-calibration-screen-epoch50"
+
+[source]
+organizer_repository_path = "data/external/royerlab-kaggle-cell-tracking-competition"
+organizer_revision = "075fc5f5a52d11077f9dc2b074644618f26939e2"
+
+[data]
+train_dir = "data/raw/train"
+splits_file = "artifacts/EXP-0007A/dataset_splits.json"
+fold = 0
+validation_group = "44b6"
+transition_strategy = "densest-plus-all-divisions"
+dataset_subset_manifest = "artifacts/EXP-0007/validation_split.json"
+dataset_subset_manifest_sha256 = "2fcede60f353645de37768be3e735a332f552fa9253d51d1154564ba4ce5cc1c"
+dataset_subset = "calibration"
+
+[model]
+experiment_config = "configs/exp-0007a-corrected-spatial-50e.toml"
+checkpoint = "artifacts/EXP-0007A/checkpoint_epoch_0050.pth"
+downsample = [1, 4, 4]
+
+[inference]
+device = "cuda"
+torch_threads = 1
+model_api = "corrected_v2"
+pool_kernel_um = 5.0
+detection_tta = true
+max_parents_per_node = 1
+max_children_per_node = 2
+detection_thresholds = [0.01, 0.03, 0.10, 0.30, 0.50, 0.70, 0.90, 0.97, 0.99]
+edge_thresholds = [0.05, 0.10, 0.15, 0.25, 0.50]
+null_parent_thresholds = [0.25, 0.50, 0.75]
+division_thresholds = [0.25, 0.50, 0.75]
+
+[evaluation]
+metric = "adjusted_edge_jaccard + 0.1 * division_jaccard"
+max_match_distance_um = 7.0
+estimated_total_allocation = "uniform-per-frame"
+
+[output]
+artifact_dir = "artifacts/EXP-0007A/calibration-screen-epoch50"
