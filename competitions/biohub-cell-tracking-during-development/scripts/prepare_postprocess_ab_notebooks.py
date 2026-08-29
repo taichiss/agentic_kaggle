@@ -284,7 +284,7 @@ def prepare(config_path: Path, output_root: Path) -> dict:
         }
     result = {
         "experiment_id": config["experiment_id"],
-        "control_public_score": config["base"]["control_public_score"],
+        "control_public_score": config["base"].get("control_public_score"),
         "generated": generated,
     }
     (output_root / "manifest.json").write_text(

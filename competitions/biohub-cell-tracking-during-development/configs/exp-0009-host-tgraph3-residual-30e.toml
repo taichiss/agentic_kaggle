@@ -129,9 +129,10 @@ variant = "best-local-validation"
 dataset_id = "suzukitaichi/biohub-exp-0009-tgraph3-residual-best-e3"
 kernel_id = "suzukitaichi/biohub-exp-0009-tgraph3-best-e3-submit"
 postprocess_profile = "public-applicable-v1"
-status = "submitted"
+status = "complete"
 kernel_version = 2
 submission_ref = 55854853
+public_score = 0.890
 
 [[submission.milestones]]
 completed_epoch = 5

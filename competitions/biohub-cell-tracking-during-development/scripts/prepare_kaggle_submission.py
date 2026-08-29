@@ -28,6 +28,28 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _manifest_entry(path: Path) -> dict[str, object]:
+    entry: dict[str, object] = {
+        "bytes": path.stat().st_size,
+        "sha256": _sha256(path),
+    }
+    if path.suffix == ".zip":
+        with zipfile.ZipFile(path) as archive:
+            members = {
+                info.filename: archive.read(info)
+                for info in archive.infolist()
+                if not info.is_dir()
+            }
+        entry["members"] = {
+            name: {
+                "bytes": len(contents),
+                "sha256": hashlib.sha256(contents).hexdigest(),
+            }
+            for name, contents in sorted(members.items())
+        }
+    return entry
+
+
 def _notebook(
     dataset_id: str,
     title: str,
@@ -182,10 +204,7 @@ def prepare(
         "checkpoint": config.get("checkpoint", {}),
         "postprocess_profile": postprocess_profile,
         "files": {
-            str(path.relative_to(dataset_dir)): {
-                "bytes": path.stat().st_size,
-                "sha256": _sha256(path),
-            }
+            str(path.relative_to(dataset_dir)): _manifest_entry(path)
             for path in copied
         },
     }

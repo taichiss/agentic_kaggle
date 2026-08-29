@@ -10,10 +10,11 @@ run ID, or checksum sufficient to identify them.
 | EXP-0003 | 2026-08-26 | Code Competition submission works end to end through Kaggle CLI | official sample submission / public test | `9a80bb8` | private Notebook v1 | not applicable | not run | 0.000 public | Kaggle ref `55785839` | Notebook push/run/output/submit/score path passed | replace sample graph with calibrated inference |
 | EXP-0004 | 2026-08-26 | H006/H008 full organizer baseline plus topology post-processing | official 2026-08-26 inventory | `9c3eba8` | `configs/exp-0004-host-baseline-fold0-50e.toml` | 20260826 / embryo fold 0 (`44b6` held out) | 0.9381 (50e best; completed epoch 34); metric screen selected e30 | 0.787 e5; 0.805 e20 raw; 0.869 e20 post; 0.874 e34; 0.877 e50; **0.890 e30** | W&B `ud8rmowz`; Kaggle refs `55790493`, `55797775`, `55798388`, `55805307`, `55805308`, `55810126` | checkpoint selection plus post-processing established the 0.890 fixed control | calibrate post-processing one factor at a time |
 | EXP-0007 | 2026-08-27 | H007 controlled spatial/temporal/proposal backbone comparison | official 2026-08-26 inventory | `6b88560` | `configs/exp-0007{a,b,c}-*.toml` | 20260827 / fold 0 disjoint calibration/report | report: A 0.568826; B 0.556438; C 0.457876; host 0.691999 | A e5 0.626 public | `artifacts/EXP-0007{A,B,C}/`; Kaggle ref `55823762` | spatial A won the corrected arms, but all arms trailed the host and missed report divisions | continue only A to 50e under the pinned selection/report gate |
-| EXP-0009 | 2026-08-28 | H011 three-frame residual improves continuation-edge selection over frozen e30 host logits | official 2026-08-26 inventory + frozen EXP-0004 e30 | `6b88560` | `configs/exp-0009-host-tgraph3-residual-30e.toml` | 20260828 / embryo fold 0 (`44b6` held out) | base 0.922163; best 0.922684 at e3 (+0.000521); e30 0.920704 (-0.001459) | e30 ref `55843163`: **0.891**; e3 ref `55854853` pending | `artifacts/EXP-0009/`; W&B `70f9278e`; e30 Notebook v2 `345596422` | e30 improves the 0.890 LB control despite lower local top-1, confirming proxy/LB mismatch | compare e3 with e30 after scoring |
+| EXP-0009 | 2026-08-28 | H011 three-frame residual improves continuation-edge selection over frozen e30 host logits | official 2026-08-26 inventory + frozen EXP-0004 e30 | `6b88560` | `configs/exp-0009-host-tgraph3-residual-30e.toml` | 20260828 / embryo fold 0 (`44b6` held out) | base 0.922163; best 0.922684 at e3 (+0.000521); e30 0.920704 (-0.001459) | e30 ref `55843163`: **0.891**; local-best e3 ref `55854853`: 0.890 | `artifacts/EXP-0009/`; W&B `70f9278e`; e30 Notebook v2 `345596422` | e30 beats both control and local-best e3, confirming proxy/LB mismatch | retain e30 and improve checkpoint ranking |
 | EXP-0011 | 2026-08-28 | H014 candidate-set self-attention improves parent choice by modelling competition among the nearest eight candidates | frozen EXP-0009 cache `c5e97a56`; frozen EXP-0004 e30 logits | `7277812` + experiment working tree | `configs/exp-0011-tgraph3-candidate-attention-10e.toml` | 20260828 / identical EXP-0009 calibration split | base 0.922163; best 0.922372 at e1 (+2 links); e10 0.920704 (-14 links); MLP best 0.922684 (+5 links) | not_submitted | `artifacts/EXP-0011/`; W&B `693a7de8` | attention lowers CE more but does not beat the independent MLP; residual magnitude, not candidate interaction capacity, is the immediate limiter | test a bounded residual scale/gate before any cache-v2 temporal GNN/GRU |
 | EXP-0012 | 2026-08-29 | H015 centered, smoothly bounded attention residuals preserve host-correct links while fixing ambiguous links | frozen EXP-0009 cache `c5e97a56`; frozen EXP-0004 e30 logits | `7277812` + experiment working tree | `configs/exp-0012-tgraph3-bounded-attention-10e.toml` | 20260828 / identical EXP-0009 calibration split | base 0.922163; best **0.923101 at e3** (+9 links); e10 0.922476 (+3 links); MLP best 0.922684 (+5 links) | not_submitted | `artifacts/EXP-0012/`; W&B `9d75368c` | valid-candidate centering plus ±0.15 tanh bound converts Attention from net regression to the best local parent-accuracy result | retain e3 best; verify on independent report/LB only after explicit submission request |
 | EXP-0010 | 2026-08-28 | H012/H013 remaining error can be separated into short false tracks versus missed long-displacement links | frozen EXP-0004 e30 model / public test | `6b88560` | `configs/exp-0010-postprocess-ab.toml` | fixed checkpoint and inference profile | structural gate only; no new heavy CV | corrected min7 ref `55829542`: **0.893**; gate12 ref `55828801`: 0.884 | private Notebook v1 outputs under `artifacts/EXP-0010/` | pruning six-node tracks improves the fixed 0.890 control; widening the relink gate hurts | adopt min7 and reject gate12 |
+| EXP-0013 | 2026-08-29 | H016 min-component 7 transfers to EXP-0008 EMA epoch 30 | official data + fixed EMA e30 wrapper `5a2d5fc` | `2207d45` + packaging working tree | `configs/exp-0013-exp0008-ema-e30-min7.toml` | 20260827 / fold 0; EMA proxy 0.929642 | competition screen pending until EXP-0008 reaches e50 | ref `55866168` pending | Dataset v2; Notebook v2; `artifacts/EXP-0013/` | full hidden inference is valid; min-7 effect remains unpaired for this checkpoint | read LB, then request an identical min-6 control only if attribution matters |
 
 ## Detailed Notes
 
@@ -201,7 +202,8 @@ Checkpoint SHA-256:
   completed public-test inference and produced a valid four-dataset CSV with 167,087 nodes and
   159,380 edges. CSV SHA-256:
   `2037bffd71aebe44f98c3823a20ff06ec4aac4aad94fcd76a0367c25de6f0a68`.
-  Code Competition submission ref `55854853` is pending.
+  Code Competition submission ref `55854853` scored 0.890, tying the frozen control and trailing
+  the epoch-30 residual head by 0.001 despite its better local top-1 score.
 
 ### EXP-0011
 
@@ -246,6 +248,28 @@ Checkpoint SHA-256:
 - The result supports bounded correction capacity as the immediate mechanism. It does not yet
   establish a competition-metric gain because the local objective is sparse parent top-1 rather
   than the post-processed graph metric.
+
+### EXP-0013
+
+- The fixed source is EXP-0008 EMA completed epoch 30, wrapper SHA-256
+  `5a2d5fc84e4aebd485945016350273992fc457f30c575e1dd0078d546a6809b0`. Its exported 136-tensor
+  inference state SHA-256 is
+  `dfd6a3d57a768080f9d1344614132ca284b909525984962c4ddce610daca4d91`.
+- EMA was selected over raw for this single-slot deployment probe because the epoch-30 adjacent-pair
+  proxy was 0.929642 versus 0.914262. The competition-metric checkpoint screen has not run yet, so
+  this is a pragmatic choice rather than a proven competition-metric selection.
+- The only post-process change is division-preserving minimum component size 6 to 7, transferred
+  from EXP-0010 ref `55829542` at 0.893. Detection, TTA, linking, division repair, and smoothing are
+  unchanged. EXP-0008 EMA e30 min-6 has not been submitted, so the transferred effect is unpaired.
+- Dataset `suzukitaichi/biohub-exp-0008-ema-e30` version 2 binds the Kaggle-expanded model archive.
+  Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0008-ema-e30-min7-submit>, version 2,
+  completed in 318.302 inference seconds and emitted 169,090 nodes plus 161,789 edges. CSV SHA-256:
+  `8bfca1b8ee2f561e4847245aa5ad1b6d1abc276657f4f5a4340b03c42fee4105`.
+  Code Competition submission ref `55866168` is pending.
+- Notebook version 1 stopped before inference because the generic Dataset manifest did not bind
+  Kaggle-expanded ZIP members. No submission slot was consumed. The packager now records every
+  archive member hash, and version 2 passed the same fail-closed verification.
 
 ### EXP-0010
 
