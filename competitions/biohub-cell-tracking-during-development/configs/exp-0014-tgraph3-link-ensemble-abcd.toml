@@ -93,7 +93,7 @@ arm = "B"
 variant = "bounded-attention-e3"
 mode = "bounded_attention"
 kernel_id = "suzukitaichi/biohub-exp-0014-tgraph3-bounded-attn-e3-submit"
-kernel_title = "Biohub EXP-0014 TGraph3 Bounded Attention E3 Submit"
+kernel_title = "Biohub EXP-0014 TGraph3 Bounded Attn E3 Submit"
 submission_message = "EXP-0014 B bounded Attention e3 min-component-7"
 status = "authorized"
 
