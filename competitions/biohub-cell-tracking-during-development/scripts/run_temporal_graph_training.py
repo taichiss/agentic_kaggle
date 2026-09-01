@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Cache frozen host pairs and train the EXP-0009 T=3 graph residual head.
+"""Cache frozen host pairs and train compact temporal-graph residual heads.
 
 The organizer image model always receives exactly two consecutive frames.  Two
 adjacent frozen pairs are then combined into a three-frame graph window and the
@@ -49,7 +49,14 @@ from temporal_graph import (  # noqa: E402
 )
 from torch.utils.data import DataLoader, Dataset  # noqa: E402
 
-CACHE_SCHEMA_VERSION = 1
+# Bump the corresponding value whenever feature order or feature math changes;
+# cache fingerprints include this schema and must never alias two equations.
+CACHE_SCHEMA_VERSION = 1  # Legacy T_graph=3 compact cache.
+CACHE_SCHEMA_VERSIONS = {3: 1, 4: 2}
+CACHE_FEATURE_SCHEMAS = {
+    1: "tgraph3-candidate-features-v1",
+    2: "tgraph4-acceleration-qbar-features-v1",
+}
 TRAINING_CHECKPOINT_SCHEMA_VERSION = 1
 
 
@@ -114,6 +121,32 @@ def _json_sha256(payload: Any) -> str:
         ensure_ascii=True,
     ).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _cache_schema_version(graph_window_size: int) -> int:
+    if isinstance(graph_window_size, bool) or not isinstance(graph_window_size, int):
+        raise TypeError("graph_window_size must be an integer")
+    try:
+        return CACHE_SCHEMA_VERSIONS[graph_window_size]
+    except KeyError as error:
+        raise ValueError(
+            "compact cache supports only graph_window_size 3 or 4"
+        ) from error
+
+
+def _cache_feature_schema(schema_version: int) -> str:
+    if isinstance(schema_version, bool) or not isinstance(schema_version, int):
+        raise TypeError("cache schema_version must be an integer")
+    try:
+        return CACHE_FEATURE_SCHEMAS[schema_version]
+    except KeyError as error:
+        raise ValueError(f"unsupported cache schema: {schema_version}") from error
+
+
+def _strict_int(value: object, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{label} must be an integer")
+    return value
 
 
 def _resolve_competition_path(raw: str | Path) -> Path:
@@ -292,8 +325,14 @@ def _graph_config(config: dict[str, Any], source: SourceBundle) -> TemporalGraph
         radius_um=float(candidates.get("radius_um", 15.0)),
         distance_scale_um=distance_scale,
         dropout=float(model.get("dropout", 0.1)),
-        image_window_size=int(config["data"].get("image_window_size", 2)),
-        graph_window_size=int(config["data"].get("graph_window_size", 3)),
+        image_window_size=_strict_int(
+            config["data"].get("image_window_size", 2),
+            "data.image_window_size",
+        ),
+        graph_window_size=_strict_int(
+            config["data"].get("graph_window_size", 3),
+            "data.graph_window_size",
+        ),
         architecture=str(model.get("architecture", "mlp")),
         attention_heads=int(model.get("attention_heads", 4)),
         residual_logit_bound=(
@@ -489,7 +528,12 @@ def _cache_fingerprint(
     max_transitions: int | None,
 ) -> str:
     payload = {
-        "schema_version": CACHE_SCHEMA_VERSION,
+        "schema_version": _cache_schema_version(
+            _strict_int(
+                config["data"].get("graph_window_size", 3),
+                "data.graph_window_size",
+            )
+        ),
         "experiment_id": config["experiment_id"],
         "seed": int(config["seed"]),
         "source_raw_sha256": source.raw_checkpoint_sha256,
@@ -844,6 +888,8 @@ def _build_sparse_candidate_examples(
     current: ExtractedPair,
     gt_edges: torch.Tensor,
     graph_config: TemporalGraphConfig,
+    *,
+    prior: ExtractedPair | None = None,
 ) -> SparseExamples:
     candidates = build_parent_candidates(
         current.pair.source_coords_um,
@@ -857,6 +903,8 @@ def _build_sparse_candidate_examples(
         previous.pair,
         current.pair,
         candidates,
+        prior_pair=None if prior is None else prior.pair,
+        graph_window_size=graph_config.graph_window_size,
         distance_scale_um=graph_config.distance_scale_um,
         middle_coord_atol=graph_config.middle_coord_atol,
     )
@@ -893,7 +941,10 @@ def _build_sparse_candidate_examples(
             masks.append(candidates.valid_mask[sample, target])
             labels.append(int(slots.item()))
 
-    feature_width = candidate_feature_dim(graph_config.node_feature_dim)
+    feature_width = candidate_feature_dim(
+        graph_config.node_feature_dim,
+        graph_window_size=graph_config.graph_window_size,
+    )
     if rows:
         features = torch.stack(rows).to(torch.float16)
         base_logits = torch.stack(bases).to(torch.float16)
@@ -938,54 +989,64 @@ def _cache_one_dataset(
         downsample=tuple(int(value) for value in config["data"]["downsample"]),
     )
     by_start = {int(window.t_start): window for window in windows}
-    right_starts = [start for start in sorted(by_start) if start - 1 in by_start]
+    preceding_pairs = graph_config.graph_window_size - 2
+    right_starts = [
+        start
+        for start in sorted(by_start)
+        if all(start - offset in by_start for offset in range(1, preceding_pairs + 1))
+    ]
     if max_transitions is not None:
         right_starts = right_starts[:max_transitions]
 
     zarr_array = zarr.open_group(str(video_meta.zarr_path), mode="r")["0"]
     examples: list[SparseExamples] = []
-    previous: ExtractedPair | None = None
-    previous_start: int | None = None
+    retained: dict[int, ExtractedPair] = {}
     for number, current_start in enumerate(right_starts, 1):
-        if previous is None or previous_start != current_start - 1:
-            previous = _extract_pair(
+        required_starts = list(
+            range(current_start - preceding_pairs, current_start + 1)
+        )
+        for left_start, right_start in zip(
+            required_starts, required_starts[1:], strict=False
+        ):
+            if not torch.allclose(
+                by_start[left_start].coords[1], by_start[right_start].coords[0]
+            ):
+                raise ValueError(
+                    f"middle-frame GT order drift for {name} at transition "
+                    f"{right_start}"
+                )
+        for pair_start in required_starts:
+            if pair_start in retained:
+                continue
+            retained[pair_start] = _extract_pair(
                 model=model,
-                window=by_start[current_start - 1],
+                window=by_start[pair_start],
                 video_meta=video_meta,
                 zarr_array=zarr_array,
                 config=config,
                 device=device,
                 detect_and_match=detect_and_match,
                 position_function=position_function,
-                reuse_source=None,
+                reuse_source=retained.get(pair_start - 1),
             )
+        prior = retained.get(current_start - 2)
+        previous = retained[current_start - 1]
+        current = retained[current_start]
         current_window = by_start[current_start]
-        previous_window = by_start[current_start - 1]
-        if not torch.allclose(previous_window.coords[1], current_window.coords[0]):
-            raise ValueError(
-                f"middle-frame GT order drift for {name} at transition {current_start}"
-            )
-        current = _extract_pair(
-            model=model,
-            window=current_window,
-            video_meta=video_meta,
-            zarr_array=zarr_array,
-            config=config,
-            device=device,
-            detect_and_match=detect_and_match,
-            position_function=position_function,
-            reuse_source=previous,
-        )
         examples.append(
             _build_sparse_candidate_examples(
                 previous,
                 current,
                 current_window.targets[0].unsqueeze(0),
                 graph_config,
+                prior=prior,
             )
         )
-        previous = current
-        previous_start = current_start
+        retained = {
+            pair_start: pair
+            for pair_start, pair in retained.items()
+            if pair_start >= current_start - preceding_pairs + 1
+        }
         if number % 10 == 0 or number == len(right_starts):
             print(
                 f"  {split}/{name}: {number}/{len(right_starts)} right transitions",
@@ -998,7 +1059,10 @@ def _cache_one_dataset(
         valid_mask = torch.cat([item.valid_mask for item in examples])
         labels = torch.cat([item.labels for item in examples])
     else:
-        width = candidate_feature_dim(graph_config.node_feature_dim)
+        width = candidate_feature_dim(
+            graph_config.node_feature_dim,
+            graph_window_size=graph_config.graph_window_size,
+        )
         features = torch.empty(0, graph_config.top_k, width, dtype=torch.float16)
         base_logits = torch.empty(0, graph_config.top_k, dtype=torch.float16)
         valid_mask = torch.empty(0, graph_config.top_k, dtype=torch.bool)
@@ -1015,7 +1079,11 @@ def _cache_one_dataset(
         "candidate_recall": survived / total if total else None,
     }
     payload = {
-        "schema_version": CACHE_SCHEMA_VERSION,
+        "schema_version": _cache_schema_version(graph_config.graph_window_size),
+        "feature_schema": _cache_feature_schema(
+            _cache_schema_version(graph_config.graph_window_size)
+        ),
+        "feature_width": int(features.shape[-1]),
         "fingerprint": fingerprint,
         "dataset": name,
         "split": split,
@@ -1065,6 +1133,7 @@ def build_cache(
     )
     started = time.monotonic()
     records: list[dict[str, Any]] = []
+    cache_schema_version = _cache_schema_version(graph_config.graph_window_size)
     peak_allocated_bytes = 0
     peak_reserved_bytes = 0
     try:
@@ -1079,7 +1148,7 @@ def build_cache(
                         cache_file, map_location="cpu", weights_only=False
                     )
                     if (
-                        existing.get("schema_version") == CACHE_SCHEMA_VERSION
+                        existing.get("schema_version") == cache_schema_version
                         and existing.get("fingerprint") == fingerprint
                     ):
                         stats = dict(existing["stats"])
@@ -1142,7 +1211,12 @@ def build_cache(
             "candidate_recall": survived / total if total else None,
         }
     manifest = {
-        "schema_version": CACHE_SCHEMA_VERSION,
+        "schema_version": cache_schema_version,
+        "feature_schema": _cache_feature_schema(cache_schema_version),
+        "feature_width": candidate_feature_dim(
+            graph_config.node_feature_dim,
+            graph_window_size=graph_config.graph_window_size,
+        ),
         "fingerprint": fingerprint,
         "experiment_id": config["experiment_id"],
         "source_raw_checkpoint_sha256": source.raw_checkpoint_sha256,
@@ -1184,15 +1258,62 @@ def build_cache(
 class CompactCacheDataset(Dataset):
     """In-memory compact rows; no frozen image tensor remains resident."""
 
-    def __init__(self, paths: list[Path], fingerprint: str) -> None:
+    def __init__(
+        self,
+        paths: list[Path],
+        fingerprint: str,
+        schema_version: int = CACHE_SCHEMA_VERSION,
+        *,
+        top_k: int | None = None,
+        feature_width: int | None = None,
+    ) -> None:
         payloads = [
             torch.load(path, map_location="cpu", weights_only=False) for path in paths
         ]
         for path, payload in zip(paths, payloads, strict=True):
-            if payload.get("schema_version") != CACHE_SCHEMA_VERSION:
+            if payload.get("schema_version") != schema_version:
                 raise ValueError(f"cache schema mismatch: {path}")
             if payload.get("fingerprint") != fingerprint:
                 raise ValueError(f"cache fingerprint mismatch: {path}")
+            payload_feature_schema = payload.get("feature_schema")
+            if payload_feature_schema is not None and payload_feature_schema != (
+                _cache_feature_schema(schema_version)
+            ):
+                raise ValueError(f"cache feature-math revision mismatch: {path}")
+            features = payload.get("features")
+            base_logits = payload.get("base_logits")
+            valid_mask = payload.get("valid_mask")
+            labels = payload.get("labels")
+            if not all(
+                isinstance(value, torch.Tensor)
+                for value in (features, base_logits, valid_mask, labels)
+            ):
+                raise TypeError(f"cache tensors are missing: {path}")
+            if features.ndim != 3:
+                raise ValueError(f"cache features must have shape (N,K,F): {path}")
+            rows, candidates, width = features.shape
+            if top_k is not None and candidates != top_k:
+                raise ValueError(f"cache top-k mismatch: {path}")
+            if feature_width is not None and width != feature_width:
+                raise ValueError(f"cache feature width mismatch: {path}")
+            payload_feature_width = payload.get("feature_width")
+            if payload_feature_width is not None and int(payload_feature_width) != width:
+                raise ValueError(f"cache recorded feature width mismatch: {path}")
+            if base_logits.shape != (rows, candidates):
+                raise ValueError(f"cache base-logit shape mismatch: {path}")
+            if valid_mask.shape != (rows, candidates) or valid_mask.dtype != torch.bool:
+                raise ValueError(f"cache valid-mask contract mismatch: {path}")
+            if labels.shape != (rows,) or labels.dtype != torch.long:
+                raise ValueError(f"cache label contract mismatch: {path}")
+            if not features.is_floating_point() or not base_logits.is_floating_point():
+                raise TypeError(f"cache features and logits must be floating point: {path}")
+            if not torch.isfinite(features).all() or not torch.isfinite(base_logits).all():
+                raise ValueError(f"cache contains non-finite values: {path}")
+            if rows:
+                if bool(((labels < 0) | (labels >= candidates)).any()):
+                    raise ValueError(f"cache label is outside candidate range: {path}")
+                if not bool(valid_mask.gather(1, labels.unsqueeze(1)).all()):
+                    raise ValueError(f"cache label selects an invalid candidate: {path}")
         self.features = torch.cat([payload["features"] for payload in payloads])
         self.base_logits = torch.cat([payload["base_logits"] for payload in payloads])
         self.valid_mask = torch.cat([payload["valid_mask"] for payload in payloads])
@@ -1224,6 +1345,36 @@ def _cache_datasets(
     ):
         raise ValueError("shared cache manifest SHA-256 mismatch")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    schema_version = int(manifest.get("schema_version", -1))
+    if schema_version not in CACHE_SCHEMA_VERSIONS.values():
+        raise ValueError(f"unsupported cache schema: {schema_version}")
+    graph_config = manifest.get("graph_config")
+    if not isinstance(graph_config, dict):
+        raise ValueError("cache manifest is missing graph_config")
+    graph_window_size = _strict_int(
+        graph_config.get("graph_window_size"),
+        "cache graph_window_size",
+    )
+    expected_schema = _cache_schema_version(graph_window_size)
+    if schema_version != expected_schema:
+        raise ValueError("cache schema does not match graph_window_size")
+    top_k = _strict_int(graph_config.get("top_k"), "cache graph_config.top_k")
+    node_feature_dim = _strict_int(
+        graph_config.get("node_feature_dim"),
+        "cache graph_config.node_feature_dim",
+    )
+    feature_width = candidate_feature_dim(
+        node_feature_dim,
+        graph_window_size=graph_window_size,
+    )
+    recorded_feature_schema = manifest.get("feature_schema")
+    if recorded_feature_schema is not None and recorded_feature_schema != (
+        _cache_feature_schema(schema_version)
+    ):
+        raise ValueError("cache feature schema mismatch")
+    recorded_feature_width = manifest.get("feature_width")
+    if recorded_feature_width is not None and recorded_feature_width != feature_width:
+        raise ValueError("cache manifest feature width mismatch")
     fingerprint = str(manifest["fingerprint"])
     paths: dict[str, list[Path]] = {"train": [], "validation": []}
     for record in manifest["files"]:
@@ -1231,8 +1382,20 @@ def _cache_datasets(
         if not path.is_file() or _sha256(path) != record["sha256"]:
             raise ValueError(f"cache file integrity check failed: {path}")
         paths[record["split"]].append(path)
-    train = CompactCacheDataset(paths["train"], fingerprint)
-    validation = CompactCacheDataset(paths["validation"], fingerprint)
+    train = CompactCacheDataset(
+        paths["train"],
+        fingerprint,
+        schema_version,
+        top_k=top_k,
+        feature_width=feature_width,
+    )
+    validation = CompactCacheDataset(
+        paths["validation"],
+        fingerprint,
+        schema_version,
+        top_k=top_k,
+        feature_width=feature_width,
+    )
     if not len(train) or not len(validation):
         raise ValueError(
             f"cache has insufficient supervised examples: train={len(train)}, "
@@ -1316,7 +1479,10 @@ def _restore_rng(payload: dict[str, Any], loader_generator: torch.Generator) -> 
 
 
 def _training_fingerprint(
-    config: dict[str, Any], graph_config: TemporalGraphConfig, cache_fingerprint: str
+    config: dict[str, Any],
+    graph_config: TemporalGraphConfig,
+    cache_fingerprint: str,
+    cache_manifest_sha256: str,
 ) -> str:
     return _json_sha256(
         {
@@ -1326,8 +1492,70 @@ def _training_fingerprint(
             "checkpoint": config["checkpoint"],
             "graph_config": graph_config.to_dict(),
             "cache_fingerprint": cache_fingerprint,
+            "cache_manifest_sha256": cache_manifest_sha256,
         }
     )
+
+
+def _validate_cache_training_contract(
+    manifest: dict[str, Any],
+    graph_config: TemporalGraphConfig,
+    source: SourceBundle,
+    config: dict[str, Any],
+) -> tuple[int, str, int]:
+    schema_version = int(manifest.get("schema_version", -1))
+    expected_schema = _cache_schema_version(graph_config.graph_window_size)
+    if schema_version != expected_schema:
+        raise ValueError(
+            f"cache schema mismatch for T_graph={graph_config.graph_window_size}: "
+            f"expected {expected_schema}, found {schema_version}"
+        )
+    feature_schema = _cache_feature_schema(schema_version)
+    recorded_feature_schema = manifest.get("feature_schema")
+    if recorded_feature_schema is not None and recorded_feature_schema != feature_schema:
+        raise ValueError("cache feature-math revision mismatch")
+    feature_width = candidate_feature_dim(
+        graph_config.node_feature_dim,
+        graph_window_size=graph_config.graph_window_size,
+    )
+    recorded_width = manifest.get("feature_width")
+    if recorded_width is not None and int(recorded_width) != feature_width:
+        raise ValueError("cache feature width does not match the temporal head")
+    if manifest.get("source_weights_sha256") != source.weights_sha256:
+        raise ValueError("cache frozen-host weights do not match the training source")
+    if manifest.get("source_raw_checkpoint_sha256") != source.raw_checkpoint_sha256:
+        raise ValueError("cache raw source checkpoint does not match the training source")
+
+    cached_graph = manifest.get("graph_config")
+    if not isinstance(cached_graph, dict):
+        raise ValueError("cache manifest is missing graph_config")
+    candidate_fields = (
+        "node_feature_dim",
+        "top_k",
+        "radius_um",
+        "distance_scale_um",
+        "middle_coord_atol",
+        "image_window_size",
+        "graph_window_size",
+        "ownership",
+    )
+    expected_graph = graph_config.to_dict()
+    mismatches = [
+        name
+        for name in candidate_fields
+        if cached_graph.get(name) != expected_graph.get(name)
+    ]
+    if mismatches:
+        raise ValueError(
+            "cache and temporal head use different candidate contracts: "
+            + ", ".join(mismatches)
+        )
+    source_experiment = config.get("cache", {}).get("source_experiment_id")
+    if source_experiment is not None and manifest.get("experiment_id") != (
+        source_experiment
+    ):
+        raise ValueError("shared cache source experiment mismatch")
+    return schema_version, feature_schema, feature_width
 
 
 def _training_checkpoint(
@@ -1340,6 +1568,10 @@ def _training_checkpoint(
     graph_source_sha256: str,
     raw_checkpoint_sha256: str,
     cache_fingerprint: str,
+    cache_manifest_sha256: str,
+    cache_schema_version: int,
+    feature_schema: str,
+    feature_width: int,
     training_fingerprint: str,
     history: list[dict[str, Any]],
     loader_generator: torch.Generator,
@@ -1350,9 +1582,13 @@ def _training_checkpoint(
             "experiment_id": config["experiment_id"],
             "completed_epochs": completed_epochs,
             "cache_fingerprint": cache_fingerprint,
+            "cache_manifest_sha256": cache_manifest_sha256,
+            "cache_schema_version": cache_schema_version,
+            "feature_schema": feature_schema,
+            "feature_width": feature_width,
             "ownership": "right_transition",
             "image_window_size": 2,
-            "graph_window_size": 3,
+            "graph_window_size": head.config.graph_window_size,
             "source_raw_checkpoint_sha256": raw_checkpoint_sha256,
         },
     )
@@ -1442,6 +1678,15 @@ def train_head(
         ),
     )
     cache_fingerprint = str(cache_manifest["fingerprint"])
+    cache_manifest_sha256 = _sha256(cache_dir / "manifest.json")
+    cache_schema_version, feature_schema, feature_width = (
+        _validate_cache_training_contract(
+            cache_manifest,
+            graph_config,
+            source,
+            config,
+        )
+    )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     seed = int(config["seed"])
     random.seed(seed)
@@ -1475,7 +1720,12 @@ def train_head(
         pin_memory=device.type == "cuda",
         persistent_workers=workers > 0,
     )
-    fingerprint = _training_fingerprint(config, graph_config, cache_fingerprint)
+    fingerprint = _training_fingerprint(
+        config,
+        graph_config,
+        cache_fingerprint,
+        cache_manifest_sha256,
+    )
     start_epoch, best_score, history = _restore_training(
         artifact_dir=artifact_dir,
         config=config,
@@ -1531,6 +1781,10 @@ def train_head(
             graph_source_sha256=source.weights_sha256,
             raw_checkpoint_sha256=source.raw_checkpoint_sha256,
             cache_fingerprint=cache_fingerprint,
+            cache_manifest_sha256=cache_manifest_sha256,
+            cache_schema_version=cache_schema_version,
+            feature_schema=feature_schema,
+            feature_width=feature_width,
             training_fingerprint=fingerprint,
             history=history,
             loader_generator=loader_generator,
@@ -1557,6 +1811,10 @@ def train_head(
         "train_examples": len(train_dataset),
         "validation_examples": len(validation_dataset),
         "cache_fingerprint": cache_fingerprint,
+        "cache_manifest_sha256": cache_manifest_sha256,
+        "cache_schema_version": cache_schema_version,
+        "feature_schema": feature_schema,
+        "feature_width": feature_width,
         "source_raw_checkpoint_sha256": source.raw_checkpoint_sha256,
         "source_weights_sha256": source.weights_sha256,
         "runtime_seconds": round(time.monotonic() - started, 3),

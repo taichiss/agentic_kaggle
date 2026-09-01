@@ -4,6 +4,7 @@ import importlib.util
 import inspect
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import torch
@@ -71,6 +72,24 @@ def _triplet(module):
     return previous, current
 
 
+def _quadruplet(module):
+    prior_pair = _pair(
+        module,
+        [[-1, 0, 0], [9, 0, 0]],
+        [[0, 0, 0], [10, 0, 0]],
+        [[4, 0], [0, 4]],
+    )
+    prior = module.ExtractedPair(
+        pair=prior_pair,
+        source_coords_grid=prior_pair.source_coords_um,
+        target_coords_grid=prior_pair.target_coords_um,
+        source_matches=torch.tensor([[0, 1]]),
+        target_matches=torch.tensor([[0, 1]]),
+    )
+    previous, current = _triplet(module)
+    return prior, previous, current
+
+
 def test_sparse_candidate_examples_mask_unknown_targets_and_count_recall():
     module = _load_script()
     previous, current = _triplet(module)
@@ -105,6 +124,40 @@ def test_sparse_candidate_examples_report_parent_dropped_by_radius():
     assert examples.supervised_parents == 1
     assert examples.candidate_parents == 0
     assert examples.features.shape[0] == 0
+
+
+def test_tgraph4_sparse_examples_use_cache_schema_v2_and_wider_features():
+    module = _load_script()
+    prior, previous, current = _quadruplet(module)
+    graph_config = module.TemporalGraphConfig(
+        node_feature_dim=2,
+        hidden_dim=4,
+        top_k=2,
+        radius_um=5.0,
+        graph_window_size=4,
+    )
+    gt_edges = torch.tensor([[[1.0, 0.0], [0.0, 0.0]]])
+
+    examples = module._build_sparse_candidate_examples(
+        previous,
+        current,
+        gt_edges,
+        graph_config,
+        prior=prior,
+    )
+
+    assert module._cache_schema_version(3) == 1
+    assert module._cache_schema_version(4) == 2
+    with pytest.raises(ValueError, match="only graph_window_size 3 or 4"):
+        module._cache_schema_version(5)
+    with pytest.raises(TypeError, match="must be an integer"):
+        module._cache_schema_version(4.0)
+    assert examples.features.shape == (
+        1,
+        2,
+        module.candidate_feature_dim(2, graph_window_size=4),
+    )
+    assert examples.features.shape[-1] == module.candidate_feature_dim(2) + 4
 
 
 def test_zero_detection_matches_are_padded_and_sparse_cache_stays_empty():
@@ -163,6 +216,10 @@ def test_training_checkpoint_nests_portable_head_with_flattened_host_sha():
         graph_source_sha256="flattened-sha",
         raw_checkpoint_sha256="raw-wrapper-sha",
         cache_fingerprint="cache-sha",
+        cache_manifest_sha256="manifest-sha",
+        cache_schema_version=1,
+        feature_schema="tgraph3-candidate-features-v1",
+        feature_width=module.candidate_feature_dim(2),
         training_fingerprint="training-sha",
         history=[{}] * 5,
         loader_generator=generator,
@@ -172,7 +229,96 @@ def test_training_checkpoint_nests_portable_head_with_flattened_host_sha():
     assert temporal["base_checkpoint_sha256"] == "flattened-sha"
     assert temporal["metadata"]["completed_epochs"] == 5
     assert temporal["metadata"]["source_raw_checkpoint_sha256"] == "raw-wrapper-sha"
+    assert temporal["metadata"]["cache_manifest_sha256"] == "manifest-sha"
+    assert temporal["metadata"]["feature_width"] == module.candidate_feature_dim(2)
     assert all(tensor.device.type == "cpu" for tensor in temporal["state_dict"].values())
+
+
+def test_training_checkpoint_records_tgraph4_contract():
+    module = _load_script()
+    graph_config = module.TemporalGraphConfig(
+        node_feature_dim=2,
+        hidden_dim=4,
+        top_k=2,
+        radius_um=5.0,
+        graph_window_size=4,
+    )
+    head = module.TemporalGraphResidualHead(graph_config)
+    optimizer = torch.optim.AdamW(head.parameters(), lr=1e-4)
+    payload = module._training_checkpoint(
+        config={"experiment_id": "EXP-T4"},
+        head=head,
+        optimizer=optimizer,
+        completed_epochs=5,
+        best_score=0.75,
+        graph_source_sha256="flattened-sha",
+        raw_checkpoint_sha256="raw-wrapper-sha",
+        cache_fingerprint="cache-sha",
+        cache_manifest_sha256="manifest-sha",
+        cache_schema_version=2,
+        feature_schema="tgraph4-acceleration-qbar-features-v1",
+        feature_width=module.candidate_feature_dim(2, graph_window_size=4),
+        training_fingerprint="training-sha",
+        history=[{}] * 5,
+        loader_generator=torch.Generator().manual_seed(17),
+    )
+
+    assert payload["temporal_graph"]["metadata"]["graph_window_size"] == 4
+    assert payload["temporal_graph"]["config"]["graph_window_size"] == 4
+    assert payload["temporal_graph"]["metadata"]["cache_schema_version"] == 2
+
+
+def test_shared_cache_contract_rejects_different_host_or_candidate_geometry():
+    module = _load_script()
+    graph_config = module.TemporalGraphConfig(
+        node_feature_dim=2,
+        hidden_dim=4,
+        top_k=2,
+        radius_um=5.0,
+        graph_window_size=4,
+    )
+    source = SimpleNamespace(
+        weights_sha256="host-sha",
+        raw_checkpoint_sha256="raw-sha",
+    )
+    manifest = {
+        "schema_version": 2,
+        "feature_schema": "tgraph4-acceleration-qbar-features-v1",
+        "feature_width": module.candidate_feature_dim(2, graph_window_size=4),
+        "experiment_id": "EXP-CACHE",
+        "source_weights_sha256": "host-sha",
+        "source_raw_checkpoint_sha256": "raw-sha",
+        "graph_config": graph_config.to_dict(),
+    }
+    config = {"cache": {"source_experiment_id": "EXP-CACHE"}}
+
+    assert module._validate_cache_training_contract(
+        manifest,
+        graph_config,
+        source,
+        config,
+    ) == (
+        2,
+        "tgraph4-acceleration-qbar-features-v1",
+        module.candidate_feature_dim(2, graph_window_size=4),
+    )
+
+    wrong_host = dict(manifest, source_weights_sha256="other")
+    with pytest.raises(ValueError, match="frozen-host weights"):
+        module._validate_cache_training_contract(
+            wrong_host,
+            graph_config,
+            source,
+            config,
+        )
+    wrong_graph = {**manifest, "graph_config": {**manifest["graph_config"], "top_k": 3}}
+    with pytest.raises(ValueError, match="different candidate contracts"):
+        module._validate_cache_training_contract(
+            wrong_graph,
+            graph_config,
+            source,
+            config,
+        )
 
 
 def test_real_organizer_detect_and_match_signature_accepts_cache_call_contract():

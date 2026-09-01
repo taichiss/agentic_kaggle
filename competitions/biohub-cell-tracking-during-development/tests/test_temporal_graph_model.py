@@ -154,6 +154,167 @@ def test_candidate_features_use_right_transition_and_constant_velocity() -> None
     assert batch.features[0, 0, 0, -1] == 1.0  # has history
 
 
+def test_four_frame_features_append_constant_acceleration_without_changing_t3_prefix() -> None:
+    prior = _pair(
+        [0.0],
+        [1.0],
+        torch.zeros(1, 1, 1),
+        feature_dim=1,
+    )
+    previous = _pair(
+        [1.0],
+        [3.0],
+        torch.zeros(1, 1, 1),
+        feature_dim=1,
+    )
+    current = _pair(
+        [3.0],
+        [6.0],
+        torch.tensor([[[2.0]]]),
+        feature_dim=1,
+        source_offset=20.0,
+        target_offset=30.0,
+    )
+    candidates = build_parent_candidates(
+        current.source_coords_um,
+        current.target_coords_um,
+        current.source_mask,
+        current.target_mask,
+        top_k=1,
+        radius_um=5.0,
+    )
+
+    t3 = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        distance_scale_um=10.0,
+    )
+    t4 = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        prior_pair=prior,
+        graph_window_size=4,
+        distance_scale_um=10.0,
+    )
+
+    assert candidate_feature_dim(1) == 13
+    assert candidate_feature_dim(1, 4) == 17
+    assert t4.features.shape == (1, 1, 1, candidate_feature_dim(1, 4))
+    torch.testing.assert_close(t4.features[..., : candidate_feature_dim(1)], t3.features)
+    torch.testing.assert_close(
+        t4.features[0, 0, 0, -4:],
+        torch.tensor([0.0, 0.0, 0.0, 1.0]),
+    )
+
+
+def test_four_frame_features_probabilistically_propagate_partial_second_history() -> None:
+    prior = _pair(
+        [0.0],
+        [1.0, 5.0],
+        torch.tensor([[[0.0, -torch.inf]]]),
+        feature_dim=1,
+    )
+    previous = _pair(
+        [1.0, 5.0],
+        [3.0],
+        torch.zeros(1, 2, 1),
+        feature_dim=1,
+    )
+    current = _pair(
+        [3.0],
+        [3.0],
+        torch.zeros(1, 1, 1),
+        feature_dim=1,
+    )
+    candidates = build_parent_candidates(
+        current.source_coords_um,
+        current.target_coords_um,
+        current.source_mask,
+        current.target_mask,
+        top_k=1,
+        radius_um=5.0,
+    )
+
+    batch = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        prior_pair=prior,
+        graph_window_size=4,
+        distance_scale_um=10.0,
+    )
+
+    torch.testing.assert_close(
+        batch.features[0, 0, 0, -4:],
+        torch.tensor([0.0, 0.0, -0.3, 0.5]),
+    )
+
+
+def test_four_frame_features_fall_back_to_constant_velocity_without_second_history() -> None:
+    prior = _pair(
+        [0.0],
+        [1.0],
+        torch.full((1, 1, 1), -torch.inf),
+        feature_dim=1,
+    )
+    previous = _pair(
+        [1.0],
+        [3.0],
+        torch.zeros(1, 1, 1),
+        feature_dim=1,
+    )
+    current = _pair(
+        [3.0],
+        [5.0],
+        torch.zeros(1, 1, 1),
+        feature_dim=1,
+    )
+    candidates = build_parent_candidates(
+        current.source_coords_um,
+        current.target_coords_um,
+        current.source_mask,
+        current.target_mask,
+        top_k=1,
+        radius_um=5.0,
+    )
+
+    batch = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        prior_pair=prior,
+        graph_window_size=4,
+        distance_scale_um=10.0,
+    )
+
+    assert not batch.features[0, 0, 0, -4:].any()
+
+
+def test_four_frame_contract_rejects_nonadjacent_prior_pair() -> None:
+    prior = _pair([0.0], [2.0], torch.zeros(1, 1, 1))
+    previous = _pair([1.0], [3.0], torch.zeros(1, 1, 1))
+    current = _pair([3.0], [4.0], torch.zeros(1, 1, 1))
+    candidates = build_parent_candidates(
+        current.source_coords_um,
+        current.target_coords_um,
+        current.source_mask,
+        current.target_mask,
+        top_k=1,
+        radius_um=5.0,
+    )
+
+    with pytest.raises(ValueError, match="coordinates or node order"):
+        build_candidate_features(
+            previous,
+            current,
+            candidates,
+            prior_pair=prior,
+            graph_window_size=4,
+        )
+
+
 def test_triplet_contract_owns_right_transition_and_rejects_reordered_middle() -> None:
     previous = _pair([0.0], [1.0, 2.0], torch.zeros(1, 1, 2))
     current = _pair(
@@ -203,6 +364,40 @@ def test_zero_initialized_head_preserves_host_logits_and_detaches_host() -> None
     assert base_logits.grad is None
     assert model.residual_mlp[-1].weight.grad is not None
     assert model.residual_mlp[-1].bias.grad is not None
+
+
+def test_four_frame_head_requires_prior_and_preserves_zero_initialized_host() -> None:
+    prior = _pair([0.0], [1.0], torch.zeros(1, 1, 1))
+    previous = _pair([1.0], [2.0], torch.zeros(1, 1, 1))
+    current = _pair([2.0], [3.0], torch.tensor([[[0.75]]]))
+    model = TemporalGraphResidualHead(
+        TemporalGraphConfig(
+            node_feature_dim=2,
+            hidden_dim=8,
+            top_k=1,
+            radius_um=10.0,
+            graph_window_size=4,
+        )
+    )
+
+    with pytest.raises(ValueError, match="prior_pair is required"):
+        model(previous, current)
+    output = model(previous, current, prior_pair=prior)
+
+    assert torch.equal(output.edge_logits, current.edge_logits)
+    assert output.candidate_features.features.shape[-1] == candidate_feature_dim(2, 4)
+
+
+def test_three_frame_head_rejects_unexpected_prior_pair() -> None:
+    prior = _pair([0.0], [1.0], torch.zeros(1, 1, 1))
+    previous = _pair([1.0], [2.0], torch.zeros(1, 1, 1))
+    current = _pair([2.0], [3.0], torch.zeros(1, 1, 1))
+    model = TemporalGraphResidualHead(
+        TemporalGraphConfig(node_feature_dim=2, hidden_dim=8, top_k=1)
+    )
+
+    with pytest.raises(ValueError, match="prior_pair must be omitted"):
+        model(previous, current, prior_pair=prior)
 
 
 def test_candidate_attention_is_zero_initialized_and_handles_padding() -> None:

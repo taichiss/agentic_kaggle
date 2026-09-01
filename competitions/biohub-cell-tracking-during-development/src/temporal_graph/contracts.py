@@ -1,4 +1,4 @@
-"""Typed contracts for a frozen-host, three-frame graph residual model."""
+"""Typed contracts for frozen-host temporal graph residual models."""
 
 from __future__ import annotations
 
@@ -115,8 +115,17 @@ class RightTransitionTriplet:
     def __post_init__(self) -> None:
         previous = self.previous_to_source
         current = self.source_to_target
+        if (
+            isinstance(self.middle_coord_atol, bool)
+            or not isinstance(self.middle_coord_atol, (int, float))
+            or not math.isfinite(float(self.middle_coord_atol))
+            or float(self.middle_coord_atol) < 0.0
+        ):
+            raise ValueError("middle_coord_atol must be finite and non-negative")
         if previous.batch_size != current.batch_size:
             raise ValueError("adjacent pairs must share the batch axis")
+        if previous.target_features.device != current.source_features.device:
+            raise ValueError("adjacent pairs must be on the same device")
         if previous.target_count != current.source_count:
             raise ValueError("the shared middle frame must have one common padded node axis")
         if previous.target_features.shape[-1] != current.source_features.shape[-1]:
@@ -124,6 +133,11 @@ class RightTransitionTriplet:
         if not torch.equal(previous.target_mask, current.source_mask):
             raise ValueError("middle-frame masks or node order differ")
         valid = previous.target_mask
+        if valid.any() and (
+            not torch.isfinite(previous.target_coords_um[valid]).all()
+            or not torch.isfinite(current.source_coords_um[valid]).all()
+        ):
+            raise ValueError("middle-frame coordinates must be finite")
         if valid.any() and not torch.allclose(
             previous.target_coords_um[valid],
             current.source_coords_um[valid],
@@ -297,10 +311,14 @@ class TemporalGraphConfig:
             raise ValueError("dropout must be in [0, 1)")
         if self.middle_coord_atol < 0:
             raise ValueError("middle_coord_atol must be non-negative")
+        for name in ("image_window_size", "graph_window_size"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError(f"{name} must be an integer")
         if self.image_window_size != 2:
             raise ValueError("the frozen host contract requires image_window_size=2")
-        if self.graph_window_size != 3:
-            raise ValueError("the temporal graph contract requires graph_window_size=3")
+        if self.graph_window_size not in {3, 4}:
+            raise ValueError("the temporal graph contract requires graph_window_size=3 or 4")
         if self.architecture not in {"mlp", "candidate_attention"}:
             raise ValueError(
                 "architecture must be 'mlp' or 'candidate_attention'"

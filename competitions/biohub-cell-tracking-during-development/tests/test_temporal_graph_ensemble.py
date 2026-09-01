@@ -21,7 +21,13 @@ from temporal_graph import (  # noqa: E402
 
 
 class StubHead(nn.Module):
-    def __init__(self, residual: torch.Tensor, *, architecture: str) -> None:
+    def __init__(
+        self,
+        residual: torch.Tensor,
+        *,
+        architecture: str,
+        graph_window_size: int = 3,
+    ) -> None:
         super().__init__()
         self.config = TemporalGraphConfig(
             node_feature_dim=2,
@@ -33,6 +39,7 @@ class StubHead(nn.Module):
             residual_logit_bound=(
                 0.15 if architecture == "candidate_attention" else None
             ),
+            graph_window_size=graph_window_size,
         )
         self.register_buffer("residual", residual)
 
@@ -170,4 +177,49 @@ def test_ensemble_rejects_candidate_contract_mismatch() -> None:
     )
 
     with pytest.raises(ValueError, match="different candidate contracts"):
+        TemporalGraphLinkEnsemble(mlp, attention, mode="agreement_gate")
+
+
+def test_four_frame_ensemble_requires_adjacent_prior_pair() -> None:
+    prior = _pair([-1.0], [0.0], torch.zeros(1, 1, 1))
+    previous, current = _triplet()
+    mlp = StubHead(
+        torch.tensor([[[-0.4, 0.4]]]),
+        architecture="mlp",
+        graph_window_size=4,
+    )
+    attention = StubHead(
+        torch.tensor([[[-0.1, 0.1]]]),
+        architecture="candidate_attention",
+        graph_window_size=4,
+    )
+    ensemble = TemporalGraphLinkEnsemble(
+        mlp,
+        attention,
+        mode="bounded_logit_5050",
+    )
+
+    with pytest.raises(ValueError, match="prior_pair is required"):
+        ensemble(previous, current)
+    output = ensemble(previous, current, prior_pair=prior)
+    assert output.candidate_features.features.shape[-1] == 20
+
+    nonadjacent_prior = _pair([-1.0], [4.0], torch.zeros(1, 1, 1))
+    with pytest.raises(ValueError, match="coordinates or node order"):
+        ensemble(previous, current, prior_pair=nonadjacent_prior)
+
+
+def test_ensemble_rejects_graph_window_mismatch() -> None:
+    mlp = StubHead(
+        torch.zeros(1, 1, 2),
+        architecture="mlp",
+        graph_window_size=3,
+    )
+    attention = StubHead(
+        torch.zeros(1, 1, 2),
+        architecture="candidate_attention",
+        graph_window_size=4,
+    )
+
+    with pytest.raises(ValueError, match="graph_window_size"):
         TemporalGraphLinkEnsemble(mlp, attention, mode="agreement_gate")

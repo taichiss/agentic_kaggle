@@ -89,7 +89,7 @@ mode = "mlp"
 kernel_id = "suzukitaichi/biohub-exp-0014-tgraph3-mlp-e3-submit"
 kernel_title = "Biohub EXP-0014 TGraph3 MLP E3 Submit"
 submission_message = "EXP-0014 A MLP e3 min-component-7"
-status = "submitted-pending"
+status = "complete"
 kernel_version = 1
 submission_ref = 55943665
 submitted_at = "2026-09-01T16:12:18.037000Z"
@@ -98,6 +98,7 @@ rows = 318756
 nodes = 162881
 edges = 155875
 inference_seconds = 320.605
+public_score = 0.893
 
 [[submission.variants]]
 arm = "B"
@@ -106,7 +107,7 @@ mode = "bounded_attention"
 kernel_id = "suzukitaichi/biohub-exp-0014-tgraph3-bounded-attn-e3-submit"
 kernel_title = "Biohub EXP-0014 TGraph3 Bounded Attn E3 Submit"
 submission_message = "EXP-0014 B bounded Attention e3 min-component-7"
-status = "submitted-pending"
+status = "complete"
 kernel_version = 1
 submission_ref = 55943911
 submitted_at = "2026-09-01T16:24:21.247000Z"
@@ -115,6 +116,7 @@ rows = 318759
 nodes = 162882
 edges = 155877
 inference_seconds = 320.751
+public_score = 0.893
 
 [[submission.variants]]
 arm = "C"
@@ -123,7 +125,7 @@ mode = "bounded_logit_5050"
 kernel_id = "suzukitaichi/biohub-exp-0014-tgraph3-bounded-logit-5050-submit"
 kernel_title = "Biohub EXP-0014 TGraph3 Bounded Logit 5050 Submit"
 submission_message = "EXP-0014 C MLP Attention 50-50 bounded-logit min-component-7"
-status = "submitted-pending"
+status = "complete"
 kernel_version = 1
 submission_ref = 55943722
 submitted_at = "2026-09-01T16:15:18.537000Z"
@@ -132,6 +134,7 @@ rows = 318740
 nodes = 162872
 edges = 155868
 inference_seconds = 341.934
+public_score = 0.893
 
 [[submission.variants]]
 arm = "D"
@@ -140,7 +143,7 @@ mode = "agreement_gate"
 kernel_id = "suzukitaichi/biohub-exp-0014-tgraph3-agreement-gate-submit"
 kernel_title = "Biohub EXP-0014 TGraph3 Agreement Gate Submit"
 submission_message = "EXP-0014 D MLP Attention agreement gate min-component-7"
-status = "submitted-pending"
+status = "complete"
 kernel_version = 1
 submission_ref = 55944373
 submitted_at = "2026-09-01T16:50:08.147000Z"
@@ -149,6 +152,7 @@ rows = 318728
 nodes = 162863
 edges = 155865
 inference_seconds = 307.066
+public_score = 0.893
 
 [output]
 artifact_dir = "artifacts/EXP-0014"

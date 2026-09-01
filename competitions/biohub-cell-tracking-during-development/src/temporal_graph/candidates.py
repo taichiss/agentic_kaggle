@@ -117,19 +117,10 @@ def expected_previous_parent_statistics(
     if batch == 0 or previous_count == 0 or middle_count == 0:
         return PreviousParentStatistics(fallback, entropy, has_history)
 
-    logits = previous_pair.edge_logits.detach().float()
-    valid = previous_pair.source_mask.unsqueeze(-1) & previous_pair.target_mask.unsqueeze(1)
-    valid &= torch.isfinite(logits)
-    masked_logits = logits.masked_fill(~valid, -torch.inf)
-    has_parent = valid.any(dim=1)
-    maximum = masked_logits.amax(dim=1)
-    maximum = torch.where(has_parent, maximum, torch.zeros_like(maximum))
-    weights = torch.where(
-        valid,
-        torch.exp(masked_logits - maximum.unsqueeze(1)),
-        torch.zeros_like(masked_logits),
+    probabilities, has_parent = _normalized_parent_probabilities(
+        previous_pair,
+        eps=eps,
     )
-    probabilities = weights / weights.sum(dim=1, keepdim=True).clamp_min(eps)
     expected = torch.einsum(
         "bps,bpc->bsc",
         probabilities,
@@ -144,6 +135,38 @@ def expected_previous_parent_statistics(
     ).unsqueeze(-1)
     has_history = has_parent.unsqueeze(-1)
     return PreviousParentStatistics(expected, entropy, has_history)
+
+
+def _normalized_parent_probabilities(
+    pair: FrozenPair,
+    *,
+    eps: float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return finite, mask-aware source probabilities for each target."""
+    batch, source_count, target_count = pair.edge_logits.shape
+    logits = pair.edge_logits.detach().float()
+    has_parent = torch.zeros(
+        batch,
+        target_count,
+        dtype=torch.bool,
+        device=logits.device,
+    )
+    if batch == 0 or source_count == 0 or target_count == 0:
+        return logits.new_zeros(batch, source_count, target_count), has_parent
+
+    valid = pair.source_mask.unsqueeze(-1) & pair.target_mask.unsqueeze(1)
+    valid &= torch.isfinite(logits)
+    masked_logits = logits.masked_fill(~valid, -torch.inf)
+    has_parent = valid.any(dim=1)
+    maximum = masked_logits.amax(dim=1)
+    maximum = torch.where(has_parent, maximum, torch.zeros_like(maximum))
+    weights = torch.where(
+        valid,
+        torch.exp(masked_logits - maximum.unsqueeze(1)),
+        torch.zeros_like(masked_logits),
+    )
+    probabilities = weights / weights.sum(dim=1, keepdim=True).clamp_min(eps)
+    return probabilities, has_parent
 
 
 def _gather_source(values: torch.Tensor, candidates: ParentCandidates) -> torch.Tensor:
@@ -179,13 +202,22 @@ def _gather_edge_logits(
     return torch.gather(edge_logits.transpose(1, 2), 2, candidates.source_index)
 
 
-def candidate_feature_dim(node_feature_dim: int) -> int:
+def candidate_feature_dim(
+    node_feature_dim: int,
+    graph_window_size: int = 3,
+) -> int:
     """Return the stable feature width used by :func:`build_candidate_features`."""
     if isinstance(node_feature_dim, bool) or not isinstance(node_feature_dim, int):
         raise TypeError("node_feature_dim must be an integer")
     if node_feature_dim <= 0:
         raise ValueError("node_feature_dim must be positive")
-    return 3 * node_feature_dim + 10
+    if (
+        isinstance(graph_window_size, bool)
+        or not isinstance(graph_window_size, int)
+        or graph_window_size not in {3, 4}
+    ):
+        raise ValueError("graph_window_size must be 3 or 4")
+    return 3 * node_feature_dim + (10 if graph_window_size == 3 else 14)
 
 
 def build_candidate_features(
@@ -193,6 +225,8 @@ def build_candidate_features(
     current_pair: FrozenPair,
     candidates: ParentCandidates,
     *,
+    prior_pair: FrozenPair | None = None,
+    graph_window_size: int = 3,
     distance_scale_um: float = 10.0,
     middle_coord_atol: float = 1.0e-4,
 ) -> CandidateFeatureBatch:
@@ -201,15 +235,29 @@ def build_candidate_features(
     Feature order is: previous-view middle appearance, current-view source
     appearance, target appearance, normalized displacement (3), normalized
     constant-velocity residual (3), distance, frozen base logit, previous
-    parent entropy, and a history-availability indicator.
+    parent entropy, and a history-availability indicator. When ``prior_pair``
+    supplies ``t-2 -> t-1``, the complete three-frame feature vector remains
+    an unchanged prefix followed by normalized constant-acceleration residual
+    (3) and probabilistically propagated second-history mass (1).
     """
     if distance_scale_um <= 0:
         raise ValueError("distance_scale_um must be positive")
+    candidate_feature_dim(current_pair.feature_dim, graph_window_size)
+    if graph_window_size == 4 and prior_pair is None:
+        raise ValueError("prior_pair is required when graph_window_size=4")
+    if graph_window_size == 3 and prior_pair is not None:
+        raise ValueError("prior_pair must be omitted when graph_window_size=3")
     triplet = RightTransitionTriplet(
         previous_pair,
         current_pair,
         middle_coord_atol=middle_coord_atol,
     )
+    if prior_pair is not None:
+        RightTransitionTriplet(
+            prior_pair,
+            previous_pair,
+            middle_coord_atol=middle_coord_atol,
+        )
     current = triplet.owned_transition
     if candidates.batch_size != current.batch_size:
         raise ValueError("candidate and transition batch dimensions differ")
@@ -241,21 +289,77 @@ def build_candidate_features(
     distance = candidates.distance_um.unsqueeze(-1) / float(distance_scale_um)
     base_logit = _gather_edge_logits(current.edge_logits.detach().float(), candidates).unsqueeze(-1)
 
-    features = torch.cat(
-        [
-            previous_view,
-            current_source,
-            target_view,
-            displacement,
-            velocity_residual,
-            distance,
-            base_logit,
-            previous_entropy,
-            has_history,
-        ],
-        dim=-1,
-    )
-    expected_dim = candidate_feature_dim(current.feature_dim)
+    feature_parts = [
+        previous_view,
+        current_source,
+        target_view,
+        displacement,
+        velocity_residual,
+        distance,
+        base_logit,
+        previous_entropy,
+        has_history,
+    ]
+    if prior_pair is not None:
+        prior_history = expected_previous_parent_statistics(prior_pair)
+        parent_probabilities, _ = _normalized_parent_probabilities(
+            previous_pair,
+            eps=1.0e-8,
+        )
+        prior_available = prior_history.has_history.squeeze(-1).float()
+        propagated_weights = parent_probabilities * prior_available.unsqueeze(-1)
+        second_history_mass = propagated_weights.sum(dim=1)
+        has_second_history = second_history_mass > 1.0e-8
+        conditional_weights = propagated_weights / second_history_mass.unsqueeze(
+            1
+        ).clamp_min(1.0e-8)
+        expected_first_parent = torch.einsum(
+            "bst,bsc->btc",
+            conditional_weights,
+            previous_pair.source_coords_um.detach().float(),
+        )
+        expected_second_parent = torch.einsum(
+            "bst,bsc->btc",
+            conditional_weights,
+            prior_history.expected_position_um.detach().float(),
+        )
+
+        previous_velocity = expected_first_parent - expected_second_parent
+        current_velocity = (
+            current.source_coords_um.detach().float() - expected_first_parent
+        )
+        acceleration = current_velocity - previous_velocity
+        acceleration_prediction = (
+            current.source_coords_um.detach().float() + current_velocity + acceleration
+        )
+        acceleration_prediction = _gather_source(acceleration_prediction, candidates)
+        acceleration_residual = (
+            target_coords - acceleration_prediction
+        ) / float(distance_scale_um)
+        gathered_has_second_history = _gather_source(
+            has_second_history.unsqueeze(-1),
+            candidates,
+        )
+        acceleration_residual = torch.where(
+            gathered_has_second_history,
+            acceleration_residual,
+            torch.zeros_like(acceleration_residual),
+        )
+        second_history_mass = torch.where(
+            has_second_history,
+            second_history_mass,
+            torch.zeros_like(second_history_mass),
+        )
+        gathered_second_history_mass = _gather_source(
+            second_history_mass.unsqueeze(-1),
+            candidates,
+        )
+        feature_parts.extend(
+            [acceleration_residual, gathered_second_history_mass]
+        )
+
+    features = torch.cat(feature_parts, dim=-1)
+    expected_dim = candidate_feature_dim(current.feature_dim, graph_window_size)
     if features.shape[-1] != expected_dim:
         raise RuntimeError("candidate feature construction drifted from its public contract")
     features = features * candidates.valid_mask.unsqueeze(-1).to(features.dtype)

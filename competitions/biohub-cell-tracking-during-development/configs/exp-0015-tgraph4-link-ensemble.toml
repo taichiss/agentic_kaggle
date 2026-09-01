@@ -1,0 +1,109 @@
+schema_version = 1
+experiment_id = "EXP-0015"
+hypothesis_id = "H018"
+seed = 20260902
+description = "T_graph=4 constant-acceleration MLP/Attention bounded-logit ensemble with T_graph=3 startup fallback"
+
+[source]
+organizer_revision = "075fc5f5a52d11077f9dc2b074644618f26939e2"
+base_experiment_id = "EXP-0004"
+base_checkpoint_completed_epochs = 30
+base_checkpoint_path = "data/kaggle-submission-EXP-0004-epoch30-postprocess-v1/dataset/edge_predictor_best.pth"
+base_checkpoint_sha256 = "9e068669b861b0dd993483e3ce6fc636fde604004011d5ec1e08039ae2843337"
+source_checkpoint_sha256 = "729836a33f485eb9e90ffd97f4ad6defdae916ac0e0affad04de649ade91b79e"
+
+[data]
+split_strategy = "embryo-prefix"
+fold = 0
+validation_group = "44b6"
+validation_partition = "calibration"
+image_window_size = 2
+graph_window_size = 4
+cache_fingerprint = "44db840466c86e93b1b76ba5a5b5a04ad4d3c3160ee745d9689e3ceaabea871d"
+cache_manifest_sha256 = "78f01de4b4659b8e34690097616bc360be9742b377d97489b6451787a80f38e2"
+
+[fallback]
+graph_window_size = 3
+cache_fingerprint = "c5e97a56ac6a9cabe8fb62496ec40a44f49a8abe22eefd16afd1c010c354eeeb"
+cache_manifest_sha256 = "6296240ca44fa9b6b9ce3d98ba56e774621b67b2e460a2b0f26ece6264f56542"
+
+[heads.mlp]
+experiment_id = "EXP-0015-MLP"
+completed_epoch = 8
+checkpoint_path = "artifacts/EXP-0015/mlp/best_model.pth"
+checkpoint_sha256 = "669d6104e2c8a2ab476a278bdcf9f88a792717a6dc02c79061dff50cf8585b56"
+wandb_run_id = "c892282b"
+local_top1_accuracy = 0.922704296545914
+
+[heads.attention]
+experiment_id = "EXP-0015-ATTN"
+completed_epoch = 5
+checkpoint_path = "artifacts/EXP-0015/attention/best_model.pth"
+checkpoint_sha256 = "b93091c28f6171015842c633a7b6c79db0273a6cc7e8fd5fa9ae672574a42ba1"
+wandb_run_id = "5981b97c"
+local_top1_accuracy = 0.9231255265374895
+architecture = "candidate_attention"
+attention_heads = 4
+residual_logit_bound = 0.15
+
+[heads.fallback_mlp]
+experiment_id = "EXP-0009"
+completed_epoch = 3
+checkpoint_path = "artifacts/EXP-0009/best_model.pth"
+checkpoint_sha256 = "a295c3cba5a06c9a7b3893f7998934143ccfde2cebd41285f4a8db3cf35dc808"
+local_top1_accuracy = 0.9226841721371262
+
+[heads.fallback_attention]
+experiment_id = "EXP-0012"
+completed_epoch = 3
+checkpoint_path = "artifacts/EXP-0012/best_model.pth"
+checkpoint_sha256 = "f72a6446a73831f30795f8599f6e80b2e52ff3038367c7226ae5de045e66899d"
+local_top1_accuracy = 0.923100969052829
+architecture = "candidate_attention"
+attention_heads = 4
+residual_logit_bound = 0.15
+
+[ensemble]
+mlp_weight = 0.5
+attention_weight = 0.5
+center_over_valid_candidates = true
+logit_bound = 0.15
+
+[inference]
+detection_probability_threshold = 0.99
+edge_threshold = 0.5
+pool_kernel_um = 5.0
+detection_tta = true
+candidate_top_k = 8
+candidate_radius_um = 15.0
+max_parents_per_node = 1
+max_children_per_node = 2
+base_postprocess_profile = "public-applicable-v1"
+minimum_component_nodes = 7
+preserve_division_components = true
+
+[controls]
+freeze_image_model = true
+freeze_detection_head = true
+freeze_host_edge_scorer = true
+freeze_candidate_generation = true
+freeze_division_policy = true
+freeze_postprocess = true
+effective_postprocess_profile = "public-applicable-v1-min-component-7"
+control_submission_ref = 55943722
+control_public_score = 0.893
+
+[submission]
+competition = "biohub-cell-tracking-during-development"
+dataset_id = "suzukitaichi/biohub-exp-0015-tgraph4-link-5050"
+dataset_title = "Biohub EXP-0015 TGraph4 Link 5050"
+kernel_id = "suzukitaichi/biohub-exp-0015-tgraph4-bounded-logit-5050-submit"
+kernel_title = "Biohub EXP-0015 TGraph4 Bounded Logit 5050 Submit"
+submission_message = "EXP-0015 T_graph=4 bounded-logit 50:50 min-component-7"
+status = "planned"
+requires_explicit_request = true
+authorized_at = "2026-09-02"
+
+[output]
+artifact_dir = "artifacts/EXP-0015"
+bundle_dir = "data/kaggle-submission-EXP-0015-tgraph4-bounded-logit-5050"

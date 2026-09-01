@@ -120,7 +120,10 @@ class TemporalGraphResidualHead(nn.Module):
             raise ValueError("pass either config or node_feature_dim arguments, not both")
         self.config = config
 
-        feature_dim = candidate_feature_dim(config.node_feature_dim)
+        feature_dim = candidate_feature_dim(
+            config.node_feature_dim,
+            config.graph_window_size,
+        )
         if config.architecture == "mlp":
             layers: list[nn.Module] = [
                 nn.LayerNorm(feature_dim),
@@ -169,7 +172,10 @@ class TemporalGraphResidualHead(nn.Module):
                 raise ValueError("valid_mask is required for a raw feature tensor")
         if features.ndim != 4:
             raise ValueError("candidate_features must have shape (B,N_target,K,F)")
-        if features.shape[-1] != candidate_feature_dim(self.config.node_feature_dim):
+        if features.shape[-1] != candidate_feature_dim(
+            self.config.node_feature_dim,
+            self.config.graph_window_size,
+        ):
             raise ValueError("candidate feature width does not match the model config")
         if valid_mask.shape != features.shape[:3] or valid_mask.dtype != torch.bool:
             raise ValueError("valid_mask must be boolean with shape (B,N_target,K)")
@@ -197,8 +203,14 @@ class TemporalGraphResidualHead(nn.Module):
         previous_pair: FrozenPair | RightTransitionTriplet,
         current_pair: FrozenPair | None = None,
         candidates: ParentCandidates | None = None,
+        *,
+        prior_pair: FrozenPair | None = None,
     ) -> TemporalGraphOutput:
-        """Refine only ``t -> t+1`` from frames ``(t-1, t, t+1)``."""
+        """Refine ``t -> t+1`` using the configured graph window."""
+        if self.config.graph_window_size == 4 and prior_pair is None:
+            raise ValueError("prior_pair is required when graph_window_size=4")
+        if self.config.graph_window_size == 3 and prior_pair is not None:
+            raise ValueError("prior_pair must be omitted when graph_window_size=3")
         if isinstance(previous_pair, RightTransitionTriplet):
             if current_pair is not None:
                 raise ValueError("current_pair must be omitted when passing a triplet")
@@ -230,6 +242,8 @@ class TemporalGraphResidualHead(nn.Module):
             previous,
             current,
             candidates,
+            prior_pair=prior_pair,
+            graph_window_size=self.config.graph_window_size,
             distance_scale_um=self.config.distance_scale_um,
             middle_coord_atol=self.config.middle_coord_atol,
         )

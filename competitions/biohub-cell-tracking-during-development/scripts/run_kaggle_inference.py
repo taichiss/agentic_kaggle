@@ -318,15 +318,95 @@ def _load_temporal_graph_head(
     return head.eval()
 
 
+def _temporal_graph_config(temporal_graph_head: Any) -> Any | None:
+    """Return the effective config for a head or a two-head link ensemble."""
+    config = getattr(temporal_graph_head, "config", None)
+    if config is not None:
+        return config
+    mlp_head = getattr(temporal_graph_head, "mlp_head", None)
+    return None if mlp_head is None else getattr(mlp_head, "config", None)
+
+
+def _temporal_graph_window_size(temporal_graph_head: Any) -> int:
+    """Read the graph window while retaining legacy T3 callable compatibility."""
+    config = _temporal_graph_config(temporal_graph_head)
+    if config is None:
+        # Older tests and downstream wrappers supplied a callable without
+        # exposing its T3 config. Keep that pre-T4 calling contract intact.
+        return 3
+    value = getattr(config, "graph_window_size", None)
+    if isinstance(value, bool) or not isinstance(value, int) or value not in {3, 4}:
+        raise ValueError("temporal graph config requires graph_window_size=3 or 4")
+    return value
+
+
+def _validate_temporal_graph_fallback_contract(
+    temporal_graph_head: Any,
+    temporal_graph_fallback_head: Any,
+) -> None:
+    """Fail closed unless a T4 primary and T3 fallback share candidate semantics."""
+    primary = _temporal_graph_config(temporal_graph_head)
+    fallback = _temporal_graph_config(temporal_graph_fallback_head)
+    if primary is None or fallback is None:
+        raise ValueError("primary and fallback temporal heads must expose their config")
+    if getattr(primary, "graph_window_size", None) != 4:
+        raise ValueError("a temporal graph fallback requires a T_graph=4 primary head")
+    if getattr(fallback, "graph_window_size", None) != 3:
+        raise ValueError("the temporal graph fallback must use T_graph=3")
+
+    comparable_fields = (
+        "node_feature_dim",
+        "top_k",
+        "radius_um",
+        "distance_scale_um",
+        "middle_coord_atol",
+        "image_window_size",
+        "ownership",
+    )
+    missing = [
+        name
+        for name in comparable_fields
+        if not hasattr(primary, name) or not hasattr(fallback, name)
+    ]
+    if missing:
+        raise ValueError(
+            "temporal graph candidate contract is incomplete: " + ", ".join(missing)
+        )
+    mismatches = [
+        name
+        for name in comparable_fields
+        if getattr(primary, name) != getattr(fallback, name)
+    ]
+    if mismatches:
+        raise ValueError(
+            "primary and fallback temporal heads use different candidate contracts: "
+            + ", ".join(mismatches)
+        )
+
+
 def _owned_transition_logits(
     temporal_graph_head: Any | None,
     previous_pair: Any | None,
     current_pair: Any,
+    *,
+    prior_pair: Any | None = None,
+    temporal_graph_fallback_head: Any | None = None,
 ) -> torch.Tensor:
-    """Use graph context only when a complete left pair is available."""
+    """Refine one owned transition when the configured history is complete."""
     if temporal_graph_head is None or previous_pair is None:
         return current_pair.edge_logits
-    return temporal_graph_head(previous_pair, current_pair).edge_logits
+    graph_window_size = _temporal_graph_window_size(temporal_graph_head)
+    if graph_window_size == 3:
+        return temporal_graph_head(previous_pair, current_pair).edge_logits
+    if prior_pair is None:
+        if temporal_graph_fallback_head is None:
+            return current_pair.edge_logits
+        return temporal_graph_fallback_head(previous_pair, current_pair).edge_logits
+    return temporal_graph_head(
+        previous_pair,
+        current_pair,
+        prior_pair=prior_pair,
+    ).edge_logits
 
 
 class UNetNodeTransformer(nn.Module):
@@ -572,9 +652,20 @@ def predict_dataset(
     detection_tta: bool,
     max_frames: int | None = None,
     temporal_graph_head: Any | None = None,
+    temporal_graph_fallback_head: Any | None = None,
 ) -> tuple[np.ndarray, list[tuple[int, int, float]]]:
+    if temporal_graph_fallback_head is not None and temporal_graph_head is None:
+        raise ValueError("a temporal graph fallback requires a primary temporal head")
     if temporal_graph_head is not None and window_size != 2:
         raise ValueError("temporal graph inference requires the frozen host window_size=2")
+    graph_window_size = 0
+    if temporal_graph_head is not None:
+        graph_window_size = _temporal_graph_window_size(temporal_graph_head)
+    if temporal_graph_fallback_head is not None:
+        _validate_temporal_graph_fallback_contract(
+            temporal_graph_head,
+            temporal_graph_fallback_head,
+        )
     frozen_pair_type: Any | None = None
     if temporal_graph_head is not None:
         from temporal_graph import FrozenPair
@@ -619,7 +710,7 @@ def predict_dataset(
     offsets: dict[int, tuple[int, int]] = {}
     node_count = 0
     edges: list[tuple[int, int, float]] = []
-    previous_pair: Any | None = None
+    pair_history: list[Any] = []
     previous_target_frame: int | None = None
 
     for window_number, start in enumerate(starts):
@@ -677,7 +768,7 @@ def predict_dataset(
             target_start, target_end = offsets[target_frame]
             if source_start == source_end or target_start == target_end:
                 if temporal_graph_head is not None:
-                    previous_pair = None
+                    pair_history.clear()
                     previous_target_frame = None
                 continue
 
@@ -733,13 +824,20 @@ def predict_dataset(
                     edge_logits=base_logits,
                 )
                 if previous_target_frame != source_frame:
-                    previous_pair = None
+                    pair_history.clear()
+                previous_pair = pair_history[-1] if pair_history else None
+                prior_pair = pair_history[-2] if len(pair_history) >= 2 else None
                 logits = _owned_transition_logits(
                     temporal_graph_head,
                     previous_pair,
                     current_pair,
+                    prior_pair=prior_pair,
+                    temporal_graph_fallback_head=temporal_graph_fallback_head,
                 )[0]
-                previous_pair = current_pair.detached()
+                pair_history.append(current_pair.detached())
+                history_limit = graph_window_size - 2
+                if len(pair_history) > history_limit:
+                    del pair_history[:-history_limit]
                 previous_target_frame = target_frame
             probabilities = torch.softmax(logits, dim=0).cpu().numpy()
             candidates = sorted(
@@ -1115,6 +1213,21 @@ def main() -> int:
         help="Second bounded-Attention checkpoint for controlled link combinations.",
     )
     parser.add_argument(
+        "--temporal-graph-fallback-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional T_graph=3 MLP checkpoint for the second T_graph=4 transition.",
+    )
+    parser.add_argument(
+        "--temporal-graph-fallback-attention-checkpoint",
+        type=Path,
+        default=None,
+        help=(
+            "Optional T_graph=3 bounded-Attention checkpoint paired with the "
+            "fallback MLP."
+        ),
+    )
+    parser.add_argument(
         "--temporal-link-mode",
         choices=(
             "single",
@@ -1193,6 +1306,7 @@ def main() -> int:
         bundle_config,
     )
     temporal_graph_head = None
+    temporal_graph_fallback_head = None
     if args.temporal_link_mode == "single":
         if args.temporal_graph_attention_checkpoint is not None:
             raise ValueError(
@@ -1256,6 +1370,42 @@ def main() -> int:
             f"attention={attention_checkpoint}",
             flush=True,
         )
+    fallback_checkpoint = args.temporal_graph_fallback_checkpoint
+    fallback_attention_checkpoint = args.temporal_graph_fallback_attention_checkpoint
+    if (fallback_checkpoint is None) != (fallback_attention_checkpoint is None):
+        raise ValueError(
+            "T_graph=4 fallback requires both the MLP and Attention checkpoints"
+        )
+    if fallback_checkpoint is not None:
+        if temporal_graph_head is None:
+            raise ValueError("T_graph=4 fallback requires a primary temporal checkpoint")
+        fallback_mlp_head = _load_temporal_graph_head(
+            fallback_checkpoint.expanduser(),
+            args.bundle_dir,
+            device,
+        )
+        fallback_attention_head = _load_temporal_graph_head(
+            fallback_attention_checkpoint.expanduser(),
+            args.bundle_dir,
+            device,
+        )
+        from temporal_graph import TemporalGraphLinkEnsemble
+
+        temporal_graph_fallback_head = TemporalGraphLinkEnsemble(
+            fallback_mlp_head,
+            fallback_attention_head,
+            mode="bounded_logit_5050",
+            logit_bound=args.ensemble_logit_bound,
+        ).eval()
+        _validate_temporal_graph_fallback_contract(
+            temporal_graph_head,
+            temporal_graph_fallback_head,
+        )
+        print(
+            "T_graph=3 bounded-logit fallback enabled: "
+            f"mlp={fallback_checkpoint}, attention={fallback_attention_checkpoint}",
+            flush=True,
+        )
     if args.minimum_component_nodes <= 0:
         raise ValueError("minimum_component_nodes must be positive")
     datasets = sorted(args.test_dir.glob("*.zarr"))
@@ -1290,6 +1440,7 @@ def main() -> int:
                 detection_tta,
                 args.max_frames,
                 temporal_graph_head,
+                temporal_graph_fallback_head,
             )
         if len(coords) == 0:
             raise RuntimeError(

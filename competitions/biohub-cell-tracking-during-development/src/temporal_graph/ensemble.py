@@ -101,7 +101,14 @@ class TemporalGraphLinkEnsemble(nn.Module):
         self,
         previous_pair: FrozenPair | RightTransitionTriplet,
         current_pair: FrozenPair | None = None,
+        *,
+        prior_pair: FrozenPair | None = None,
     ) -> TemporalGraphOutput:
+        graph_window_size = self.mlp_head.config.graph_window_size
+        if graph_window_size == 4 and prior_pair is None:
+            raise ValueError("prior_pair is required when graph_window_size=4")
+        if graph_window_size == 3 and prior_pair is not None:
+            raise ValueError("prior_pair must be omitted when graph_window_size=3")
         if isinstance(previous_pair, RightTransitionTriplet):
             if current_pair is not None:
                 raise ValueError("current_pair must be omitted when passing a triplet")
@@ -130,6 +137,8 @@ class TemporalGraphLinkEnsemble(nn.Module):
             previous,
             current,
             candidates,
+            prior_pair=prior_pair,
+            graph_window_size=graph_window_size,
             distance_scale_um=self.mlp_head.config.distance_scale_um,
             middle_coord_atol=self.mlp_head.config.middle_coord_atol,
         )

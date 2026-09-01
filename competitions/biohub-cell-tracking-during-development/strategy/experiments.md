@@ -275,23 +275,57 @@ Checkpoint SHA-256:
   <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0014-tgraph3-mlp-e3-submit>, version 1,
   emitted 162,881 nodes and 155,875 edges in 320.605 inference seconds. CSV SHA-256 is
   `62699d43be4d9040f7344fcfbce5f3a5d0620de46eb2b9df9e4613f619d6310e`; submission ref
-  `55943665` is pending.
+  `55943665` scored 0.893 public.
 - Arm B Notebook
   <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0014-tgraph3-bounded-attn-e3-submit>, version 1,
   emitted 162,882 nodes and 155,877 edges in 320.751 seconds. CSV SHA-256 is
   `b33e01cd77f8280eee94fd57ddf8a99e5d72584b0db928b55d376f65d6274614`; submission ref
-  `55943911` is pending.
+  `55943911` scored 0.893 public.
 - Arm C Notebook
   <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0014-tgraph3-bounded-logit-5050-submit>, version 1,
   emitted 162,872 nodes and 155,868 edges in 341.934 seconds. CSV SHA-256 is
   `159b6170eb971001609f2e6aaced013c4fd026ac53a0b73ce68a7542cd0911b5`; submission ref
-  `55943722` is pending.
+  `55943722` scored 0.893 public.
 - Arm D Notebook
   <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0014-tgraph3-agreement-gate-submit>, version 1,
   emitted 162,863 nodes and 155,865 edges in 307.066 seconds. CSV SHA-256 is
   `68e9ef756433c6778e7560027997e0a5b04a829807b285c8bd2cb0cc56abedba`; submission ref
-  `55944373` is pending. The CSV is byte-identical to Host-only min7 ref `55829542` on the public
+  `55944373` scored 0.893 public. The CSV is byte-identical to Host-only min7 ref `55829542` on the public
   clips, so the agreement gate made no public-input graph changes.
+- All four link policies tied the Host-only min7 control at 0.893. H017 is rejected for these
+  checkpoints: architectural diversity and the 30 local disagreements did not translate into a
+  measurable LB difference. EXP-0015 therefore changes temporal evidence itself with
+  `T_graph=4`, while retaining arm C as the fixed score-combination policy.
+
+### EXP-0015
+
+- This is the controlled `T_graph=4` successor to EXP-0014 C. The image model remains
+  `T_image=2`; detections, Host logits, top-8/15 µm candidates, division handling, and
+  min-component-7 post-processing stay frozen. The first transition uses Host, the second uses
+  the exact EXP-0014 C T3 bounded-logit ensemble, and later transitions use the T4 ensemble.
+- Cache schema v2 adds four features to the T3 width: a normalized constant-acceleration target
+  residual in xyz and the probability mass with valid second-history support. The probability is
+  re-normalized over valid prior parents before both historical expectations are computed; a row
+  with no second-history mass receives four exact zeros. The resulting feature width is 110.
+- The full cache contains 104,350 training and 9,496 validation examples. Construction took
+  1,973.579 seconds and retained sparse-parent candidate recall of 0.998211 and 0.998633. Cache
+  fingerprint is `44db840466c86e93b1b76ba5a5b5a04ad4d3c3160ee745d9689e3ceaabea871d`;
+  enriched manifest SHA-256 is
+  `78f01de4b4659b8e34690097616bc360be9742b377d97489b6451787a80f38e2`.
+- The MLP completed ten epochs in 12.372 seconds and retained epoch 8 at 0.922704 (W&B
+  `c892282b`, checkpoint SHA-256
+  `669d6104e2c8a2ab476a278bdcf9f88a792717a6dc02c79061dff50cf8585b56`). The bounded Attention
+  head completed ten epochs in 13.022 seconds and retained epoch 5 at 0.923126 (W&B `5981b97c`,
+  checkpoint SHA-256
+  `b93091c28f6171015842c633a7b6c79db0273a6cc7e8fd5fa9ae672574a42ba1`).
+- On the exact 9,496-row validation cache, Host gets 8,758 links correct; MLP gets 8,762,
+  Attention gets 8,766, and the fixed centered ±0.15 bounded-logit 50:50 ensemble gets 8,759.
+  The deployment ensemble fixes two Host mistakes and regresses one Host-correct link. The heads
+  disagree on 74 rows. This passes the direction-only local gate, but its +1-link margin is too
+  small to claim a robust gain before the controlled Kaggle comparison.
+- The packaged private Dataset binds both T4 heads, both immutable T3 startup-fallback heads, the
+  frozen Host, and integrated inference with a content-addressed manifest. The one authorized
+  Notebook submission is being compared directly with EXP-0014 C ref `55943722` at 0.893.
 
 ### EXP-0013
 
