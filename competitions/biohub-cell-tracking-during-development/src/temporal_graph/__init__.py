@@ -17,6 +17,7 @@ from .contracts import (
     TemporalGraphConfig,
     TemporalGraphOutput,
 )
+from .ensemble import TEMPORAL_LINK_MODES, TemporalGraphLinkEnsemble
 from .model import TemporalGraphResidualHead, TemporalGraphResidualScorer
 
 __all__ = [
@@ -28,6 +29,7 @@ __all__ = [
     "RightTransitionTriplet",
     "TemporalGraphCheckpoint",
     "TemporalGraphConfig",
+    "TemporalGraphLinkEnsemble",
     "TemporalGraphOutput",
     "TemporalGraphResidualHead",
     "TemporalGraphResidualScorer",
@@ -36,4 +38,5 @@ __all__ = [
     "candidate_feature_dim",
     "expected_previous_parent_statistics",
     "refine_logits",
+    "TEMPORAL_LINK_MODES",
 ]

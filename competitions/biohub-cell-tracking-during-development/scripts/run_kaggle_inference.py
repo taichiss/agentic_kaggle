@@ -786,6 +786,8 @@ def postprocess_prediction(
     coords: np.ndarray,
     raw_edges: list[tuple[int, int, float]],
     voxel_size_um: tuple[float, float, float],
+    *,
+    minimum_component_nodes: int = 6,
 ) -> tuple[np.ndarray, list[tuple[int, int]], dict[str, int | float]]:
     """Apply the artifact-free topology repairs used by the public 0.926 harness.
 
@@ -793,6 +795,8 @@ def postprocess_prediction(
     gap nodes, and eight-view TTA. Those are additional models or inference changes rather
     than post-processing that can be applied to this checkpoint's frozen predictions.
     """
+    if minimum_component_nodes <= 0:
+        raise ValueError("minimum_component_nodes must be positive")
     if len(coords) == 0:
         return coords, [], {"raw_nodes": 0, "raw_edges": len(raw_edges)}
 
@@ -992,7 +996,7 @@ def postprocess_prediction(
     kept_ids: set[int] = set()
     for members in components.values():
         has_division = any(outdegree.get(node_id, 0) >= 2 for node_id in members)
-        if len(members) >= 6 or has_division:
+        if len(members) >= minimum_component_nodes or has_division:
             kept_ids.update(members)
     if not kept_ids:
         kept_ids = incident
@@ -1049,6 +1053,7 @@ def postprocess_prediction(
         "motion_tight_edges": tight_edges,
         "motion_relaxed_edges": relaxed_edges,
         "safe_divisions_added": len(division_edges),
+        "minimum_component_nodes": minimum_component_nodes,
         "short_or_isolated_nodes_removed": len(coords) - len(output_coords),
         "nodes": len(output_coords),
         "edges": len(output_edges),
@@ -1103,12 +1108,31 @@ def main() -> int:
             f"{TEMPORAL_GRAPH_ENV} or config.json."
         ),
     )
+    parser.add_argument(
+        "--temporal-graph-attention-checkpoint",
+        type=Path,
+        default=None,
+        help="Second bounded-Attention checkpoint for controlled link combinations.",
+    )
+    parser.add_argument(
+        "--temporal-link-mode",
+        choices=(
+            "single",
+            "mlp",
+            "bounded_attention",
+            "bounded_logit_5050",
+            "agreement_gate",
+        ),
+        default="single",
+    )
+    parser.add_argument("--ensemble-logit-bound", type=float, default=0.15)
     parser.add_argument("--max-datasets", type=int, default=None)
     parser.add_argument("--max-frames", type=int, default=None)
     parser.add_argument(
         "--postprocess-profile",
         choices=("none", "public-applicable-v1"),
     )
+    parser.add_argument("--minimum-component-nodes", type=int, default=6)
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -1169,7 +1193,37 @@ def main() -> int:
         bundle_config,
     )
     temporal_graph_head = None
-    if temporal_graph_checkpoint is not None:
+    if args.temporal_link_mode == "single":
+        if args.temporal_graph_attention_checkpoint is not None:
+            raise ValueError(
+                "attention checkpoint requires an explicit comparative temporal-link mode"
+            )
+        if temporal_graph_checkpoint is not None:
+            if profile is not None:
+                raise ValueError(
+                    "temporal graph residual is not part of the finalized corrected_v2 profile"
+                )
+            if window_size != 2:
+                raise ValueError(
+                    "temporal graph inference keeps T_image=2; bundle window_size must be 2"
+                )
+            temporal_graph_head = _load_temporal_graph_head(
+                temporal_graph_checkpoint,
+                args.bundle_dir,
+                device,
+            )
+            print(
+                f"temporal graph residual enabled: {temporal_graph_checkpoint}",
+                flush=True,
+            )
+    else:
+        if temporal_graph_checkpoint is None:
+            raise ValueError("comparative temporal-link modes require the MLP checkpoint")
+        attention_checkpoint = args.temporal_graph_attention_checkpoint
+        if attention_checkpoint is None:
+            raise ValueError(
+                "comparative temporal-link modes require the Attention checkpoint"
+            )
         if profile is not None:
             raise ValueError(
                 "temporal graph residual is not part of the finalized corrected_v2 profile"
@@ -1178,15 +1232,32 @@ def main() -> int:
             raise ValueError(
                 "temporal graph inference keeps T_image=2; bundle window_size must be 2"
             )
-        temporal_graph_head = _load_temporal_graph_head(
+        mlp_head = _load_temporal_graph_head(
             temporal_graph_checkpoint,
             args.bundle_dir,
             device,
         )
+        attention_head = _load_temporal_graph_head(
+            attention_checkpoint,
+            args.bundle_dir,
+            device,
+        )
+        from temporal_graph import TemporalGraphLinkEnsemble
+
+        temporal_graph_head = TemporalGraphLinkEnsemble(
+            mlp_head,
+            attention_head,
+            mode=args.temporal_link_mode,
+            logit_bound=args.ensemble_logit_bound,
+        ).eval()
         print(
-            f"temporal graph residual enabled: {temporal_graph_checkpoint}",
+            "temporal link comparison enabled: "
+            f"mode={args.temporal_link_mode}, mlp={temporal_graph_checkpoint}, "
+            f"attention={attention_checkpoint}",
             flush=True,
         )
+    if args.minimum_component_nodes <= 0:
+        raise ValueError("minimum_component_nodes must be positive")
     datasets = sorted(args.test_dir.glob("*.zarr"))
     if args.max_datasets is not None:
         datasets = datasets[: args.max_datasets]
@@ -1230,6 +1301,7 @@ def main() -> int:
                 coords,
                 edges,
                 tuple(float(value) for value in metadata["scale"]),
+                minimum_component_nodes=args.minimum_component_nodes,
             )
             if len(coords) == 0 or len(edges) == 0:
                 raise RuntimeError(
