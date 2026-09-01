@@ -13,7 +13,7 @@ run ID, or checksum sufficient to identify them.
 | EXP-0009 | 2026-08-28 | H011 three-frame residual improves continuation-edge selection over frozen e30 host logits | official 2026-08-26 inventory + frozen EXP-0004 e30 | `6b88560` | `configs/exp-0009-host-tgraph3-residual-30e.toml` | 20260828 / embryo fold 0 (`44b6` held out) | base 0.922163; best 0.922684 at e3 (+0.000521); e30 0.920704 (-0.001459) | e30 ref `55843163`: **0.891**; local-best e3 ref `55854853`: 0.890 | `artifacts/EXP-0009/`; W&B `70f9278e`; e30 Notebook v2 `345596422` | e30 beats both control and local-best e3, confirming proxy/LB mismatch | retain e30 and improve checkpoint ranking |
 | EXP-0011 | 2026-08-28 | H014 candidate-set self-attention improves parent choice by modelling competition among the nearest eight candidates | frozen EXP-0009 cache `c5e97a56`; frozen EXP-0004 e30 logits | `7277812` + experiment working tree | `configs/exp-0011-tgraph3-candidate-attention-10e.toml` | 20260828 / identical EXP-0009 calibration split | base 0.922163; best 0.922372 at e1 (+2 links); e10 0.920704 (-14 links); MLP best 0.922684 (+5 links) | not_submitted | `artifacts/EXP-0011/`; W&B `693a7de8` | attention lowers CE more but does not beat the independent MLP; residual magnitude, not candidate interaction capacity, is the immediate limiter | test a bounded residual scale/gate before any cache-v2 temporal GNN/GRU |
 | EXP-0012 | 2026-08-29 | H015 centered, smoothly bounded attention residuals preserve host-correct links while fixing ambiguous links | frozen EXP-0009 cache `c5e97a56`; frozen EXP-0004 e30 logits | `7277812` + experiment working tree | `configs/exp-0012-tgraph3-bounded-attention-10e.toml` | 20260828 / identical EXP-0009 calibration split | base 0.922163; best **0.923101 at e3** (+9 links); e10 0.922476 (+3 links); MLP best 0.922684 (+5 links) | not_submitted | `artifacts/EXP-0012/`; W&B `9d75368c` | valid-candidate centering plus ±0.15 tanh bound converts Attention from net regression to the best local parent-accuracy result | retain e3 best; verify on independent report/LB only after explicit submission request |
-| EXP-0014 | 2026-09-02 | H017 complementary MLP and bounded-Attention link errors can improve the fixed Host graph through score-level combination or agreement gating | frozen EXP-0004 e30 Host + EXP-0009/0012 e3 heads; cache `c5e97a56` | `1520276` + experiment working tree | `configs/exp-0014-tgraph3-link-ensemble-abcd.toml` | 20260902 / identical EXP-0009 calibration split | Host 0.922163; MLP 0.922684; Attention **0.923101**; bounded 50:50 0.922372; gate 0.922476 | four arms authorized | shared Dataset + four private GPU Notebooks | Attention leads locally; LB probes test metric mismatch and complementary graph-level effects with min-component 7 fixed | submit A/B/C/D and compare directly with Host-only min7 ref `55829542` at 0.893 |
+| EXP-0014 | 2026-09-02 | H017 complementary MLP and bounded-Attention link errors can improve the fixed Host graph through score-level combination or agreement gating | frozen EXP-0004 e30 Host + EXP-0009/0012 e3 heads; cache `c5e97a56` | `bf1ee23` | `configs/exp-0014-tgraph3-link-ensemble-abcd.toml` | 20260902 / identical EXP-0009 calibration split | Host 0.922163; MLP 0.922684; Attention **0.923101**; bounded 50:50 0.922372; gate 0.922476 | A `55943665`, B `55943911`, C `55943722`, D `55944373`; all pending | Dataset v1 + four private GPU Notebook v1 outputs under `artifacts/EXP-0014/` | all four output contracts passed; agreement gate exactly matches Host min7 on the public clips | read all four scores and compare directly with Host-only min7 ref `55829542` at 0.893 |
 | EXP-0010 | 2026-08-28 | H012/H013 remaining error can be separated into short false tracks versus missed long-displacement links | frozen EXP-0004 e30 model / public test | `6b88560` | `configs/exp-0010-postprocess-ab.toml` | fixed checkpoint and inference profile | structural gate only; no new heavy CV | corrected min7 ref `55829542`: **0.893**; gate12 ref `55828801`: 0.884 | private Notebook v1 outputs under `artifacts/EXP-0010/` | pruning six-node tracks improves the fixed 0.890 control; widening the relink gate hurts | adopt min7 and reject gate12 |
 | EXP-0013 | 2026-08-29 | H016 min-component 7 transfers to EXP-0008 EMA epoch 30 | official data + fixed EMA e30 wrapper `5a2d5fc` | `2207d45` + packaging working tree | `configs/exp-0013-exp0008-ema-e30-min7.toml` | 20260827 / fold 0; EMA proxy 0.929642 | competition screen pending until EXP-0008 reaches e50 | min-7 ref `55866168`: 0.879; min-6 ref `55877003` pending | Dataset v2; min-7 Notebook v2; min-6 Notebook v1; `artifacts/EXP-0013/` | min-7 transfer is below the established EXP-0004 controls; paired min-6 scoring will isolate the post-process effect | read min-6 LB and compare directly with 0.879 |
 
@@ -268,6 +268,30 @@ Checkpoint SHA-256:
 - On the 9,597-row calibration cache, the heads disagree on only 30 rows. Local top-1 is 0.922684
   for MLP, 0.923101 for Attention, 0.922372 for bounded 50:50, and 0.922476 for the agreement gate,
   against Host 0.922163. These are diagnostics, not the competition selection metric.
+- Shared private Dataset
+  <https://www.kaggle.com/datasets/suzukitaichi/biohub-exp-0014-tgraph3-link-abcd>, version 1,
+  binds manifest SHA-256 `9e9457c34a414b7d5aa055deb01e5d27de73f1d4f17779e8b56d950ad4f51cbf`.
+- Arm A Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0014-tgraph3-mlp-e3-submit>, version 1,
+  emitted 162,881 nodes and 155,875 edges in 320.605 inference seconds. CSV SHA-256 is
+  `62699d43be4d9040f7344fcfbce5f3a5d0620de46eb2b9df9e4613f619d6310e`; submission ref
+  `55943665` is pending.
+- Arm B Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0014-tgraph3-bounded-attn-e3-submit>, version 1,
+  emitted 162,882 nodes and 155,877 edges in 320.751 seconds. CSV SHA-256 is
+  `b33e01cd77f8280eee94fd57ddf8a99e5d72584b0db928b55d376f65d6274614`; submission ref
+  `55943911` is pending.
+- Arm C Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0014-tgraph3-bounded-logit-5050-submit>, version 1,
+  emitted 162,872 nodes and 155,868 edges in 341.934 seconds. CSV SHA-256 is
+  `159b6170eb971001609f2e6aaced013c4fd026ac53a0b73ce68a7542cd0911b5`; submission ref
+  `55943722` is pending.
+- Arm D Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0014-tgraph3-agreement-gate-submit>, version 1,
+  emitted 162,863 nodes and 155,865 edges in 307.066 seconds. CSV SHA-256 is
+  `68e9ef756433c6778e7560027997e0a5b04a829807b285c8bd2cb0cc56abedba`; submission ref
+  `55944373` is pending. The CSV is byte-identical to Host-only min7 ref `55829542` on the public
+  clips, so the agreement gate made no public-input graph changes.
 
 ### EXP-0013
 

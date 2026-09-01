@@ -65,8 +65,10 @@
   0.923101 by fixing 12 host mistakes while regressing three host-correct links, exceeding the MLP
   best by four correct links. Epoch 10 remained above the frozen host at 0.922476.
 - EXP-0014 freezes the Host, detections, candidate geometry, division logic, and min-component-7
-  post-process across four authorized temporal-link arms: MLP e3, bounded Attention e3, centered
-  bounded 50:50 logits, and an agreement-gated bounded Attention correction.
+  post-process across MLP e3, bounded Attention e3, centered bounded 50:50 logits, and an
+  agreement-gated correction. All four Notebook version-1 outputs passed the four-dataset contract
+  and were submitted as refs `55943665`, `55943911`, `55943722`, and `55944373`; all are pending.
+  Agreement gating produced a public-input CSV byte-identical to Host-only min7.
 - EXP-0013 exported the fixed EXP-0008 EMA epoch-30 state and transferred only the proven
   minimum-component 7 post-process. Notebook version 2 emitted 169,090 nodes and 161,789 edges;
   submission ref `55866168` scored 0.879. The identical-weight min-6 control is required before
@@ -109,14 +111,14 @@
 | H014 | Candidate-set attention improves ambiguous parent selection over independent candidate scoring | 97.5% of validation rows have multiple candidates and attention can compare their host margin and motion jointly | ten-epoch best does not exceed EXP-0009 MLP best 0.922684 | rejected in tested form |
 | H015 | Centering and bounding Attention residuals preserves confident host links while correcting ambiguous choices | unbounded e10 fixed 52 but regressed 66; a ±0.15 pairwise-safe correction limits destructive flips | bounded ten-epoch best does not exceed MLP best 0.922684 | locally accepted at 0.923101; report/LB unverified |
 | H016 | The min-component-7 precision correction transfers to the independently trained EXP-0008 EMA checkpoint | the identical change improved EXP-0004 e30 from 0.890 to 0.893 | an identical-weight EXP-0008 min-6 control matches or beats min-7 | min-7 scored 0.879; min-6 ref `55877003` pending |
-| H017 | MLP and bounded-Attention temporal-link errors are complementary enough for score-level combination or agreement gating to improve the fixed Host graph | the two e3 heads differ architecturally and disagree on 30/9,597 calibration rows | no A/B/C/D arm exceeds Host-only min-7 ref `55829542` at 0.893 | four-arm LB test authorized |
+| H017 | MLP and bounded-Attention temporal-link errors are complementary enough for score-level combination or agreement gating to improve the fixed Host graph | the two e3 heads differ architecturally and disagree on 30/9,597 calibration rows | no A/B/C/D arm exceeds Host-only min-7 ref `55829542` at 0.893 | four-arm LB test submitted; pending |
 | H012 | Remaining node-count penalty is driven partly by transient six-node tracks | epoch-30 control is penalized for excess nodes; min-7 removes 4,212 nodes while retaining division components | fixed-checkpoint public LB does not exceed 0.890 | accepted at 0.893 |
 | H013 | Remaining edge error is recall-limited and benefits from a wider relaxed motion gate | epoch-30 screen recall 0.7849 trails precision 0.8538; 12 µm adds 2,676 relaxed links on public test clips | fixed-checkpoint public LB does not exceed 0.890 | rejected at 0.884 |
 
 ## Priority Plan
 
-1. Submit the four EXP-0014 temporal-link arms with min-component 7 fixed and compare them with
-   Host-only ref `55829542` at 0.893.
+1. Read the four pending EXP-0014 temporal-link scores and compare them with Host-only ref
+   `55829542` at 0.893.
 2. Read EXP-0013 min-6 ref `55877003` and compare it directly with min-7 ref `55866168` at 0.879.
 3. Retain EXP-0009 epoch 30 at 0.891; do not use local top-1 alone for checkpoint selection.
 4. Retain EXP-0012 epoch 3 and verify it on an independent report subset before increasing
@@ -163,4 +165,5 @@
 - [ ] Verify EXP-0012 best epoch 3 on an independent report subset or LB after explicit approval.
 - [x] Submit EXP-0008 EMA epoch 30 with min-component 7 as EXP-0013 (ref `55866168`).
 - [x] Submit the identical EXP-0008 EMA epoch-30 min-component-6 control (ref `55877003`).
-- [ ] Submit the four EXP-0014 temporal-link arms with one shared content-addressed Dataset.
+- [x] Submit the four EXP-0014 temporal-link arms with one shared content-addressed Dataset (refs
+  `55943665`, `55943911`, `55943722`, and `55944373`).
