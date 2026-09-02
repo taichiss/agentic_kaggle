@@ -100,9 +100,22 @@ dataset_title = "Biohub EXP-0015 TGraph4 Link 5050"
 kernel_id = "suzukitaichi/biohub-exp-0015-tgraph4-bounded-logit-5050-submit"
 kernel_title = "Biohub EXP-0015 TGraph4 Bounded Logit 5050 Submit"
 submission_message = "EXP-0015 T_graph=4 bounded-logit 50:50 min-component-7"
-status = "planned"
+status = "submitted-pending"
 requires_explicit_request = true
 authorized_at = "2026-09-02"
+dataset_version = 1
+kernel_version = 2
+bundle_manifest_sha256 = "37df05d112df7b750782906fb573663a7ab2f6d8270a95ffcd2219802df43f38"
+inference_script_sha256 = "fd71e3265b1d13591e8acec0aa597607d1ca42c7900c83d74f97138557b17d29"
+file_sha256 = "70ce6dcfa9c01fd0dfe107c094e65daf9b32c32b3c0da527c383355131e24c1b"
+rows = 318751
+nodes = 162877
+edges = 155874
+inference_seconds = 321.186
+submission_api = "code"
+submission_ref = 55949925
+submitted_at = "2026-09-02T00:01:25.057000Z"
+plain_file_submit_result = "rejected: Code Submission API required"
 
 [output]
 artifact_dir = "artifacts/EXP-0015"

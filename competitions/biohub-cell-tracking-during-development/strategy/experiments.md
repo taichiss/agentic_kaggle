@@ -324,8 +324,18 @@ Checkpoint SHA-256:
   disagree on 74 rows. This passes the direction-only local gate, but its +1-link margin is too
   small to claim a robust gain before the controlled Kaggle comparison.
 - The packaged private Dataset binds both T4 heads, both immutable T3 startup-fallback heads, the
-  frozen Host, and integrated inference with a content-addressed manifest. The one authorized
-  Notebook submission is being compared directly with EXP-0014 C ref `55943722` at 0.893.
+  frozen Host, and integrated inference with content-addressed manifest SHA-256
+  `37df05d112df7b750782906fb573663a7ab2f6d8270a95ffcd2219802df43f38`. Dataset
+  `suzukitaichi/biohub-exp-0015-tgraph4-link-5050` version 1 is attached to Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0015-tgraph4-bounded-logit-5050-submit>,
+  version 2.
+- Notebook inference completed in 321.186 seconds and emitted 162,877 nodes plus 155,874 edges
+  across all four datasets. The 318,751-row CSV passed both competition-specific and generic
+  validators; SHA-256 is
+  `70ce6dcfa9c01fd0dfe107c094e65daf9b32c32b3c0da527c383355131e24c1b`. The normal file-upload
+  API was rejected because this is a Code Competition; Notebook version 2 was then submitted via
+  the Code Submission API as ref `55949925`. It is pending and is the direct comparison with
+  EXP-0014 C ref `55943722` at 0.893.
 
 ### EXP-0013
 
