@@ -349,10 +349,27 @@ Checkpoint SHA-256:
   width, pair adjacency, source checkpoint, and cache fingerprint are fail-closed.
 - One-dataset/three-transition smoke completed on GPU with train/validation candidate recall 1.0,
   finite 114-column payloads, and 805,580,800 peak allocated bytes. W&B run `d7892627` records the
-  smoke. The full cache W&B run `952d942a` is in progress.
+  smoke. The full schema-v3 cache contains 103,342 training and 9,401 validation examples; its
+  candidate recall is 0.998194 and 0.998619. Construction took 1,875.990 seconds under W&B run
+  `952d942a`. Cache fingerprint is
+  `0aa5c2d2924e4c940f284918013026c7e016e7e93f82629991ab58b48fd5a739`; manifest SHA-256 is
+  `a56e8143b51dca75101ccd809ae2d05a0c1fab7448eb319315a9944a6033741a`.
+- The T5 MLP completed ten epochs in 11.816 seconds and retained epoch 9 at 0.922455 (W&B
+  `d4e31ff8`, checkpoint SHA-256
+  `186159abf90c584e39a8da3781641fe24f6063c801e2b23eb36292cf6812833a`). Bounded Attention
+  completed ten epochs in 13.425 seconds and retained epoch 6 at 0.922987 (W&B `e2d2de10`,
+  checkpoint SHA-256
+  `6f8cd3ccff4a1b266bdec400cba7f099726e6263d95dac9ed117dcd8b9283190`). Epoch-5 and epoch-10
+  periodic checkpoints were retained for both heads.
+- On the exact 9,401-row cache, Host, MLP, bounded Attention, and the fixed centered bounded-logit
+  50:50 ensemble get 8,668, 8,672, 8,677, and 8,669 parent links correct. The deployment ensemble
+  fixes two Host mistakes and regresses one Host-correct link, again leaving only a +1-link local
+  signal. MLP and Attention disagree on 76 rows.
 - The fixed deployment contains six compact heads: T5 MLP/Attention primary, immutable EXP-0015
   T4 MLP/Attention fallback, and immutable EXP-0009/EXP-0012 T3 MLP/Attention fallback. Every
-  tier uses centered ±0.15 bounded-logit 50:50 combination.
+  tier uses centered ±0.15 bounded-logit 50:50 combination. The content-addressed bundle binds
+  all six checkpoints and the frozen Host in manifest SHA-256
+  `94e63f697ddf348a2abc80f0ead4fade70b21254ef3b354468802fe5bd740058`.
 
 ### EXP-0013
 
