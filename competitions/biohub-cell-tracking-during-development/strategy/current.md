@@ -83,6 +83,7 @@
   retaining `T_image=2`. Its full cache contains 103,342 training and 9,401 validation examples.
   Best MLP epoch 9 and bounded-Attention epoch 6 reach 0.922455 and 0.922987 locally; the fixed
   50:50 deployment reaches 0.922136 versus Host 0.922030, fixing two links and regressing one.
+  Notebook version 1 produced a valid 318,778-row CSV and was submitted as ref `55957329`, pending.
 - EXP-0013 exported the fixed EXP-0008 EMA epoch-30 state and transferred only the proven
   minimum-component 7 post-process. Notebook version 2 emitted 169,090 nodes and 161,789 edges;
   submission ref `55866168` scored 0.879. The identical-weight min-6 control is required before

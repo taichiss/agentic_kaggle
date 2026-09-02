@@ -370,6 +370,13 @@ Checkpoint SHA-256:
   tier uses centered ±0.15 bounded-logit 50:50 combination. The content-addressed bundle binds
   all six checkpoints and the frozen Host in manifest SHA-256
   `94e63f697ddf348a2abc80f0ead4fade70b21254ef3b354468802fe5bd740058`.
+- Private Dataset `suzukitaichi/biohub-exp-0016-tgraph5-link-5050` version 1 is attached to GPU,
+  internet-disabled Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0016-tgraph5-bounded-logit-5050-submit>,
+  version 1. The Notebook completed and emitted 162,892 nodes plus 155,886 edges across all four
+  datasets. The 318,778-row CSV passed both validators; SHA-256 is
+  `57c3b1c6042fe82ab9acc6f28bebeabf95ab8b696600b097a0c725076173a8a6`. Code Submission ref
+  `55957329` is pending.
 
 ### EXP-0013
 
