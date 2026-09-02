@@ -1,4 +1,4 @@
-"""Focused tests for optional T_graph=3/4 submission inference wiring."""
+"""Focused tests for optional T_graph=3/4/5 submission inference wiring."""
 
 from __future__ import annotations
 
@@ -183,6 +183,80 @@ def test_t4_uses_t3_fallback_until_prior_pair_is_available() -> None:
     ]
 
 
+def test_t5_uses_t3_then_t4_fallback_before_primary() -> None:
+    module = _load_script()
+    base = torch.tensor([[[1.0]]])
+    t3_logits = torch.tensor([[[2.0]]])
+    t4_logits = torch.tensor([[[3.0]]])
+    primary_logits = torch.tensor([[[4.0]]])
+    oldest, prior, previous = object(), object(), object()
+    current = SimpleNamespace(edge_logits=base)
+    calls: list[tuple[str, object, object, object | None, object | None]] = []
+
+    class PrimaryHead:
+        config = _graph_config(5)
+
+        def __call__(self, left, right, *, prior_pair, oldest_pair):
+            calls.append(("primary", left, right, prior_pair, oldest_pair))
+            return SimpleNamespace(edge_logits=primary_logits)
+
+    class T3FallbackHead:
+        config = _graph_config(3)
+
+        def __call__(self, left, right):
+            calls.append(("t3", left, right, None, None))
+            return SimpleNamespace(edge_logits=t3_logits)
+
+    class T4FallbackHead:
+        config = _graph_config(4)
+
+        def __call__(self, left, right, *, prior_pair):
+            calls.append(("t4", left, right, prior_pair, None))
+            return SimpleNamespace(edge_logits=t4_logits)
+
+    head = PrimaryHead()
+    t3_fallback = T3FallbackHead()
+    t4_fallback = T4FallbackHead()
+    assert (
+        module._owned_transition_logits(
+            head,
+            previous,
+            current,
+            temporal_graph_fallback_head=t3_fallback,
+            temporal_graph_t4_fallback_head=t4_fallback,
+        )
+        is t3_logits
+    )
+    assert (
+        module._owned_transition_logits(
+            head,
+            previous,
+            current,
+            prior_pair=prior,
+            temporal_graph_fallback_head=t3_fallback,
+            temporal_graph_t4_fallback_head=t4_fallback,
+        )
+        is t4_logits
+    )
+    assert (
+        module._owned_transition_logits(
+            head,
+            previous,
+            current,
+            prior_pair=prior,
+            oldest_pair=oldest,
+            temporal_graph_fallback_head=t3_fallback,
+            temporal_graph_t4_fallback_head=t4_fallback,
+        )
+        is primary_logits
+    )
+    assert calls == [
+        ("t3", previous, current, None, None),
+        ("t4", previous, current, prior, None),
+        ("primary", previous, current, prior, oldest),
+    ]
+
+
 def test_t4_fallback_candidate_contract_mismatch_fails_closed() -> None:
     module = _load_script()
     primary = SimpleNamespace(config=_graph_config(4))
@@ -190,6 +264,20 @@ def test_t4_fallback_candidate_contract_mismatch_fails_closed() -> None:
 
     with pytest.raises(ValueError, match="different candidate contracts: top_k"):
         module._validate_temporal_graph_fallback_contract(primary, fallback)
+
+
+def test_t5_rejects_a_non_t4_second_fallback() -> None:
+    module = _load_script()
+    primary = SimpleNamespace(config=_graph_config(5))
+    fallback = SimpleNamespace(config=_graph_config(3))
+
+    with pytest.raises(ValueError, match="fallback must use T_graph=4"):
+        module._validate_temporal_graph_fallback_contract(
+            primary,
+            fallback,
+            primary_window_size=5,
+            fallback_window_size=4,
+        )
 
 
 def test_pair_stream_reuses_middle_nodes_and_keeps_legacy_output(
@@ -336,6 +424,86 @@ def test_t4_pair_stream_rolls_two_history_pairs_and_uses_fallback(
     assert primary_calls == [
         ((0, 1), (1, 2), (2, 3)),
         ((1, 2), (2, 3), (3, 4)),
+    ]
+
+
+def test_t5_pair_stream_rolls_three_history_pairs_and_both_fallbacks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_script()
+    sys.path.insert(0, str(COMPETITION_ROOT / "src"))
+    host = _synthetic_frozen_host_stream(module, monkeypatch, frames=6)
+    t3_calls: list[tuple[tuple[int, int], tuple[int, int]]] = []
+    t4_calls: list[
+        tuple[tuple[int, int], tuple[int, int], tuple[int, int]]
+    ] = []
+    primary_calls: list[
+        tuple[
+            tuple[int, int],
+            tuple[int, int],
+            tuple[int, int],
+            tuple[int, int],
+        ]
+    ] = []
+
+    class PrimaryHead:
+        config = _graph_config(5)
+
+        def __call__(self, previous, current, *, prior_pair, oldest_pair):
+            primary_calls.append(
+                (
+                    _pair_frames(oldest_pair),
+                    _pair_frames(prior_pair),
+                    _pair_frames(previous),
+                    _pair_frames(current),
+                )
+            )
+            return SimpleNamespace(edge_logits=current.edge_logits)
+
+    class T3FallbackHead:
+        config = _graph_config(3)
+
+        def __call__(self, previous, current):
+            t3_calls.append((_pair_frames(previous), _pair_frames(current)))
+            return SimpleNamespace(edge_logits=current.edge_logits)
+
+    class T4FallbackHead:
+        config = _graph_config(4)
+
+        def __call__(self, previous, current, *, prior_pair):
+            t4_calls.append(
+                (
+                    _pair_frames(prior_pair),
+                    _pair_frames(previous),
+                    _pair_frames(current),
+                )
+            )
+            return SimpleNamespace(edge_logits=current.edge_logits)
+
+    coords, edges = module.predict_dataset(
+        host,
+        tmp_path,
+        torch.device("cpu"),
+        (1, 4, 4),
+        2,
+        0.99,
+        0.5,
+        5.0,
+        False,
+        6,
+        PrimaryHead(),
+        T3FallbackHead(),
+        T4FallbackHead(),
+    )
+
+    assert len(coords) == 6
+    assert len(edges) == 5
+    assert t3_calls == [((0, 1), (1, 2))]
+    assert t4_calls == [((0, 1), (1, 2), (2, 3))]
+    assert primary_calls == [
+        ((0, 1), (1, 2), (2, 3), (3, 4)),
+        ((1, 2), (2, 3), (3, 4), (4, 5)),
     ]
 
 

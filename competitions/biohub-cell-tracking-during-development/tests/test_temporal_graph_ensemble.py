@@ -209,6 +209,49 @@ def test_four_frame_ensemble_requires_adjacent_prior_pair() -> None:
         ensemble(previous, current, prior_pair=nonadjacent_prior)
 
 
+def test_five_frame_ensemble_requires_and_forwards_two_history_pairs() -> None:
+    oldest = _pair([-2.0], [-1.0], torch.zeros(1, 1, 1))
+    prior = _pair([-1.0], [0.0], torch.zeros(1, 1, 1))
+    previous, current = _triplet()
+    mlp = StubHead(
+        torch.tensor([[[-0.4, 0.4]]]),
+        architecture="mlp",
+        graph_window_size=5,
+    )
+    attention = StubHead(
+        torch.tensor([[[-0.1, 0.1]]]),
+        architecture="candidate_attention",
+        graph_window_size=5,
+    )
+    ensemble = TemporalGraphLinkEnsemble(
+        mlp,
+        attention,
+        mode="bounded_logit_5050",
+    )
+
+    with pytest.raises(ValueError, match="prior_pair is required"):
+        ensemble(previous, current)
+    with pytest.raises(ValueError, match="oldest_pair is required"):
+        ensemble(previous, current, prior_pair=prior)
+    output = ensemble(
+        previous,
+        current,
+        prior_pair=prior,
+        oldest_pair=oldest,
+    )
+
+    assert output.candidate_features.features.shape[-1] == 24
+
+    nonadjacent_oldest = _pair([-2.0], [4.0], torch.zeros(1, 1, 1))
+    with pytest.raises(ValueError, match="coordinates or node order"):
+        ensemble(
+            previous,
+            current,
+            prior_pair=prior,
+            oldest_pair=nonadjacent_oldest,
+        )
+
+
 def test_ensemble_rejects_graph_window_mismatch() -> None:
     mlp = StubHead(
         torch.zeros(1, 1, 2),

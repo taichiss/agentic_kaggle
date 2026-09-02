@@ -90,6 +90,24 @@ def _quadruplet(module):
     return prior, previous, current
 
 
+def _quintuplet(module):
+    oldest_pair = _pair(
+        module,
+        [[-2, 0, 0], [8, 0, 0]],
+        [[-1, 0, 0], [9, 0, 0]],
+        [[4, 0], [0, 4]],
+    )
+    oldest = module.ExtractedPair(
+        pair=oldest_pair,
+        source_coords_grid=oldest_pair.source_coords_um,
+        target_coords_grid=oldest_pair.target_coords_um,
+        source_matches=torch.tensor([[0, 1]]),
+        target_matches=torch.tensor([[0, 1]]),
+    )
+    prior, previous, current = _quadruplet(module)
+    return oldest, prior, previous, current
+
+
 def test_sparse_candidate_examples_mask_unknown_targets_and_count_recall():
     module = _load_script()
     previous, current = _triplet(module)
@@ -148,8 +166,8 @@ def test_tgraph4_sparse_examples_use_cache_schema_v2_and_wider_features():
 
     assert module._cache_schema_version(3) == 1
     assert module._cache_schema_version(4) == 2
-    with pytest.raises(ValueError, match="only graph_window_size 3 or 4"):
-        module._cache_schema_version(5)
+    with pytest.raises(ValueError, match="only graph_window_size 3, 4, or 5"):
+        module._cache_schema_version(6)
     with pytest.raises(TypeError, match="must be an integer"):
         module._cache_schema_version(4.0)
     assert examples.features.shape == (
@@ -158,6 +176,39 @@ def test_tgraph4_sparse_examples_use_cache_schema_v2_and_wider_features():
         module.candidate_feature_dim(2, graph_window_size=4),
     )
     assert examples.features.shape[-1] == module.candidate_feature_dim(2) + 4
+
+
+def test_tgraph5_sparse_examples_use_cache_schema_v3_and_jerk_features():
+    module = _load_script()
+    oldest, prior, previous, current = _quintuplet(module)
+    graph_config = module.TemporalGraphConfig(
+        node_feature_dim=2,
+        hidden_dim=4,
+        top_k=2,
+        radius_um=5.0,
+        graph_window_size=5,
+    )
+    gt_edges = torch.tensor([[[1.0, 0.0], [0.0, 0.0]]])
+
+    examples = module._build_sparse_candidate_examples(
+        previous,
+        current,
+        gt_edges,
+        graph_config,
+        prior=prior,
+        oldest=oldest,
+    )
+
+    assert module._cache_schema_version(5) == 3
+    assert module._cache_feature_schema(3) == (
+        "tgraph5-jerk-deep-history-features-v1"
+    )
+    assert examples.features.shape == (
+        1,
+        2,
+        module.candidate_feature_dim(2, graph_window_size=5),
+    )
+    assert examples.features.shape[-1] == module.candidate_feature_dim(2) + 8
 
 
 def test_zero_detection_matches_are_padded_and_sparse_cache_stays_empty():
@@ -268,6 +319,44 @@ def test_training_checkpoint_records_tgraph4_contract():
     assert payload["temporal_graph"]["metadata"]["cache_schema_version"] == 2
 
 
+def test_training_checkpoint_records_tgraph5_contract():
+    module = _load_script()
+    graph_config = module.TemporalGraphConfig(
+        node_feature_dim=2,
+        hidden_dim=4,
+        top_k=2,
+        radius_um=5.0,
+        graph_window_size=5,
+    )
+    head = module.TemporalGraphResidualHead(graph_config)
+    optimizer = torch.optim.AdamW(head.parameters(), lr=1e-4)
+    feature_width = module.candidate_feature_dim(2, graph_window_size=5)
+    payload = module._training_checkpoint(
+        config={"experiment_id": "EXP-T5"},
+        head=head,
+        optimizer=optimizer,
+        completed_epochs=5,
+        best_score=0.75,
+        graph_source_sha256="flattened-sha",
+        raw_checkpoint_sha256="raw-wrapper-sha",
+        cache_fingerprint="cache-sha",
+        cache_manifest_sha256="manifest-sha",
+        cache_schema_version=3,
+        feature_schema="tgraph5-jerk-deep-history-features-v1",
+        feature_width=feature_width,
+        training_fingerprint="training-sha",
+        history=[{}] * 5,
+        loader_generator=torch.Generator().manual_seed(17),
+    )
+
+    metadata = payload["temporal_graph"]["metadata"]
+    assert metadata["graph_window_size"] == 5
+    assert payload["temporal_graph"]["config"]["graph_window_size"] == 5
+    assert metadata["cache_schema_version"] == 3
+    assert metadata["feature_schema"] == "tgraph5-jerk-deep-history-features-v1"
+    assert metadata["feature_width"] == feature_width
+
+
 def test_shared_cache_contract_rejects_different_host_or_candidate_geometry():
     module = _load_script()
     graph_config = module.TemporalGraphConfig(
@@ -315,6 +404,57 @@ def test_shared_cache_contract_rejects_different_host_or_candidate_geometry():
     with pytest.raises(ValueError, match="different candidate contracts"):
         module._validate_cache_training_contract(
             wrong_graph,
+            graph_config,
+            source,
+            config,
+        )
+
+
+def test_tgraph5_cache_contract_requires_feature_revision_metadata():
+    module = _load_script()
+    graph_config = module.TemporalGraphConfig(
+        node_feature_dim=2,
+        hidden_dim=4,
+        top_k=2,
+        radius_um=5.0,
+        graph_window_size=5,
+    )
+    source = SimpleNamespace(
+        weights_sha256="host-sha",
+        raw_checkpoint_sha256="raw-sha",
+    )
+    feature_width = module.candidate_feature_dim(2, graph_window_size=5)
+    manifest = {
+        "schema_version": 3,
+        "feature_schema": "tgraph5-jerk-deep-history-features-v1",
+        "feature_width": feature_width,
+        "experiment_id": "EXP-T5-CACHE",
+        "source_weights_sha256": "host-sha",
+        "source_raw_checkpoint_sha256": "raw-sha",
+        "graph_config": graph_config.to_dict(),
+    }
+    config = {"cache": {"source_experiment_id": "EXP-T5-CACHE"}}
+
+    assert module._validate_cache_training_contract(
+        manifest,
+        graph_config,
+        source,
+        config,
+    ) == (
+        3,
+        "tgraph5-jerk-deep-history-features-v1",
+        feature_width,
+    )
+    with pytest.raises(ValueError, match="feature-math revision"):
+        module._validate_cache_training_contract(
+            {key: value for key, value in manifest.items() if key != "feature_schema"},
+            graph_config,
+            source,
+            config,
+        )
+    with pytest.raises(ValueError, match="feature width is missing"):
+        module._validate_cache_training_contract(
+            {key: value for key, value in manifest.items() if key != "feature_width"},
             graph_config,
             source,
             config,

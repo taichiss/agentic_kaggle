@@ -317,8 +317,10 @@ class TemporalGraphConfig:
                 raise ValueError(f"{name} must be an integer")
         if self.image_window_size != 2:
             raise ValueError("the frozen host contract requires image_window_size=2")
-        if self.graph_window_size not in {3, 4}:
-            raise ValueError("the temporal graph contract requires graph_window_size=3 or 4")
+        if self.graph_window_size not in {3, 4, 5}:
+            raise ValueError(
+                "the temporal graph contract requires graph_window_size=3, 4, or 5"
+            )
         if self.architecture not in {"mlp", "candidate_attention"}:
             raise ValueError(
                 "architecture must be 'mlp' or 'candidate_attention'"

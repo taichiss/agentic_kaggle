@@ -214,10 +214,11 @@ def candidate_feature_dim(
     if (
         isinstance(graph_window_size, bool)
         or not isinstance(graph_window_size, int)
-        or graph_window_size not in {3, 4}
+        or graph_window_size not in {3, 4, 5}
     ):
-        raise ValueError("graph_window_size must be 3 or 4")
-    return 3 * node_feature_dim + (10 if graph_window_size == 3 else 14)
+        raise ValueError("graph_window_size must be 3, 4, or 5")
+    temporal_width = {3: 10, 4: 14, 5: 18}[graph_window_size]
+    return 3 * node_feature_dim + temporal_width
 
 
 def build_candidate_features(
@@ -226,6 +227,7 @@ def build_candidate_features(
     candidates: ParentCandidates,
     *,
     prior_pair: FrozenPair | None = None,
+    oldest_pair: FrozenPair | None = None,
     graph_window_size: int = 3,
     distance_scale_um: float = 10.0,
     middle_coord_atol: float = 1.0e-4,
@@ -238,15 +240,29 @@ def build_candidate_features(
     parent entropy, and a history-availability indicator. When ``prior_pair``
     supplies ``t-2 -> t-1``, the complete three-frame feature vector remains
     an unchanged prefix followed by normalized constant-acceleration residual
-    (3) and probabilistically propagated second-history mass (1).
+    (3) and probabilistically propagated second-history mass (1). For a
+    five-frame window, ``oldest_pair`` supplies ``t-3 -> t-2`` and appends a
+    constant-jerk residual (3) plus deepest-history path mass (1), while the
+    complete T3 and T4 vectors remain unchanged prefixes.
     """
     if distance_scale_um <= 0:
         raise ValueError("distance_scale_um must be positive")
     candidate_feature_dim(current_pair.feature_dim, graph_window_size)
-    if graph_window_size == 4 and prior_pair is None:
-        raise ValueError("prior_pair is required when graph_window_size=4")
-    if graph_window_size == 3 and prior_pair is not None:
-        raise ValueError("prior_pair must be omitted when graph_window_size=3")
+    if graph_window_size == 3:
+        if prior_pair is not None:
+            raise ValueError("prior_pair must be omitted when graph_window_size=3")
+        if oldest_pair is not None:
+            raise ValueError("oldest_pair must be omitted when graph_window_size=3")
+    elif graph_window_size == 4:
+        if prior_pair is None:
+            raise ValueError("prior_pair is required when graph_window_size=4")
+        if oldest_pair is not None:
+            raise ValueError("oldest_pair must be omitted when graph_window_size=4")
+    else:
+        if prior_pair is None:
+            raise ValueError("prior_pair is required when graph_window_size=5")
+        if oldest_pair is None:
+            raise ValueError("oldest_pair is required when graph_window_size=5")
     triplet = RightTransitionTriplet(
         previous_pair,
         current_pair,
@@ -256,6 +272,14 @@ def build_candidate_features(
         RightTransitionTriplet(
             prior_pair,
             previous_pair,
+            middle_coord_atol=middle_coord_atol,
+        )
+    if oldest_pair is not None:
+        if prior_pair is None:
+            raise RuntimeError("validated T5 history unexpectedly lacks prior_pair")
+        RightTransitionTriplet(
+            oldest_pair,
+            prior_pair,
             middle_coord_atol=middle_coord_atol,
         )
     current = triplet.owned_transition
@@ -357,6 +381,90 @@ def build_candidate_features(
         feature_parts.extend(
             [acceleration_residual, gathered_second_history_mass]
         )
+
+        if oldest_pair is not None:
+            oldest_history = expected_previous_parent_statistics(oldest_pair)
+            prior_probabilities, _ = _normalized_parent_probabilities(
+                prior_pair,
+                eps=1.0e-8,
+            )
+            deepest_available = oldest_history.has_history.squeeze(-1).float()
+            prior_deep_weights = (
+                prior_probabilities * deepest_available.unsqueeze(-1)
+            )
+            deep_mass_per_second_parent = prior_deep_weights.sum(dim=1)
+            deep_path_weights = (
+                parent_probabilities * deep_mass_per_second_parent.unsqueeze(-1)
+            )
+            third_history_mass = deep_path_weights.sum(dim=1)
+            has_third_history = third_history_mass > 1.0e-8
+            normalizer = third_history_mass.unsqueeze(-1).clamp_min(1.0e-8)
+
+            expected_second_parent = torch.einsum(
+                "bst,bsc->btc",
+                deep_path_weights,
+                previous_pair.source_coords_um.detach().float(),
+            ) / normalizer
+            weighted_first_position = torch.einsum(
+                "bst,bsc->btc",
+                prior_deep_weights,
+                prior_pair.source_coords_um.detach().float(),
+            )
+            expected_first_parent = torch.einsum(
+                "bst,bsc->btc",
+                parent_probabilities,
+                weighted_first_position,
+            ) / normalizer
+            weighted_oldest_position = torch.einsum(
+                "bst,bsc->btc",
+                prior_deep_weights,
+                oldest_history.expected_position_um.detach().float(),
+            )
+            expected_oldest_parent = torch.einsum(
+                "bst,bsc->btc",
+                parent_probabilities,
+                weighted_oldest_position,
+            ) / normalizer
+
+            oldest_velocity = expected_first_parent - expected_oldest_parent
+            previous_velocity = expected_second_parent - expected_first_parent
+            current_velocity = (
+                current.source_coords_um.detach().float() - expected_second_parent
+            )
+            previous_acceleration = previous_velocity - oldest_velocity
+            current_acceleration = current_velocity - previous_velocity
+            jerk = current_acceleration - previous_acceleration
+            jerk_prediction = (
+                current.source_coords_um.detach().float()
+                + current_velocity
+                + current_acceleration
+                + jerk
+            )
+            jerk_prediction = _gather_source(jerk_prediction, candidates)
+            jerk_residual = (
+                target_coords - jerk_prediction
+            ) / float(distance_scale_um)
+            gathered_has_third_history = _gather_source(
+                has_third_history.unsqueeze(-1),
+                candidates,
+            )
+            jerk_residual = torch.where(
+                gathered_has_third_history,
+                jerk_residual,
+                torch.zeros_like(jerk_residual),
+            )
+            third_history_mass = torch.where(
+                has_third_history,
+                third_history_mass,
+                torch.zeros_like(third_history_mass),
+            )
+            gathered_third_history_mass = _gather_source(
+                third_history_mass.unsqueeze(-1),
+                candidates,
+            )
+            feature_parts.extend(
+                [jerk_residual, gathered_third_history_mass]
+            )
 
     features = torch.cat(feature_parts, dim=-1)
     expected_dim = candidate_feature_dim(current.feature_dim, graph_window_size)

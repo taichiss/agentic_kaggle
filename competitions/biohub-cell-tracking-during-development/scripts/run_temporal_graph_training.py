@@ -52,10 +52,11 @@ from torch.utils.data import DataLoader, Dataset  # noqa: E402
 # Bump the corresponding value whenever feature order or feature math changes;
 # cache fingerprints include this schema and must never alias two equations.
 CACHE_SCHEMA_VERSION = 1  # Legacy T_graph=3 compact cache.
-CACHE_SCHEMA_VERSIONS = {3: 1, 4: 2}
+CACHE_SCHEMA_VERSIONS = {3: 1, 4: 2, 5: 3}
 CACHE_FEATURE_SCHEMAS = {
     1: "tgraph3-candidate-features-v1",
     2: "tgraph4-acceleration-qbar-features-v1",
+    3: "tgraph5-jerk-deep-history-features-v1",
 }
 TRAINING_CHECKPOINT_SCHEMA_VERSION = 1
 
@@ -130,7 +131,7 @@ def _cache_schema_version(graph_window_size: int) -> int:
         return CACHE_SCHEMA_VERSIONS[graph_window_size]
     except KeyError as error:
         raise ValueError(
-            "compact cache supports only graph_window_size 3 or 4"
+            "compact cache supports only graph_window_size 3, 4, or 5"
         ) from error
 
 
@@ -890,6 +891,7 @@ def _build_sparse_candidate_examples(
     graph_config: TemporalGraphConfig,
     *,
     prior: ExtractedPair | None = None,
+    oldest: ExtractedPair | None = None,
 ) -> SparseExamples:
     candidates = build_parent_candidates(
         current.pair.source_coords_um,
@@ -904,6 +906,7 @@ def _build_sparse_candidate_examples(
         current.pair,
         candidates,
         prior_pair=None if prior is None else prior.pair,
+        oldest_pair=None if oldest is None else oldest.pair,
         graph_window_size=graph_config.graph_window_size,
         distance_scale_um=graph_config.distance_scale_um,
         middle_coord_atol=graph_config.middle_coord_atol,
@@ -1029,6 +1032,7 @@ def _cache_one_dataset(
                 position_function=position_function,
                 reuse_source=retained.get(pair_start - 1),
             )
+        oldest = retained.get(current_start - 3)
         prior = retained.get(current_start - 2)
         previous = retained[current_start - 1]
         current = retained[current_start]
@@ -1040,6 +1044,7 @@ def _cache_one_dataset(
                 current_window.targets[0].unsqueeze(0),
                 graph_config,
                 prior=prior,
+                oldest=oldest,
             )
         )
         retained = {
@@ -1150,6 +1155,13 @@ def build_cache(
                     if (
                         existing.get("schema_version") == cache_schema_version
                         and existing.get("fingerprint") == fingerprint
+                        and existing.get("feature_schema")
+                        == _cache_feature_schema(cache_schema_version)
+                        and existing.get("feature_width")
+                        == candidate_feature_dim(
+                            graph_config.node_feature_dim,
+                            graph_window_size=graph_config.graph_window_size,
+                        )
                     ):
                         stats = dict(existing["stats"])
                         record = {
@@ -1276,8 +1288,14 @@ class CompactCacheDataset(Dataset):
             if payload.get("fingerprint") != fingerprint:
                 raise ValueError(f"cache fingerprint mismatch: {path}")
             payload_feature_schema = payload.get("feature_schema")
-            if payload_feature_schema is not None and payload_feature_schema != (
-                _cache_feature_schema(schema_version)
+            expected_feature_schema = _cache_feature_schema(schema_version)
+            if (
+                schema_version >= 3
+                and payload_feature_schema != expected_feature_schema
+            ) or (
+                schema_version < 3
+                and payload_feature_schema is not None
+                and payload_feature_schema != expected_feature_schema
             ):
                 raise ValueError(f"cache feature-math revision mismatch: {path}")
             features = payload.get("features")
@@ -1297,6 +1315,8 @@ class CompactCacheDataset(Dataset):
             if feature_width is not None and width != feature_width:
                 raise ValueError(f"cache feature width mismatch: {path}")
             payload_feature_width = payload.get("feature_width")
+            if schema_version >= 3 and payload_feature_width is None:
+                raise ValueError(f"cache recorded feature width is missing: {path}")
             if payload_feature_width is not None and int(payload_feature_width) != width:
                 raise ValueError(f"cache recorded feature width mismatch: {path}")
             if base_logits.shape != (rows, candidates):
@@ -1368,11 +1388,19 @@ def _cache_datasets(
         graph_window_size=graph_window_size,
     )
     recorded_feature_schema = manifest.get("feature_schema")
-    if recorded_feature_schema is not None and recorded_feature_schema != (
-        _cache_feature_schema(schema_version)
+    expected_feature_schema = _cache_feature_schema(schema_version)
+    if (
+        schema_version >= 3
+        and recorded_feature_schema != expected_feature_schema
+    ) or (
+        schema_version < 3
+        and recorded_feature_schema is not None
+        and recorded_feature_schema != expected_feature_schema
     ):
         raise ValueError("cache feature schema mismatch")
     recorded_feature_width = manifest.get("feature_width")
+    if schema_version >= 3 and recorded_feature_width is None:
+        raise ValueError("cache manifest feature width is missing")
     if recorded_feature_width is not None and recorded_feature_width != feature_width:
         raise ValueError("cache manifest feature width mismatch")
     fingerprint = str(manifest["fingerprint"])
@@ -1512,13 +1540,22 @@ def _validate_cache_training_contract(
         )
     feature_schema = _cache_feature_schema(schema_version)
     recorded_feature_schema = manifest.get("feature_schema")
-    if recorded_feature_schema is not None and recorded_feature_schema != feature_schema:
+    if (
+        schema_version >= 3
+        and recorded_feature_schema != feature_schema
+    ) or (
+        schema_version < 3
+        and recorded_feature_schema is not None
+        and recorded_feature_schema != feature_schema
+    ):
         raise ValueError("cache feature-math revision mismatch")
     feature_width = candidate_feature_dim(
         graph_config.node_feature_dim,
         graph_window_size=graph_config.graph_window_size,
     )
     recorded_width = manifest.get("feature_width")
+    if schema_version >= 3 and recorded_width is None:
+        raise ValueError("cache feature width is missing")
     if recorded_width is not None and int(recorded_width) != feature_width:
         raise ValueError("cache feature width does not match the temporal head")
     if manifest.get("source_weights_sha256") != source.weights_sha256:

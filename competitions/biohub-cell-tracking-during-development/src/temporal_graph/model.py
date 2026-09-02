@@ -205,12 +205,24 @@ class TemporalGraphResidualHead(nn.Module):
         candidates: ParentCandidates | None = None,
         *,
         prior_pair: FrozenPair | None = None,
+        oldest_pair: FrozenPair | None = None,
     ) -> TemporalGraphOutput:
         """Refine ``t -> t+1`` using the configured graph window."""
-        if self.config.graph_window_size == 4 and prior_pair is None:
-            raise ValueError("prior_pair is required when graph_window_size=4")
-        if self.config.graph_window_size == 3 and prior_pair is not None:
-            raise ValueError("prior_pair must be omitted when graph_window_size=3")
+        if self.config.graph_window_size == 3:
+            if prior_pair is not None:
+                raise ValueError("prior_pair must be omitted when graph_window_size=3")
+            if oldest_pair is not None:
+                raise ValueError("oldest_pair must be omitted when graph_window_size=3")
+        elif self.config.graph_window_size == 4:
+            if prior_pair is None:
+                raise ValueError("prior_pair is required when graph_window_size=4")
+            if oldest_pair is not None:
+                raise ValueError("oldest_pair must be omitted when graph_window_size=4")
+        else:
+            if prior_pair is None:
+                raise ValueError("prior_pair is required when graph_window_size=5")
+            if oldest_pair is None:
+                raise ValueError("oldest_pair is required when graph_window_size=5")
         if isinstance(previous_pair, RightTransitionTriplet):
             if current_pair is not None:
                 raise ValueError("current_pair must be omitted when passing a triplet")
@@ -243,6 +255,7 @@ class TemporalGraphResidualHead(nn.Module):
             current,
             candidates,
             prior_pair=prior_pair,
+            oldest_pair=oldest_pair,
             graph_window_size=self.config.graph_window_size,
             distance_scale_um=self.config.distance_scale_um,
             middle_coord_atol=self.config.middle_coord_atol,
