@@ -334,8 +334,25 @@ Checkpoint SHA-256:
   validators; SHA-256 is
   `70ce6dcfa9c01fd0dfe107c094e65daf9b32c32b3c0da527c383355131e24c1b`. The normal file-upload
   API was rejected because this is a Code Competition; Notebook version 2 was then submitted via
-  the Code Submission API as ref `55949925`. It is pending and is the direct comparison with
-  EXP-0014 C ref `55943722` at 0.893.
+  the Code Submission API as ref `55949925` and scored 0.893 public, tying the direct EXP-0014 C
+  comparison ref `55943722` and Host-only min7. H018 is rejected on the current LB evidence.
+
+### EXP-0016
+
+- This is the controlled `T_graph=5` successor to EXP-0015. The Host remains `T_image=2`; image
+  weights, detections, Host logits, candidates, thresholds, division handling, and
+  min-component-7 post-processing remain frozen. Startup dispatch is Host for the first
+  transition, T3 50:50 for the second, T4 50:50 for the third, and T5 50:50 thereafter.
+- Cache schema v3 retains the complete 110-column T4 vector as an exact prefix and appends a
+  normalized constant-jerk target residual in xyz plus deepest-history path mass. The resulting
+  width is 114. Missing third-history support yields four exact zeros; schema, feature revision,
+  width, pair adjacency, source checkpoint, and cache fingerprint are fail-closed.
+- One-dataset/three-transition smoke completed on GPU with train/validation candidate recall 1.0,
+  finite 114-column payloads, and 805,580,800 peak allocated bytes. W&B run `d7892627` records the
+  smoke. The full cache W&B run `952d942a` is in progress.
+- The fixed deployment contains six compact heads: T5 MLP/Attention primary, immutable EXP-0015
+  T4 MLP/Attention fallback, and immutable EXP-0009/EXP-0012 T3 MLP/Attention fallback. Every
+  tier uses centered ±0.15 bounded-logit 50:50 combination.
 
 ### EXP-0013
 

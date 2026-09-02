@@ -78,7 +78,7 @@
   regresses one, and therefore has only a +1-link local signal.
 - EXP-0015 Notebook version 2 completed in 321.186 seconds and produced a valid four-dataset CSV
   with 162,877 nodes and 155,874 edges. It was submitted through the required Code Submission API
-  as ref `55949925`; public scoring is pending.
+  as ref `55949925` and scored 0.893 public, tying T3 50:50 and Host min7.
 - EXP-0013 exported the fixed EXP-0008 EMA epoch-30 state and transferred only the proven
   minimum-component 7 post-process. Notebook version 2 emitted 169,090 nodes and 161,789 edges;
   submission ref `55866168` scored 0.879. The identical-weight min-6 control is required before
@@ -122,14 +122,15 @@
 | H015 | Centering and bounding Attention residuals preserves confident host links while correcting ambiguous choices | unbounded e10 fixed 52 but regressed 66; a ±0.15 pairwise-safe correction limits destructive flips | bounded ten-epoch best does not exceed MLP best 0.922684 | locally accepted at 0.923101; report/LB unverified |
 | H016 | The min-component-7 precision correction transfers to the independently trained EXP-0008 EMA checkpoint | the identical change improved EXP-0004 e30 from 0.890 to 0.893 | an identical-weight EXP-0008 min-6 control matches or beats min-7 | min-7 scored 0.879; min-6 ref `55877003` pending |
 | H017 | MLP and bounded-Attention temporal-link errors are complementary enough for score-level combination or agreement gating to improve the fixed Host graph | the two e3 heads differ architecturally and disagree on 30/9,597 calibration rows | no A/B/C/D arm exceeds Host-only min-7 ref `55829542` at 0.893 | rejected: all four arms tied 0.893 |
-| H018 | A fourth graph frame improves link selection by adding acceleration consistency while keeping the Host image model frozen | T4 bounded 50:50 is +1 correct link over Host on 9,496 calibration rows; T3 link variants all tied Host at 0.893 | the fixed T4 50:50 bounded-logit submission does not exceed the T3 50:50 ref `55943722` at 0.893 | ref `55949925` submitted; score pending |
+| H018 | A fourth graph frame improves link selection by adding acceleration consistency while keeping the Host image model frozen | T4 bounded 50:50 is +1 correct link over Host on 9,496 calibration rows; T3 link variants all tied Host at 0.893 | the fixed T4 50:50 bounded-logit submission does not exceed the T3 50:50 ref `55943722` at 0.893 | rejected on LB: ref `55949925` tied at 0.893 |
+| H019 | A fifth graph frame improves link selection by adding jerk consistency while keeping all image and graph controls frozen | T4 also tied Host at 0.893, so one more history step tests whether higher-order motion is informative | the fixed T5 50:50 bounded-logit submission does not exceed T4 ref `55949925` at 0.893 | running as EXP-0016 |
 | H012 | Remaining node-count penalty is driven partly by transient six-node tracks | epoch-30 control is penalized for excess nodes; min-7 removes 4,212 nodes while retaining division components | fixed-checkpoint public LB does not exceed 0.890 | accepted at 0.893 |
 | H013 | Remaining edge error is recall-limited and benefits from a wider relaxed motion gate | epoch-30 screen recall 0.7849 trails precision 0.8538; 12 µm adds 2,676 relaxed links on public test clips | fixed-checkpoint public LB does not exceed 0.890 | rejected at 0.884 |
 
 ## Priority Plan
 
-1. Submit the packaged EXP-0015 T4 bounded-logit 50:50 combination against EXP-0014 C at 0.893;
-   cache schema v2 and both ten-epoch head runs are complete.
+1. Complete EXP-0016 cache schema v3 and submit the T5 bounded-logit 50:50 combination against
+   EXP-0015 at 0.893; T5 smoke and all implementation gates have passed.
 2. Retain EXP-0009 epoch 30 at 0.891; do not use local top-1 alone for checkpoint selection.
 3. Retain EXP-0012 epoch 3 as the T3 startup fallback for T4 deployment.
 4. Adopt EXP-0010 min-component 7 as the post-processing control; do not retain the 12 µm gate.
