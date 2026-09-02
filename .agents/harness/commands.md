@@ -30,5 +30,16 @@ uv run kaggle-lb submit <competition-slug> \
   --message "<what changed>"
 ```
 
+Code Competition の完了済み Notebook version を提出する場合:
+
+```bash
+uv run kaggle-lb submit <competition-slug> \
+  --file <downloaded-kernel-output>/submission.csv \
+  --kernel <owner>/<notebook> \
+  --kernel-version <version> \
+  --experiment-id EXP-0002 \
+  --message "<what changed>"
+```
+
 重いローカル CV は標準ゲートではありません。`kaggle-lb submit` は提出ファイルを軽量検査し、
 Kaggle の scoring 完了まで polling して `strategy/lb-submissions.jsonl` に結果を追記します。

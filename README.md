@@ -43,6 +43,18 @@ uv run kaggle-lb submit playground-series-s6e1 \
 
 コマンドは Kaggle CLI で提出し、submission を特定して scoring 完了まで待ち、public/private
 score を表示します。結果は対象コンペの `strategy/lb-submissions.jsonl` に追記されます。
+Code Competition では、完了済み Notebook の所有者/slug と version を明示します。`--file` は
+Notebook が生成した出力と同名のローカル CSV を指定し、提出前検査と台帳の provenance に使います。
+
+```bash
+uv run kaggle-lb submit <competition-slug> \
+  --file <downloaded-kernel-output>/submission.csv \
+  --kernel <owner>/<notebook> \
+  --kernel-version <version> \
+  --experiment-id EXP-0002 \
+  --message "notebook baseline"
+```
+
 最新状態だけ確認する場合は次を使います。
 
 ```bash

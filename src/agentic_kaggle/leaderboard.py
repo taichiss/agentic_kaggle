@@ -220,6 +220,8 @@ def append_ledger(
     file_path: Path,
     file_metadata: dict[str, Any],
     commit: str,
+    kernel: str | None = None,
+    kernel_version: int | None = None,
 ) -> Path:
     ledger_path = workspace / "strategy" / "lb-submissions.jsonl"
     record = {
@@ -231,6 +233,9 @@ def append_ledger(
         "rows": file_metadata["rows"],
         **asdict(submission),
     }
+    if kernel is not None:
+        record["kernel"] = kernel
+        record["kernel_version"] = kernel_version
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     with ledger_path.open("a", encoding="utf-8") as file:
         file.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
@@ -248,6 +253,20 @@ def _git_commit(root: Path, runner: Runner = subprocess.run) -> str:
     return result.stdout.strip() if result.returncode == 0 else "unknown"
 
 
+def _validate_code_submission(
+    *, kernel: str | None, kernel_version: int | None
+) -> None:
+    if (kernel is None) != (kernel_version is None):
+        raise ValueError("code submissions require both --kernel and --kernel-version")
+    if kernel is None:
+        return
+    owner, separator, slug = kernel.partition("/")
+    if separator != "/" or not owner or not slug or "/" in slug:
+        raise ValueError("kernel must use the <owner>/<notebook> format")
+    if kernel_version is None or kernel_version <= 0:
+        raise ValueError("kernel_version must be a positive integer")
+
+
 def submit_and_wait(
     root: Path,
     competition: str,
@@ -257,28 +276,33 @@ def submit_and_wait(
     message: str,
     timeout: float,
     poll_interval: float,
+    kernel: str | None = None,
+    kernel_version: int | None = None,
     runner: Runner = subprocess.run,
     monotonic: Callable[[], float] = time.monotonic,
     sleep: Callable[[float], None] = time.sleep,
 ) -> tuple[Submission, Path]:
+    _validate_code_submission(kernel=kernel, kernel_version=kernel_version)
     workspace, manifest = load_manifest(root, competition)
     file_path = file_path.resolve()
     file_metadata = validate_submission(file_path, manifest)
 
     before = fetch_submissions(competition, runner)
     previous_refs = {submission.ref for submission in before}
-    _run_kaggle(
-        [
-            "competitions",
-            "submit",
-            competition,
-            "--file",
-            str(file_path),
-            "--message",
-            message,
-        ],
-        runner,
-    )
+    submit_args = [
+        "competitions",
+        "submit",
+        competition,
+        "--file",
+        file_path.name if kernel is not None else str(file_path),
+        "--message",
+        message,
+    ]
+    if kernel is not None:
+        submit_args.extend(
+            ["--kernel", kernel, "--version", str(kernel_version)]
+        )
+    _run_kaggle(submit_args, runner)
     submission = wait_for_submission(
         competition,
         previous_refs=previous_refs,
@@ -297,6 +321,8 @@ def submit_and_wait(
         file_path=file_path,
         file_metadata=file_metadata,
         commit=_git_commit(root, runner),
+        kernel=kernel,
+        kernel_version=kernel_version,
     )
     return submission, ledger
 
@@ -316,13 +342,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    submit_parser = subparsers.add_parser("submit", help="submit a file and wait for scoring")
+    submit_parser = subparsers.add_parser(
+        "submit", help="submit a file or completed Notebook version and wait for scoring"
+    )
     submit_parser.add_argument("competition", help="competition slug registered in competitions/")
     submit_parser.add_argument("--file", required=True, type=Path, help="submission CSV path")
     submit_parser.add_argument(
         "--experiment-id", required=True, help="experiment ledger identifier"
     )
     submit_parser.add_argument("--message", required=True, help="Kaggle submission description")
+    submit_parser.add_argument(
+        "--kernel",
+        help="completed Code Competition Notebook as <owner>/<notebook>",
+    )
+    submit_parser.add_argument(
+        "--kernel-version",
+        type=int,
+        help="completed Notebook version to submit (requires --kernel)",
+    )
     submit_parser.add_argument(
         "--timeout", type=float, default=43200, help="wait timeout in seconds"
     )
@@ -362,6 +399,8 @@ def main(argv: list[str] | None = None) -> int:
             message=args.message,
             timeout=args.timeout,
             poll_interval=args.poll_interval,
+            kernel=args.kernel,
+            kernel_version=args.kernel_version,
         )
     except (RuntimeError, ValueError) as exc:
         raise SystemExit(f"error: {exc}") from exc

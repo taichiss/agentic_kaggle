@@ -129,3 +129,116 @@ expected_rows = 2
     assert record["experiment_id"] == "EXP-0001"
     assert record["commit"] == "abc123"
     assert record["public_score"] == "0.8123"
+    assert "kernel" not in record
+    assert "kernel_version" not in record
+
+
+def test_code_submit_uses_notebook_version_and_appends_provenance(tmp_path: Path) -> None:
+    competition = "sample-code-competition"
+    workspace = tmp_path / "competitions" / competition
+    (workspace / "strategy").mkdir(parents=True)
+    (workspace / "competition.toml").write_text(
+        """
+[competition]
+slug = "sample-code-competition"
+
+[submission]
+id_columns = ["id"]
+prediction_columns = ["prediction"]
+expected_rows = 1
+""".strip(),
+        encoding="utf-8",
+    )
+    submission_path = tmp_path / "kernel-output" / "submission.csv"
+    submission_path.parent.mkdir()
+    submission_path.write_text("id,prediction\n1,0.2\n", encoding="utf-8")
+
+    complete = [
+        {
+            "ref": "code-ref",
+            "fileName": "submission.csv",
+            "date": "2026-09-02",
+            "description": "notebook baseline",
+            "status": "complete",
+            "publicScore": "0.9",
+            "privateScore": None,
+        }
+    ]
+    submission_responses = iter([[], complete])
+    submit_commands: list[list[str]] = []
+
+    def runner(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if command[:3] == ["kaggle", "competitions", "submissions"]:
+            return _completed(command, json.dumps(next(submission_responses)))
+        if command[:3] == ["kaggle", "competitions", "submit"]:
+            submit_commands.append(command)
+            return _completed(command, "Successfully submitted")
+        if command[:3] == ["git", "rev-parse", "--short"]:
+            return _completed(command, "def456\n")
+        raise AssertionError(f"unexpected command: {command}")
+
+    result, ledger = submit_and_wait(
+        tmp_path,
+        competition,
+        file_path=submission_path,
+        experiment_id="EXP-CODE-0001",
+        message="notebook baseline",
+        timeout=30,
+        poll_interval=1,
+        kernel="owner/notebook",
+        kernel_version=7,
+        runner=runner,
+        monotonic=lambda: 0,
+        sleep=lambda _: None,
+    )
+
+    assert result.ref == "code-ref"
+    assert submit_commands == [
+        [
+            "kaggle",
+            "competitions",
+            "submit",
+            competition,
+            "--file",
+            "submission.csv",
+            "--message",
+            "notebook baseline",
+            "--kernel",
+            "owner/notebook",
+            "--version",
+            "7",
+        ]
+    ]
+    record = json.loads(ledger.read_text(encoding="utf-8"))
+    assert record["kernel"] == "owner/notebook"
+    assert record["kernel_version"] == 7
+    assert record["file"] == str(submission_path.resolve())
+
+
+@pytest.mark.parametrize(
+    ("kernel", "kernel_version", "error"),
+    [
+        ("owner/notebook", None, "both --kernel and --kernel-version"),
+        (None, 1, "both --kernel and --kernel-version"),
+        ("notebook", 1, "<owner>/<notebook>"),
+        ("owner/notebook", 0, "positive integer"),
+    ],
+)
+def test_code_submit_rejects_incomplete_or_invalid_notebook_reference(
+    tmp_path: Path,
+    kernel: str | None,
+    kernel_version: int | None,
+    error: str,
+) -> None:
+    with pytest.raises(ValueError, match=error):
+        submit_and_wait(
+            tmp_path,
+            "unused",
+            file_path=tmp_path / "submission.csv",
+            experiment_id="EXP-CODE-0001",
+            message="notebook baseline",
+            timeout=30,
+            poll_interval=1,
+            kernel=kernel,
+            kernel_version=kernel_version,
+        )
