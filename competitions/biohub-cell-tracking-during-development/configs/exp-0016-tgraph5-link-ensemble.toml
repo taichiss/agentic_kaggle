@@ -115,12 +115,13 @@ dataset_title = "Biohub EXP-0016 TGraph5 Link 5050"
 kernel_id = "suzukitaichi/biohub-exp-0016-tgraph5-bounded-logit-5050-submit"
 kernel_title = "Biohub EXP-0016 TGraph5 Bounded Logit 5050 Submit"
 submission_message = "EXP-0016 T_graph=5 bounded-logit 50:50 min-component-7"
-status = "submitted_pending"
+status = "complete"
 requires_explicit_request = true
 authorized_at = "2026-09-02"
 notebook_version = 1
 submission_ref = 55957329
 submitted_at = "2026-09-02T07:42:14Z"
+public_score = 0.893
 
 [output]
 artifact_dir = "artifacts/EXP-0016"

@@ -376,7 +376,8 @@ Checkpoint SHA-256:
   version 1. The Notebook completed and emitted 162,892 nodes plus 155,886 edges across all four
   datasets. The 318,778-row CSV passed both validators; SHA-256 is
   `57c3b1c6042fe82ab9acc6f28bebeabf95ab8b696600b097a0c725076173a8a6`. Code Submission ref
-  `55957329` is pending.
+  `55957329` scored 0.893 public, tying T4, T3, and Host min7. H019 is rejected on the current LB
+  evidence; EXP-0017/EXP-0018 extend the same controlled comparison to T10 and T20.
 
 ### EXP-0013
 
