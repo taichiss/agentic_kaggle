@@ -1,0 +1,47 @@
+schema_version = 1
+experiment_id = "EXP-0002"
+seed = 20260826
+
+[source]
+repository_path = "data/external/royerlab-kaggle-cell-tracking-competition"
+revision = "075fc5f5a52d11077f9dc2b074644618f26939e2"
+
+[data]
+train_dir = "data/raw/train"
+dataset = "6bba_09961292"
+max_frames = 10
+window_size = 2
+
+[train]
+method = "host_baseline_wandb_5x5"
+epochs = 5
+max_iters = 5
+learning_rate = 1e-4
+batch_size = 1
+num_workers = 0
+unet_out_channels = 4
+unet_layers = [4, 8]
+downsample = [2, 8, 8]
+det_loss_weight = 10.0
+det_neg_weight = 0.01
+pool_kernel_um = 5.0
+
+[inference]
+det_threshold = 0.5
+edge_threshold = 0.01
+pool_kernel_um = 30.0
+det_tta = false
+
+[tracking]
+provider = "wandb"
+mode = "online"
+project = "biohub-cell-tracking"
+name = "EXP-0002-host-baseline-5x5"
+group = "organizer-baseline"
+job_type = "train-eval"
+tags = ["biohub", "organizer-baseline", "real-data", "extended-smoke"]
+notes = "Five epochs with five updates each on ten frames; contract and trend check, not a quality baseline."
+
+[output]
+artifact_dir = "artifacts/EXP-0002"
+submission_file = "submissions/EXP-0002-local.csv"

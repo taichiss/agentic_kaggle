@@ -1,0 +1,111 @@
+schema_version = 1
+experiment_id = "EXP-0013"
+hypothesis_id = "H016"
+description = "Transfer the proven min-component-7 post-process to EXP-0008 EMA epoch 30"
+seed = 20260827
+
+[source]
+repository_path = "data/external/royerlab-kaggle-cell-tracking-competition"
+revision = "075fc5f5a52d11077f9dc2b074644618f26939e2"
+base_experiment_id = "EXP-0008"
+source_checkpoint = "data/external/royerlab-kaggle-cell-tracking-competition/weights/host_baseline_local_rtx5070ti_bs8_ema_5e/split_0/ema_checkpoint_epoch_0030.pth"
+source_checkpoint_sha256 = "5a2d5fc84e4aebd485945016350273992fc457f30c575e1dd0078d546a6809b0"
+weight_view = "ema"
+
+[data]
+train_dir = "data/raw/train"
+split_strategy = "embryo-prefix"
+group_delimiter = "_"
+fold = 0
+validation_group = "44b6"
+window_size = 2
+
+[train]
+method = "host_baseline_local_rtx5070ti_bs8_ema_5e"
+epochs = 30
+learning_rate = 1e-4
+batch_size = 8
+num_workers = 4
+unet_out_channels = 32
+unet_layers = [32, 64, 128]
+downsample = [1, 4, 4]
+det_loss_weight = 1.0
+det_neg_weight = 0.01
+pool_kernel_um = 5.0
+
+[runtime]
+training_device = "RTX 5070 Ti"
+training_mixed_precision = "float16"
+submission_machine = "NvidiaTeslaT4"
+
+[checkpoint]
+completed_epochs = 30
+weight_view = "ema"
+exported_weights_sha256 = "dfd6a3d57a768080f9d1344614132ca284b909525984962c4ddce610daca4d91"
+every_epochs = 5
+
+[base]
+checkpoint_completed_epochs = 30
+checkpoint_weight_view = "ema"
+checkpoint_sha256 = "dfd6a3d57a768080f9d1344614132ca284b909525984962c4ddce610daca4d91"
+source_checkpoint_sha256 = "5a2d5fc84e4aebd485945016350273992fc457f30c575e1dd0078d546a6809b0"
+kaggle_dataset = "suzukitaichi/biohub-exp-0008-ema-e30"
+inference_script_sha256 = "876fb3e5b7b472d8addf76cef781bc24470e62ae42b068accc8b0cfb8d7b810f"
+detection_threshold = 0.99
+edge_threshold = 0.5
+pool_kernel_um = 5.0
+detection_tta = "identity,xflip,yflip,xyflip"
+postprocess_profile = "public-applicable-v1"
+transferred_from_submission_ref = 55829542
+transferred_from_public_score = 0.893
+
+[variants.ema_epoch30_min7]
+execution_mode = "inference_script_patch"
+hypothesis = "The min-component-7 precision correction that improved EXP-0004 epoch 30 transfers to the independently trained EXP-0008 EMA checkpoint."
+falsification = "A score below the same EXP-0008 checkpoint without min-7 would reject transfer; until that control is submitted this remains a deployment probe."
+kernel_id = "suzukitaichi/biohub-exp-0008-ema-e30-min7-submit"
+kernel_title = "Biohub EXP-0008 EMA E30 Min7 Submit"
+submission_message = "EXP-0008 EMA epoch 30 with proven min-component 7 postprocess"
+
+[[variants.ema_epoch30_min7.patches]]
+parameter = "minimum_component_nodes"
+old_value = 6
+new_value = 7
+old = "if len(members) >= 6 or has_division:"
+new = "if len(members) >= 7 or has_division:"
+
+[variants.ema_epoch30_min6]
+execution_mode = "inference_script_patch"
+hypothesis = "Paired control for the EXP-0008 EMA epoch-30 min-component-7 transfer probe."
+falsification = "Not applicable: this is the identical-weight standard min-component-6 control."
+kernel_id = "suzukitaichi/biohub-exp-0008-ema-e30-min6-submit"
+kernel_title = "Biohub EXP-0008 EMA E30 Min6 Submit"
+submission_message = "EXP-0008 EMA epoch 30 standard min-component 6 control"
+patches = []
+
+[results.ema_epoch30_min7]
+dataset_version = 2
+kernel_version = 2
+nodes = 169090
+edges = 161789
+rows = 330879
+submission_sha256 = "8bfca1b8ee2f561e4847245aa5ad1b6d1abc276657f4f5a4340b03c42fee4105"
+patched_inference_script_sha256 = "b74da4544e3d0a91aaf3cb2d272cc066399b4dad09e52d5014f9bbbe43a8d10d"
+submission_ref = 55866168
+status = "complete"
+public_score = 0.879
+
+[results.ema_epoch30_min6]
+dataset_version = 2
+kernel_version = 1
+nodes = 173512
+edges = 165474
+rows = 338986
+submission_sha256 = "6ab71c474177189b603fd07061182174a9f21b2694c91e25976263a0fc526998"
+inference_script_sha256 = "876fb3e5b7b472d8addf76cef781bc24470e62ae42b068accc8b0cfb8d7b810f"
+submission_ref = 55877003
+status = "pending"
+
+[output]
+artifact_dir = "artifacts/EXP-0013"
+submission_file = "submissions/EXP-0013.csv"

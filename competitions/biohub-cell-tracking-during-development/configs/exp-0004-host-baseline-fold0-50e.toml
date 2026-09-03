@@ -1,0 +1,52 @@
+schema_version = 1
+experiment_id = "EXP-0004"
+seed = 20260826
+
+[source]
+repository_path = "data/external/royerlab-kaggle-cell-tracking-competition"
+revision = "075fc5f5a52d11077f9dc2b074644618f26939e2"
+
+[data]
+train_dir = "data/raw/train"
+split_strategy = "embryo-prefix"
+group_delimiter = "_"
+fold = 0
+validation_group = "44b6"
+window_size = 2
+
+[train]
+method = "host_baseline_embryo_fold0_50e"
+epochs = 50
+learning_rate = 1e-4
+batch_size = 8
+num_workers = 4
+unet_out_channels = 32
+unet_layers = [32, 64, 128]
+downsample = [1, 4, 4]
+det_loss_weight = 1.0
+det_neg_weight = 0.01
+pool_kernel_um = 5.0
+
+[runtime]
+cuda_deterministic = false
+cudnn_benchmark = true
+mixed_precision = "bfloat16"
+sdp_backend = "math"
+gradient_checkpointing = false
+
+[checkpoint]
+every_epochs = 5
+auto_resume = true
+
+[tracking]
+provider = "wandb"
+mode = "online"
+project = "biohub-cell-tracking"
+name = "EXP-0004-host-baseline-fold0-50e"
+group = "organizer-baseline"
+job_type = "train"
+tags = ["biohub", "organizer-baseline", "embryo-grouped", "fold-0", "baseline"]
+notes = "Official host UNet+transformer baseline: 50 full epochs, embryo-prefix grouped fold 0. Validation group is 44b6; training group is 6bba."
+
+[output]
+artifact_dir = "artifacts/EXP-0004"

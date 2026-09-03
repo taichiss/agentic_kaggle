@@ -1,0 +1,28 @@
+schema_version = 1
+experiment_id = "EXP-0001"
+seed = 20260826
+
+[data]
+root = "data/raw"
+train_split = "train"
+test_split = "test"
+axes = ["t", "z", "y", "x"]
+voxel_scale_micrometers = [1.625, 0.40625, 0.40625]
+
+[validation]
+split_unit = "dataset"
+public_test_role = "notebook_smoke_only"
+max_centroid_distance_micrometers = 7.0
+full_cv_required = false
+submission_schema_check = true
+
+[pipeline]
+detector = "unimplemented"
+linker = "unimplemented"
+division_detector = "unimplemented"
+sparse_supervision = "positive_annotations_only"
+predict_all_cells = true
+
+[output]
+prediction_graph_dir = "artifacts/EXP-0001/geff"
+submission_file = "submissions/submission.csv"

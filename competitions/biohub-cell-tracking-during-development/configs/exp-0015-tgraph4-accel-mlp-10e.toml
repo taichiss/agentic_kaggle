@@ -1,0 +1,128 @@
+schema_version = 1
+experiment_id = "EXP-0015-MLP"
+hypothesis_id = "H018"
+seed = 20260902
+
+[source]
+organizer_repository_path = "data/external/royerlab-kaggle-cell-tracking-competition"
+organizer_revision = "075fc5f5a52d11077f9dc2b074644618f26939e2"
+base_experiment_id = "EXP-0004"
+base_checkpoint_completed_epochs = 30
+base_checkpoint_path = "data/kaggle-submission-EXP-0004-epoch30-postprocess-v1/dataset/edge_predictor_best.pth"
+base_checkpoint_sha256 = "9e068669b861b0dd993483e3ce6fc636fde604004011d5ec1e08039ae2843337"
+source_checkpoint_sha256 = "729836a33f485eb9e90ffd97f4ad6defdae916ac0e0affad04de649ade91b79e"
+
+[data]
+train_dir = "data/raw/train"
+test_dir = "data/raw/test"
+split_strategy = "embryo-prefix"
+group_delimiter = "_"
+fold = 0
+validation_group = "44b6"
+validation_manifest = "artifacts/EXP-0009/validation_split_fallback.json"
+validation_partition = "calibration"
+image_window_size = 2
+graph_window_size = 4
+downsample = [1, 4, 4]
+
+[model]
+name = "host_tgraph4_acceleration_residual_mlp"
+architecture = "mlp"
+trainable_scope = "temporal_graph_residual_only"
+base_edge_score = "frozen_host_logit"
+residual_output = "edge_logit_delta"
+residual_gate_init = 0.0
+node_feature_dim = 32
+hidden_dim = 64
+layers = 2
+dropout = 0.1
+physical_coordinates = true
+continuation_edges_only = true
+
+[model.candidates]
+top_k_per_target = 8
+radius_um = 15.0
+distance_scale_um = 10.0
+time_offsets = [-2, -1, 1]
+include_host_logit = true
+include_displacement_um = true
+include_velocity_residual_um = true
+include_acceleration_residual_um = true
+include_second_history_mass = true
+include_middle_appearance_both_views = true
+include_previous_parent_entropy = true
+include_detection_confidence = false
+
+[cache]
+directory = "artifacts/EXP-0015/cache-v2"
+validation_manifest = "artifacts/EXP-0009/validation_split_fallback.json"
+host_pair_batch_size = 1
+detection_probability_threshold = 0.99
+detection_tta = true
+atomic_writes = true
+reuse_when_fingerprint_matches = true
+store_device = "cpu"
+
+[train]
+epochs = 10
+learning_rate = 1e-4
+weight_decay = 1e-4
+batch_size = 2048
+num_workers = 0
+loss = "masked_parent_cross_entropy"
+unknown_edges = "masked"
+negative_edges = "known_conflicts_for_annotated_targets"
+division_supervision = "disabled"
+gradient_clip_norm = 1.0
+
+[runtime]
+cuda_deterministic = false
+cudnn_benchmark = true
+mixed_precision = "none"
+cache_smoke_max_datasets = 1
+cache_smoke_max_transitions = 2
+
+[checkpoint]
+every_epochs = 5
+auto_resume = true
+save_last = true
+save_best = true
+
+[tracking]
+provider = "wandb"
+mode = "online"
+required = true
+entity = "salax0116-private-email"
+project = "biohub-cell-tracking"
+name = "EXP-0015-tgraph4-accel-mlp-10e"
+group = "tgraph4-acceleration"
+job_type = "train-eval"
+tags = ["biohub", "host-epoch30", "t-image-2", "t-graph-4", "acceleration", "mlp", "fold-0", "cache-v2"]
+notes = "H018: retain the frozen host and T3 feature contract, add a fourth graph frame through probabilistic acceleration consistency, and train only the compact MLP residual head."
+
+[inference]
+detection_probability_threshold = 0.99
+edge_threshold = 0.5
+pool_kernel_um = 5.0
+detection_tta = true
+max_parents_per_node = 1
+max_children_per_node = 2
+graph_window_size = 4
+candidate_top_k = 8
+candidate_radius_um = 15.0
+
+[controls]
+freeze_image_model = true
+freeze_detection_head = true
+freeze_host_edge_scorer = true
+freeze_candidate_generation = true
+division_policy = "public-applicable-v1"
+postprocess_profile = "public-applicable-v1-min-component-7"
+allow_division_changes = false
+allow_postprocess_changes = false
+comparison_experiment_id = "EXP-0014"
+comparison_public_score = 0.893
+
+[output]
+artifact_dir = "artifacts/EXP-0015/mlp"
+submission_file = "submissions/EXP-0015.csv"

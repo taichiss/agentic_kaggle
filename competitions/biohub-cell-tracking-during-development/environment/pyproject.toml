@@ -1,0 +1,33 @@
+[project]
+name = "biohub-cell-tracking-environment"
+version = "0.1.0"
+description = "Pinned local environment for BioHub 3D+time cell tracking"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "blosc2>=3.8",
+  "numpy>=2.0",
+  "pandas>=2.2",
+  "scipy>=1.14",
+  "tqdm>=4.67",
+  "tracksdata @ git+https://github.com/royerlab/tracksdata@e94a9d867860b5a72cfd18d4a7c9ca67af571f88",
+  "zarr>=3.0.10",
+]
+
+[project.optional-dependencies]
+baseline = [
+  "torch>=2.9.1",
+]
+tracking = [
+  "wandb>=0.28.1,<0.29",
+]
+nnunet = [
+  "nnunetv2 @ git+https://github.com/MIC-DKFZ/nnUNet.git@0e495086eb108ff79afe106291e8c15bd2f2bc3a",
+]
+viz = [
+  "napari>=0.5",
+  "ndv>=0.3",
+  "pyqt5>=5.15",
+]
+
+[tool.uv]
+package = false

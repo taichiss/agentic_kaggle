@@ -1,0 +1,160 @@
+schema_version = 1
+experiment_id = "EXP-0009"
+hypothesis_id = "H011"
+seed = 20260828
+
+[source]
+organizer_repository_path = "data/external/royerlab-kaggle-cell-tracking-competition"
+organizer_revision = "075fc5f5a52d11077f9dc2b074644618f26939e2"
+base_experiment_id = "EXP-0004"
+base_checkpoint_completed_epochs = 30
+base_checkpoint_path = "data/kaggle-submission-EXP-0004-epoch30-postprocess-v1/dataset/edge_predictor_best.pth"
+base_checkpoint_sha256 = "9e068669b861b0dd993483e3ce6fc636fde604004011d5ec1e08039ae2843337"
+source_checkpoint_sha256 = "729836a33f485eb9e90ffd97f4ad6defdae916ac0e0affad04de649ade91b79e"
+
+[data]
+train_dir = "data/raw/train"
+test_dir = "data/raw/test"
+split_strategy = "embryo-prefix"
+group_delimiter = "_"
+fold = 0
+validation_group = "44b6"
+validation_manifest = "artifacts/EXP-0007/validation_split.json"
+validation_partition = "calibration"
+image_window_size = 2
+graph_window_size = 3
+downsample = [1, 4, 4]
+
+[model]
+name = "host_tgraph3_residual"
+architecture = "candidate_temporal_graph_residual_mlp"
+trainable_scope = "temporal_graph_residual_only"
+base_edge_score = "frozen_host_logit"
+residual_output = "edge_logit_delta"
+residual_gate_init = 0.0
+node_feature_dim = 32
+hidden_dim = 64
+layers = 2
+dropout = 0.1
+physical_coordinates = true
+continuation_edges_only = true
+
+[model.candidates]
+top_k_per_target = 8
+radius_um = 15.0
+distance_scale_um = 10.0
+time_offsets = [-1, 1]
+include_host_logit = true
+include_displacement_um = true
+include_velocity_residual_um = true
+include_middle_appearance_both_views = true
+include_previous_parent_entropy = true
+include_detection_confidence = false
+
+[cache]
+directory = "artifacts/EXP-0009/cache"
+host_pair_batch_size = 1
+detection_probability_threshold = 0.99
+detection_tta = true
+atomic_writes = true
+reuse_when_fingerprint_matches = true
+store_device = "cpu"
+
+[train]
+epochs = 30
+learning_rate = 1e-4
+weight_decay = 1e-4
+batch_size = 2048
+num_workers = 0
+loss = "masked_parent_cross_entropy"
+unknown_edges = "masked"
+negative_edges = "known_conflicts_for_annotated_targets"
+division_supervision = "disabled"
+
+[runtime]
+cuda_deterministic = false
+cudnn_benchmark = true
+mixed_precision = "none"
+cache_smoke_max_datasets = 1
+cache_smoke_max_transitions = 2
+
+[checkpoint]
+every_epochs = 5
+auto_resume = true
+save_last = true
+save_best = true
+
+[tracking]
+provider = "wandb"
+mode = "online"
+required = true
+entity = "salax0116-private-email"
+project = "biohub-cell-tracking"
+name = "EXP-0009-host-tgraph3-residual-30e"
+group = "temporal-graph-residual"
+job_type = "train-eval"
+tags = ["biohub", "host-epoch30", "t-image-2", "t-graph-3", "residual", "fold-0"]
+notes = "H011: add only a three-frame candidate-graph residual to the frozen EXP-0004 completed-epoch-30 host model; keep division and public-applicable-v1 post-processing fixed."
+
+[inference]
+detection_probability_threshold = 0.99
+edge_threshold = 0.5
+pool_kernel_um = 5.0
+detection_tta = true
+max_parents_per_node = 1
+max_children_per_node = 2
+graph_window_size = 3
+candidate_top_k = 8
+candidate_radius_um = 15.0
+
+[controls]
+freeze_image_model = true
+freeze_detection_head = true
+freeze_host_edge_scorer = true
+division_policy = "public-applicable-v1"
+postprocess_profile = "public-applicable-v1"
+allow_division_changes = false
+allow_postprocess_changes = false
+comparison_public_score = 0.890
+
+[submission]
+competition = "biohub-cell-tracking-during-development"
+requires_explicit_request = true
+output_name = "submission.csv"
+
+[[submission.milestones]]
+completed_epoch = 3
+checkpoint = "best_model.pth"
+variant = "best-local-validation"
+dataset_id = "suzukitaichi/biohub-exp-0009-tgraph3-residual-best-e3"
+kernel_id = "suzukitaichi/biohub-exp-0009-tgraph3-best-e3-submit"
+postprocess_profile = "public-applicable-v1"
+status = "complete"
+kernel_version = 2
+submission_ref = 55854853
+public_score = 0.890
+
+[[submission.milestones]]
+completed_epoch = 5
+checkpoint = "checkpoint_epoch_0005.pth"
+variant = "early-lb-probe"
+dataset_id = "suzukitaichi/biohub-exp-0009-tgraph3-residual-e5"
+kernel_id = "suzukitaichi/biohub-exp-0009-tgraph3-e5-submit"
+postprocess_profile = "public-applicable-v1"
+status = "planned"
+
+[[submission.milestones]]
+completed_epoch = 30
+checkpoint = "checkpoint_epoch_0030.pth"
+variant = "final-30e"
+dataset_id = "suzukitaichi/biohub-exp-0009-tgraph3-residual-e30"
+kernel_id = "suzukitaichi/biohub-exp-0009-tgraph3-e30-submit"
+postprocess_profile = "public-applicable-v1"
+status = "complete"
+kernel_version = 2
+submission_ref = 55843163
+public_score = 0.891
+
+[output]
+artifact_dir = "artifacts/EXP-0009"
+submission_file = "submissions/EXP-0009.csv"

@@ -1,0 +1,156 @@
+diff --git a/scripts/train_unet_transformer.py b/scripts/train_unet_transformer.py
+index 67522ae..a188213 100644
+--- a/scripts/train_unet_transformer.py
++++ b/scripts/train_unet_transformer.py
+@@ -54,22 +54,28 @@ def compute_gt_transition_matrix(
+ 
+ def compute_loss(logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+     """BCE on annotated rows and columns (sparse GT — unannotated cells ignored)."""
+-    active_rows = target.sum(dim=1) > 0
+-    active_cols = target.sum(dim=0) > 0
+-    mask = active_rows.unsqueeze(1) | active_cols.unsqueeze(0)
+-    if not mask.any():
+-        return torch.tensor(0.0, requires_grad=True, device=logits.device)
+-
+-    probs = torch.softmax(logits, dim=0)  # dim=0 intentional: divisions allowed, merges aren't
+-    bce = F.binary_cross_entropy(probs, target, reduction="none")
+-    p_t = probs * target + (1 - probs) * (1 - target)
+-    loss = ((1 - p_t) ** 2) * bce
+-
+-    div_rows = target.sum(dim=1) > 1
+-    weight = torch.ones_like(loss)
+-    weight[div_rows] = 1.0
+-
+-    return (loss * weight)[mask].mean()
++    # BCE on probabilities is unsafe under autocast. Keep this numerically
++    # sensitive, very small edge-loss block in FP32 while the heavy model
++    # forward/backward can use BF16.
++    with torch.autocast(device_type=logits.device.type, enabled=False):
++        logits = logits.float()
++        target = target.float()
++        active_rows = target.sum(dim=1) > 0
++        active_cols = target.sum(dim=0) > 0
++        mask = active_rows.unsqueeze(1) | active_cols.unsqueeze(0)
++        if not mask.any():
++            return torch.tensor(0.0, requires_grad=True, device=logits.device)
++
++        probs = torch.softmax(logits, dim=0)  # divisions allowed, merges aren't
++        bce = F.binary_cross_entropy(probs, target, reduction="none")
++        p_t = probs * target + (1 - probs) * (1 - target)
++        loss = ((1 - p_t) ** 2) * bce
++
++        div_rows = target.sum(dim=1) > 1
++        weight = torch.ones_like(loss)
++        weight[div_rows] = 1.0
++
++        return (loss * weight)[mask].mean()
+ 
+ 
+ def compute_batch_loss(
+@@ -1021,6 +1027,9 @@ def train(
+     augmentations: list | None = DEFAULT_AUGMENTATIONS,
+     pool_kernel_um: float = 5.0,
+     data_parallel: bool = True,
++    checkpoint_every: int | None = None,
++    resume_checkpoint: Path | None = None,
++    gradient_checkpointing: bool = True,
+ ) -> UNetNodeTransformer:
+     """Train on one fold from a pre-computed splits file.
+ 
+@@ -1065,6 +1074,7 @@ def train(
+         "downsample": list(downsample),
+         "window_size": window_size,
+         "pool_kernel_um": pool_kernel_um,
++        "gradient_checkpointing": gradient_checkpointing,
+     }
+     (output_dir / "config.json").write_text(json.dumps(model_config, indent=2))
+ 
+@@ -1127,6 +1137,7 @@ def train(
+         in_channels=1,
+         out_channels=unet_out_channels,
+         layers=unet_layers,
++        gradient_checkpointing=gradient_checkpointing,
+     )
+     if unet_weights is not None:
+         state = torch.load(unet_weights, map_location="cpu", weights_only=True)
+@@ -1158,11 +1169,23 @@ def train(
+     print(f"Model parameters: {n_params:,}", flush=True)
+ 
+     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
++    start_epoch = 0
++    best_score = 0.0
++    if resume_checkpoint is not None:
++        checkpoint = torch.load(resume_checkpoint, map_location=device, weights_only=False)
++        model.load_state_dict(checkpoint["model_state_dict"])
++        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
++        start_epoch = int(checkpoint["completed_epochs"])
++        best_score = float(checkpoint["best_score"])
++        print(
++            f"Resuming from {resume_checkpoint}: completed_epochs={start_epoch}, "
++            f"best_score={best_score:.4f}",
++            flush=True,
++        )
+     print(f"Starting training for {n_epochs} epochs (batch_size={batch_size})...", flush=True)
+ 
+-    best_score = 0.0
+     save_path = output_dir / "edge_predictor_best.pth"
+-    pbar = tqdm(range(n_epochs), desc="Training", disable=False)
++    pbar = tqdm(range(start_epoch, n_epochs), desc="Training", disable=False)
+     print(f"Detection loss: weight={det_loss_weight}, neg_weight={det_neg_weight}", flush=True)
+ 
+     for epoch in pbar:
+@@ -1189,6 +1212,24 @@ def train(
+                 save_path,
+             )
+ 
++        if checkpoint_every is not None and (epoch + 1) % checkpoint_every == 0:
++            checkpoint_path = output_dir / f"checkpoint_epoch_{epoch + 1:04d}.pth"
++            model_state = {
++                k.replace("unet.module.", "unet.", 1): v
++                for k, v in model.state_dict().items()
++            }
++            torch.save(
++                {
++                    "completed_epochs": epoch + 1,
++                    "best_score": best_score,
++                    "model_state_dict": model_state,
++                    "optimizer_state_dict": optimizer.state_dict(),
++                    "model_config": model_config,
++                },
++                checkpoint_path,
++            )
++            print(f"  Periodic checkpoint: {checkpoint_path}", flush=True)
++
+         marker = "*" if is_best else " "
+         pbar.set_postfix(edge=f"{edge_loss:.4f}", det=f"{det_loss:.4f}", acc=f"{test_acc:.4f}")
+         print(
+@@ -1252,6 +1293,13 @@ def main() -> None:
+                              "when more than one is available (default: on).")
+     parser.add_argument("--single-gpu", dest="data_parallel", action="store_false",
+                         help="Disable multi-GPU; train on cuda:0 only.")
++    parser.add_argument("--checkpoint-every", type=int, default=None,
++                        help="Save model and optimizer state every N completed epochs.")
++    parser.add_argument("--resume-checkpoint", type=str, default=None,
++                        help="Resume model, optimizer, epoch, and best score from a checkpoint.")
++    parser.add_argument("--no-gradient-checkpointing", dest="gradient_checkpointing",
++                        action="store_false", default=True,
++                        help="Disable UNet activation checkpointing when memory permits.")
+ 
+     args = parser.parse_args()
+ 
+@@ -1262,6 +1310,7 @@ def main() -> None:
+     unet_weights = Path(args.unet_weights) if args.unet_weights else None
+     debug_video = Path(args.debug_video) if args.debug_video else None
+     downsample = tuple(int(x) for x in args.downsample.split(","))
++    resume_checkpoint = Path(args.resume_checkpoint) if args.resume_checkpoint else None
+ 
+     folds = [0] if debug_video is not None else (
+         range(5) if args.split == "all" else [int(args.split)]
+@@ -1287,4 +1336,7 @@ def main() -> None:
+             window_size=args.window_size,
+             pool_kernel_um=args.pool_kernel_um,
+             data_parallel=args.data_parallel,
++            checkpoint_every=args.checkpoint_every,
++            resume_checkpoint=resume_checkpoint,
++            gradient_checkpointing=args.gradient_checkpointing,
+         )
