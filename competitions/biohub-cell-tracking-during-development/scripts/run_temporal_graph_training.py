@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """Cache frozen host pairs and train compact temporal-graph residual heads.
 
-The organizer image model always receives exactly two consecutive frames.  Two
-adjacent frozen pairs are then combined into a three-frame graph window and the
-compact residual head owns only the right transition.  Sparse annotations are
-used only when one annotated parent is represented by exactly one detected
+The organizer image model always receives exactly two consecutive frames.
+Adjacent frozen pairs are then combined into the configured graph window while
+the compact residual head owns only the right transition. Sparse annotations
+are used only when one annotated parent is represented by exactly one detected
 source; missing annotations never become negative or null labels.
 """
 
@@ -23,6 +23,7 @@ import tempfile
 import time
 import tomllib
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -53,10 +54,12 @@ from torch.utils.data import DataLoader, Dataset  # noqa: E402
 # cache fingerprints include this schema and must never alias two equations.
 CACHE_SCHEMA_VERSION = 1  # Legacy T_graph=3 compact cache.
 CACHE_SCHEMA_VERSIONS = {3: 1, 4: 2, 5: 3}
+LONG_HISTORY_CACHE_SCHEMA_VERSION = 4
 CACHE_FEATURE_SCHEMAS = {
     1: "tgraph3-candidate-features-v1",
     2: "tgraph4-acceleration-qbar-features-v1",
     3: "tgraph5-jerk-deep-history-features-v1",
+    4: "tgraph-long-history-linear-aggregate-features-v1",
 }
 TRAINING_CHECKPOINT_SCHEMA_VERSION = 1
 
@@ -130,9 +133,9 @@ def _cache_schema_version(graph_window_size: int) -> int:
     try:
         return CACHE_SCHEMA_VERSIONS[graph_window_size]
     except KeyError as error:
-        raise ValueError(
-            "compact cache supports only graph_window_size 3, 4, or 5"
-        ) from error
+        if graph_window_size >= 6:
+            return LONG_HISTORY_CACHE_SCHEMA_VERSION
+        raise ValueError("compact cache requires graph_window_size >= 3") from error
 
 
 def _cache_feature_schema(schema_version: int) -> str:
@@ -890,6 +893,7 @@ def _build_sparse_candidate_examples(
     gt_edges: torch.Tensor,
     graph_config: TemporalGraphConfig,
     *,
+    history: Sequence[ExtractedPair] | None = None,
     prior: ExtractedPair | None = None,
     oldest: ExtractedPair | None = None,
 ) -> SparseExamples:
@@ -905,6 +909,9 @@ def _build_sparse_candidate_examples(
         previous.pair,
         current.pair,
         candidates,
+        history_pairs=(
+            None if history is None else tuple(item.pair for item in history)
+        ),
         prior_pair=None if prior is None else prior.pair,
         oldest_pair=None if oldest is None else oldest.pair,
         graph_window_size=graph_config.graph_window_size,
@@ -1032,8 +1039,13 @@ def _cache_one_dataset(
                 position_function=position_function,
                 reuse_source=retained.get(pair_start - 1),
             )
-        oldest = retained.get(current_start - 3)
-        prior = retained.get(current_start - 2)
+        history = [
+            retained[pair_start]
+            for pair_start in range(
+                current_start - preceding_pairs,
+                current_start - 1,
+            )
+        ]
         previous = retained[current_start - 1]
         current = retained[current_start]
         current_window = by_start[current_start]
@@ -1043,8 +1055,7 @@ def _cache_one_dataset(
                 current,
                 current_window.targets[0].unsqueeze(0),
                 graph_config,
-                prior=prior,
-                oldest=oldest,
+                history=history,
             )
         )
         retained = {
@@ -1366,7 +1377,10 @@ def _cache_datasets(
         raise ValueError("shared cache manifest SHA-256 mismatch")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     schema_version = int(manifest.get("schema_version", -1))
-    if schema_version not in CACHE_SCHEMA_VERSIONS.values():
+    if schema_version not in {
+        *CACHE_SCHEMA_VERSIONS.values(),
+        LONG_HISTORY_CACHE_SCHEMA_VERSION,
+    }:
         raise ValueError(f"unsupported cache schema: {schema_version}")
     graph_config = manifest.get("graph_config")
     if not isinstance(graph_config, dict):

@@ -166,8 +166,10 @@ def test_tgraph4_sparse_examples_use_cache_schema_v2_and_wider_features():
 
     assert module._cache_schema_version(3) == 1
     assert module._cache_schema_version(4) == 2
-    with pytest.raises(ValueError, match="only graph_window_size 3, 4, or 5"):
-        module._cache_schema_version(6)
+    assert module._cache_schema_version(10) == 4
+    assert module._cache_schema_version(20) == 4
+    with pytest.raises(ValueError, match="graph_window_size >= 3"):
+        module._cache_schema_version(2)
     with pytest.raises(TypeError, match="must be an integer"):
         module._cache_schema_version(4.0)
     assert examples.features.shape == (
@@ -209,6 +211,58 @@ def test_tgraph5_sparse_examples_use_cache_schema_v3_and_jerk_features():
         module.candidate_feature_dim(2, graph_window_size=5),
     )
     assert examples.features.shape[-1] == module.candidate_feature_dim(2) + 8
+
+
+@pytest.mark.parametrize("graph_window_size", [10, 20])
+def test_long_tgraph_sparse_examples_use_cache_schema_v4_and_fixed_aggregate(
+    graph_window_size,
+):
+    module = _load_script()
+    history = []
+    for frame in range(-(graph_window_size - 3), 0):
+        pair = _pair(
+            module,
+            [[frame, 0, 0], [frame + 10, 0, 0]],
+            [[frame + 1, 0, 0], [frame + 11, 0, 0]],
+            [[4, 0], [0, 4]],
+        )
+        history.append(
+            module.ExtractedPair(
+                pair=pair,
+                source_coords_grid=pair.source_coords_um,
+                target_coords_grid=pair.target_coords_um,
+                source_matches=torch.tensor([[0, 1]]),
+                target_matches=torch.tensor([[0, 1]]),
+            )
+        )
+    previous, current = _triplet(module)
+    graph_config = module.TemporalGraphConfig(
+        node_feature_dim=2,
+        hidden_dim=4,
+        top_k=2,
+        radius_um=5.0,
+        graph_window_size=graph_window_size,
+    )
+    gt_edges = torch.tensor([[[1.0, 0.0], [0.0, 0.0]]])
+
+    examples = module._build_sparse_candidate_examples(
+        previous,
+        current,
+        gt_edges,
+        graph_config,
+        history=history,
+    )
+
+    assert module._cache_schema_version(graph_window_size) == 4
+    assert module._cache_feature_schema(4) == (
+        "tgraph-long-history-linear-aggregate-features-v1"
+    )
+    assert examples.features.shape == (
+        1,
+        2,
+        module.candidate_feature_dim(2, graph_window_size=graph_window_size),
+    )
+    assert examples.features.shape[-1] == module.candidate_feature_dim(2, 5) + 8
 
 
 def test_zero_detection_matches_are_padded_and_sparse_cache_stays_empty():
@@ -455,6 +509,59 @@ def test_tgraph5_cache_contract_requires_feature_revision_metadata():
     with pytest.raises(ValueError, match="feature width is missing"):
         module._validate_cache_training_contract(
             {key: value for key, value in manifest.items() if key != "feature_width"},
+            graph_config,
+            source,
+            config,
+        )
+
+
+@pytest.mark.parametrize("graph_window_size", [10, 20])
+def test_long_history_cache_contract_is_v4_and_window_specific(graph_window_size):
+    module = _load_script()
+    graph_config = module.TemporalGraphConfig(
+        node_feature_dim=2,
+        hidden_dim=4,
+        top_k=2,
+        radius_um=5.0,
+        graph_window_size=graph_window_size,
+    )
+    source = SimpleNamespace(
+        weights_sha256="host-sha",
+        raw_checkpoint_sha256="raw-sha",
+    )
+    feature_width = module.candidate_feature_dim(2, graph_window_size)
+    manifest = {
+        "schema_version": 4,
+        "feature_schema": "tgraph-long-history-linear-aggregate-features-v1",
+        "feature_width": feature_width,
+        "experiment_id": "EXP-LONG-CACHE",
+        "source_weights_sha256": "host-sha",
+        "source_raw_checkpoint_sha256": "raw-sha",
+        "graph_config": graph_config.to_dict(),
+    }
+    config = {"cache": {"source_experiment_id": "EXP-LONG-CACHE"}}
+
+    assert module._validate_cache_training_contract(
+        manifest,
+        graph_config,
+        source,
+        config,
+    ) == (
+        4,
+        "tgraph-long-history-linear-aggregate-features-v1",
+        feature_width,
+    )
+    other_window = 20 if graph_window_size == 10 else 10
+    wrong_window = {
+        **manifest,
+        "graph_config": {
+            **manifest["graph_config"],
+            "graph_window_size": other_window,
+        },
+    }
+    with pytest.raises(ValueError, match="different candidate contracts"):
+        module._validate_cache_training_contract(
+            wrong_window,
             graph_config,
             source,
             config,

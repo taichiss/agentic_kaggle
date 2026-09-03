@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -278,6 +279,94 @@ def test_t5_rejects_a_non_t4_second_fallback() -> None:
             primary_window_size=5,
             fallback_window_size=4,
         )
+
+
+def test_long_window_selects_longest_eligible_startup_head() -> None:
+    module = _load_script()
+    base = torch.tensor([[[1.0]]])
+    current = SimpleNamespace(edge_logits=base)
+    history = [object() for _ in range(8)]
+    calls: list[tuple[int, int]] = []
+
+    class Head:
+        def __init__(self, window: int) -> None:
+            self.config = _graph_config(window)
+
+        def __call__(
+            self,
+            _previous,
+            _current,
+            *,
+            prior_pair=None,
+            oldest_pair=None,
+            history_pairs=None,
+        ):
+            if self.config.graph_window_size == 4:
+                assert prior_pair is not None
+            elif self.config.graph_window_size == 5:
+                assert prior_pair is not None and oldest_pair is not None
+            elif self.config.graph_window_size >= 6:
+                assert len(history_pairs) == self.config.graph_window_size - 3
+            calls.append((self.config.graph_window_size, len(history_pairs or [])))
+            return SimpleNamespace(
+                edge_logits=torch.tensor([[[float(self.config.graph_window_size)]]])
+            )
+
+    primary = Head(10)
+    fallbacks = {5: Head(5), 4: Head(4), 3: Head(3)}
+    selected = []
+    for available in range(9):
+        logits = module._owned_transition_logits(
+            primary,
+            None,
+            current,
+            pair_history=history[:available],
+            temporal_graph_fallback_heads=fallbacks,
+        )
+        selected.append(float(logits.item()))
+
+    assert selected == [1.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 10.0]
+    assert calls[-1] == (10, 7)
+
+
+def test_fallback_stack_descriptor_is_descending_and_path_safe(tmp_path: Path) -> None:
+    module = _load_script()
+    stack = tmp_path / "fallback-stack.json"
+    stack.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "fallbacks": [
+                    {
+                        "graph_window_size": 5,
+                        "mlp_checkpoint": "t5-mlp.pth",
+                        "attention_checkpoint": "t5-attention.pth",
+                    },
+                    {
+                        "graph_window_size": 3,
+                        "mlp_checkpoint": "t3-mlp.pth",
+                        "attention_checkpoint": "t3-attention.pth",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert [
+        entry["graph_window_size"] for entry in module._fallback_stack_entries(stack)
+    ] == [5, 3]
+
+    payload = json.loads(stack.read_text(encoding="utf-8"))
+    payload["fallbacks"][1]["graph_window_size"] = 6
+    stack.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="strictly descending"):
+        module._fallback_stack_entries(stack)
+
+    payload["fallbacks"][1]["graph_window_size"] = 3
+    payload["fallbacks"][1]["mlp_checkpoint"] = "../escape.pth"
+    stack.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="unsafe mlp_checkpoint"):
+        module._fallback_stack_entries(stack)
 
 
 def test_pair_stream_reuses_middle_nodes_and_keeps_legacy_output(

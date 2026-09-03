@@ -442,6 +442,251 @@ def test_five_frame_features_zero_jerk_block_without_deepest_history() -> None:
     assert not batch.features[0, 0, 0, -4:].any()
 
 
+def _linear_history(graph_window_size: int) -> tuple[list[FrozenPair], FrozenPair, FrozenPair]:
+    history = [
+        _pair(
+            [float(frame)],
+            [float(frame + 1)],
+            torch.zeros(1, 1, 1),
+            feature_dim=1,
+        )
+        for frame in range(graph_window_size - 3)
+    ]
+    previous = _pair(
+        [float(graph_window_size - 3)],
+        [float(graph_window_size - 2)],
+        torch.zeros(1, 1, 1),
+        feature_dim=1,
+    )
+    current = _pair(
+        [float(graph_window_size - 2)],
+        [float(graph_window_size - 1)],
+        torch.zeros(1, 1, 1),
+        feature_dim=1,
+    )
+    return history, previous, current
+
+
+@pytest.mark.parametrize("graph_window_size", [10, 20])
+def test_long_history_linear_aggregate_uses_stable_width_and_exact_motion(
+    graph_window_size: int,
+) -> None:
+    history, previous, current = _linear_history(graph_window_size)
+    candidates = build_parent_candidates(
+        current.source_coords_um,
+        current.target_coords_um,
+        current.source_mask,
+        current.target_mask,
+        top_k=1,
+        radius_um=5.0,
+    )
+
+    batch = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        history_pairs=history,
+        graph_window_size=graph_window_size,
+        distance_scale_um=10.0,
+    )
+    t5 = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        history_pairs=history[-2:],
+        graph_window_size=5,
+        distance_scale_um=10.0,
+    )
+
+    assert candidate_feature_dim(1, graph_window_size) == 29
+    torch.testing.assert_close(
+        batch.features[..., : candidate_feature_dim(1, 5)],
+        t5.features,
+    )
+    # Constant velocity is extrapolated exactly. The fitted velocity agrees
+    # with the latest one, every requested lineage exists, and fit RMSE is 0.
+    torch.testing.assert_close(
+        batch.features[0, 0, 0, -8:],
+        torch.tensor([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0]),
+        atol=1.0e-6,
+        rtol=0.0,
+    )
+
+
+@pytest.mark.parametrize("graph_window_size", [10, 20])
+def test_long_history_head_api_preserves_zero_initialized_host_and_round_trips(
+    graph_window_size: int,
+) -> None:
+    history, previous, current = _linear_history(graph_window_size)
+    model = TemporalGraphResidualHead(
+        TemporalGraphConfig(
+            node_feature_dim=1,
+            hidden_dim=8,
+            top_k=1,
+            radius_um=5.0,
+            graph_window_size=graph_window_size,
+        )
+    )
+
+    output = model(previous, current, history_pairs=history)
+    restored = TemporalGraphResidualHead.from_checkpoint_payload(
+        model.checkpoint_payload(base_checkpoint_sha256="host-sha")
+    )
+
+    assert torch.equal(output.edge_logits, current.edge_logits)
+    assert output.candidate_features.features.shape[-1] == candidate_feature_dim(
+        1, graph_window_size
+    )
+    assert restored.config.graph_window_size == graph_window_size
+
+
+def test_long_history_aggregate_reads_the_deepest_frame() -> None:
+    history, previous, current = _linear_history(10)
+    shifted_oldest = _pair(
+        [-5.0],
+        [1.0],
+        torch.zeros(1, 1, 1),
+        feature_dim=1,
+    )
+    candidates = build_parent_candidates(
+        current.source_coords_um,
+        current.target_coords_um,
+        current.source_mask,
+        current.target_mask,
+        top_k=1,
+        radius_um=5.0,
+    )
+    baseline = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        history_pairs=history,
+        graph_window_size=10,
+    )
+    shifted = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        history_pairs=[shifted_oldest, *history[1:]],
+        graph_window_size=10,
+    )
+
+    torch.testing.assert_close(
+        shifted.features[..., : candidate_feature_dim(1, 5)],
+        baseline.features[..., : candidate_feature_dim(1, 5)],
+    )
+    assert not torch.equal(shifted.features[..., -8:], baseline.features[..., -8:])
+
+
+def test_t10_and_t20_aggregates_differ_on_the_same_nonlinear_transition() -> None:
+    positions = [float(frame**2) for frame in range(20)]
+    pairs = [
+        _pair(
+            [positions[frame]],
+            [positions[frame + 1]],
+            torch.zeros(1, 1, 1),
+            feature_dim=1,
+        )
+        for frame in range(19)
+    ]
+    previous = pairs[-2]
+    current = pairs[-1]
+    candidates = build_parent_candidates(
+        current.source_coords_um,
+        current.target_coords_um,
+        current.source_mask,
+        current.target_mask,
+        top_k=1,
+        radius_um=50.0,
+    )
+
+    t10 = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        history_pairs=pairs[-9:-2],
+        graph_window_size=10,
+    )
+    t20 = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        history_pairs=pairs[:-2],
+        graph_window_size=20,
+    )
+
+    torch.testing.assert_close(
+        t10.features[..., : candidate_feature_dim(1, 5)],
+        t20.features[..., : candidate_feature_dim(1, 5)],
+    )
+    assert torch.isfinite(t10.features[..., -8:]).all()
+    assert torch.isfinite(t20.features[..., -8:]).all()
+    assert not torch.allclose(t10.features[..., -8:], t20.features[..., -8:])
+
+
+def test_long_history_aggregate_zeros_all_features_without_complete_path() -> None:
+    history, previous, current = _linear_history(10)
+    history[0] = _pair(
+        [0.0],
+        [1.0],
+        torch.full((1, 1, 1), -torch.inf),
+        feature_dim=1,
+    )
+    candidates = build_parent_candidates(
+        current.source_coords_um,
+        current.target_coords_um,
+        current.source_mask,
+        current.target_mask,
+        top_k=1,
+        radius_um=5.0,
+    )
+
+    batch = build_candidate_features(
+        previous,
+        current,
+        candidates,
+        history_pairs=history,
+        graph_window_size=10,
+    )
+
+    assert not batch.features[..., -8:].any()
+
+
+def test_long_history_contract_rejects_missing_or_nonadjacent_pairs() -> None:
+    history, previous, current = _linear_history(10)
+    candidates = build_parent_candidates(
+        current.source_coords_um,
+        current.target_coords_um,
+        current.source_mask,
+        current.target_mask,
+        top_k=1,
+        radius_um=5.0,
+    )
+
+    with pytest.raises(ValueError, match="exactly 7 oldest-to-newest pairs"):
+        build_candidate_features(
+            previous,
+            current,
+            candidates,
+            history_pairs=history[:-1],
+            graph_window_size=10,
+        )
+    nonadjacent = _pair(
+        [0.0],
+        [2.0],
+        torch.zeros(1, 1, 1),
+        feature_dim=1,
+    )
+    with pytest.raises(ValueError, match="coordinates or node order"):
+        build_candidate_features(
+            previous,
+            current,
+            candidates,
+            history_pairs=[nonadjacent, *history[1:]],
+            graph_window_size=10,
+        )
+
+
 def test_four_frame_contract_rejects_nonadjacent_prior_pair() -> None:
     prior = _pair([0.0], [2.0], torch.zeros(1, 1, 1))
     previous = _pair([1.0], [3.0], torch.zeros(1, 1, 1))

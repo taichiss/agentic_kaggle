@@ -74,6 +74,14 @@ def _triplet() -> tuple[FrozenPair, FrozenPair]:
     return previous, current
 
 
+def _long_history() -> tuple[list[FrozenPair], FrozenPair, FrozenPair]:
+    history = [
+        _pair([float(frame)], [float(frame + 1)], torch.zeros(1, 1, 1))
+        for frame in range(-7, 0)
+    ]
+    return history, *_triplet()
+
+
 def test_single_head_modes_apply_only_the_selected_residual() -> None:
     previous, current = _triplet()
     mlp_residual = torch.tensor([[[-0.4, 0.4]]])
@@ -100,6 +108,26 @@ def test_single_head_modes_apply_only_the_selected_residual() -> None:
         attention_output.candidate_residual,
         attention_residual,
     )
+
+
+def test_long_history_ensemble_forwards_oldest_to_newest_history() -> None:
+    history, previous, current = _long_history()
+    residual = torch.tensor([[[-0.1, 0.1]]])
+    mlp = StubHead(residual, architecture="mlp", graph_window_size=10)
+    attention = StubHead(
+        residual,
+        architecture="candidate_attention",
+        graph_window_size=10,
+    )
+
+    output = TemporalGraphLinkEnsemble(
+        mlp,
+        attention,
+        mode="bounded_logit_5050",
+    )(previous, current, history_pairs=history)
+
+    assert output.candidate_features.features.shape[-1] == 32
+    assert torch.isfinite(output.edge_logits).all()
 
 
 def test_5050_centers_and_bounds_the_combined_candidate_residual() -> None:

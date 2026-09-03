@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import torch
 
 from .contracts import (
@@ -211,14 +213,199 @@ def candidate_feature_dim(
         raise TypeError("node_feature_dim must be an integer")
     if node_feature_dim <= 0:
         raise ValueError("node_feature_dim must be positive")
-    if (
-        isinstance(graph_window_size, bool)
-        or not isinstance(graph_window_size, int)
-        or graph_window_size not in {3, 4, 5}
-    ):
-        raise ValueError("graph_window_size must be 3, 4, or 5")
-    temporal_width = {3: 10, 4: 14, 5: 18}[graph_window_size]
+    if isinstance(graph_window_size, bool) or not isinstance(graph_window_size, int):
+        raise TypeError("graph_window_size must be an integer")
+    if graph_window_size < 3:
+        raise ValueError("graph_window_size must be at least 3")
+    # T3/T4/T5 are immutable checkpoint contracts. Longer windows retain the
+    # complete T5 prefix and add one fixed-width summary of the whole lineage,
+    # so T10 and T20 do not grow the trainable head merely because they look
+    # farther back in time.
+    temporal_width = {3: 10, 4: 14, 5: 18}.get(graph_window_size, 26)
     return 3 * node_feature_dim + temporal_width
+
+
+def _resolve_history_pairs(
+    previous_pair: FrozenPair,
+    *,
+    history_pairs: Sequence[FrozenPair] | None,
+    prior_pair: FrozenPair | None,
+    oldest_pair: FrozenPair | None,
+    graph_window_size: int,
+    middle_coord_atol: float,
+) -> tuple[FrozenPair, ...]:
+    """Normalize legacy T4/T5 aliases into an oldest-to-newest history.
+
+    A graph window of ``W`` owns the final transition, receives the immediately
+    preceding transition separately as ``previous_pair``, and therefore needs
+    exactly ``W - 3`` older pairs. Supplying less history would silently change
+    the experiment, so incomplete histories fail closed. The legacy aliases
+    remain byte-compatible call paths for existing T4/T5 submissions.
+    """
+    expected = graph_window_size - 3
+    if history_pairs is not None:
+        if prior_pair is not None or oldest_pair is not None:
+            raise ValueError(
+                "history_pairs cannot be combined with prior_pair or oldest_pair"
+            )
+        resolved = tuple(history_pairs)
+    elif graph_window_size == 3:
+        if prior_pair is not None:
+            raise ValueError("prior_pair must be omitted when graph_window_size=3")
+        if oldest_pair is not None:
+            raise ValueError("oldest_pair must be omitted when graph_window_size=3")
+        resolved = ()
+    elif graph_window_size == 4:
+        if prior_pair is None:
+            raise ValueError("prior_pair is required when graph_window_size=4")
+        if oldest_pair is not None:
+            raise ValueError("oldest_pair must be omitted when graph_window_size=4")
+        resolved = (prior_pair,)
+    elif graph_window_size == 5:
+        if prior_pair is None:
+            raise ValueError("prior_pair is required when graph_window_size=5")
+        if oldest_pair is None:
+            raise ValueError("oldest_pair is required when graph_window_size=5")
+        resolved = (oldest_pair, prior_pair)
+    else:
+        raise ValueError(
+            "history_pairs is required for graph_window_size greater than 5"
+        )
+
+    if len(resolved) != expected:
+        raise ValueError(
+            "history_pairs must contain exactly "
+            f"{expected} oldest-to-newest pairs for graph_window_size="
+            f"{graph_window_size}; got {len(resolved)}"
+        )
+    if not all(isinstance(pair, FrozenPair) for pair in resolved):
+        raise TypeError("history_pairs must contain only FrozenPair values")
+
+    adjacent = (*resolved, previous_pair)
+    for left, right in zip(adjacent, adjacent[1:], strict=False):
+        RightTransitionTriplet(
+            left,
+            right,
+            middle_coord_atol=middle_coord_atol,
+        )
+    return resolved
+
+
+def _long_history_features(
+    history_pairs: tuple[FrozenPair, ...],
+    previous_pair: FrozenPair,
+    current_pair: FrozenPair,
+    candidates: ParentCandidates,
+    target_coords: torch.Tensor,
+    expected_previous: torch.Tensor,
+    *,
+    distance_scale_um: float,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Summarize every historical frame with path-aware linear motion.
+
+    Dynamic programming propagates sufficient statistics over the frozen-host
+    parent distributions without materializing dense all-path tensors. The
+    resulting block is: long-horizon linear prediction residual (xyz), recent
+    velocity minus the fitted long-horizon velocity (xyz), complete-path mass,
+    and trajectory-fit RMSE. If no complete path reaches the deepest requested
+    frame, all eight values are explicitly zero.
+    """
+    lineage_pairs = (*history_pairs, previous_pair)
+    oldest = lineage_pairs[0]
+    mass = oldest.source_mask.detach().float()
+    oldest_coords = oldest.source_coords_um.detach().float()
+    oldest_coords = torch.where(
+        oldest.source_mask.unsqueeze(-1),
+        oldest_coords,
+        torch.zeros_like(oldest_coords),
+    )
+    summed_position = oldest_coords * mass.unsqueeze(-1)
+    summed_time_position = torch.zeros_like(summed_position)
+    summed_squared_norm = oldest_coords.square().sum(dim=-1) * mass
+
+    for time_index, pair in enumerate(lineage_pairs, start=1):
+        probabilities, _ = _normalized_parent_probabilities(pair, eps=1.0e-8)
+        propagated_mass = torch.einsum("bst,bs->bt", probabilities, mass)
+        propagated_position = torch.einsum(
+            "bst,bsc->btc", probabilities, summed_position
+        )
+        propagated_time_position = torch.einsum(
+            "bst,bsc->btc", probabilities, summed_time_position
+        )
+        propagated_squared_norm = torch.einsum(
+            "bst,bs->bt", probabilities, summed_squared_norm
+        )
+        coordinates = pair.target_coords_um.detach().float()
+        coordinates = torch.where(
+            pair.target_mask.unsqueeze(-1),
+            coordinates,
+            torch.zeros_like(coordinates),
+        )
+        mass = propagated_mass
+        summed_position = propagated_position + coordinates * mass.unsqueeze(-1)
+        summed_time_position = (
+            propagated_time_position
+            + float(time_index) * coordinates * mass.unsqueeze(-1)
+        )
+        summed_squared_norm = (
+            propagated_squared_norm
+            + coordinates.square().sum(dim=-1) * mass
+        )
+
+    has_complete_path = mass > 1.0e-8
+    normalizer = mass.unsqueeze(-1).clamp_min(1.0e-8)
+    position_sum = summed_position / normalizer
+    time_position_sum = summed_time_position / normalizer
+    squared_norm_sum = summed_squared_norm / mass.clamp_min(1.0e-8)
+
+    frame_count = float(len(lineage_pairs) + 1)
+    time_sum = frame_count * (frame_count - 1.0) / 2.0
+    time_square_sum = (
+        frame_count * (frame_count - 1.0) * (2.0 * frame_count - 1.0) / 6.0
+    )
+    mean_time = time_sum / frame_count
+    centered_time_square_sum = time_square_sum - frame_count * mean_time**2
+    slope = (
+        time_position_sum - mean_time * position_sum
+    ) / centered_time_square_sum
+    intercept = (position_sum - slope * time_sum) / frame_count
+    prediction = intercept + slope * frame_count
+
+    source_coords = current_pair.source_coords_um.detach().float()
+    recent_velocity = source_coords - expected_previous
+    velocity_delta = recent_velocity - slope
+
+    fit_sse = (
+        squared_norm_sum
+        - 2.0 * (intercept * position_sum).sum(dim=-1)
+        - 2.0 * (slope * time_position_sum).sum(dim=-1)
+        + frame_count * intercept.square().sum(dim=-1)
+        + 2.0 * time_sum * (intercept * slope).sum(dim=-1)
+        + time_square_sum * slope.square().sum(dim=-1)
+    )
+    fit_rmse = torch.sqrt(
+        fit_sse.clamp_min(0.0) / (frame_count * 3.0)
+    ).unsqueeze(-1)
+
+    prediction = _gather_source(prediction, candidates)
+    velocity_delta = _gather_source(velocity_delta, candidates)
+    path_mass = _gather_source(mass.unsqueeze(-1), candidates)
+    fit_rmse = _gather_source(fit_rmse, candidates)
+    available = _gather_source(has_complete_path.unsqueeze(-1), candidates)
+
+    scale = float(distance_scale_um)
+    prediction_residual = (target_coords - prediction) / scale
+    velocity_delta = velocity_delta / scale
+    fit_rmse = fit_rmse / scale
+    prediction_residual = torch.where(
+        available, prediction_residual, torch.zeros_like(prediction_residual)
+    )
+    velocity_delta = torch.where(
+        available, velocity_delta, torch.zeros_like(velocity_delta)
+    )
+    path_mass = torch.where(available, path_mass, torch.zeros_like(path_mass))
+    fit_rmse = torch.where(available, fit_rmse, torch.zeros_like(fit_rmse))
+    return prediction_residual, velocity_delta, path_mass, fit_rmse
 
 
 def build_candidate_features(
@@ -226,6 +413,7 @@ def build_candidate_features(
     current_pair: FrozenPair,
     candidates: ParentCandidates,
     *,
+    history_pairs: Sequence[FrozenPair] | None = None,
     prior_pair: FrozenPair | None = None,
     oldest_pair: FrozenPair | None = None,
     graph_window_size: int = 3,
@@ -243,45 +431,28 @@ def build_candidate_features(
     (3) and probabilistically propagated second-history mass (1). For a
     five-frame window, ``oldest_pair`` supplies ``t-3 -> t-2`` and appends a
     constant-jerk residual (3) plus deepest-history path mass (1), while the
-    complete T3 and T4 vectors remain unchanged prefixes.
+    complete T3 and T4 vectors remain unchanged prefixes. Longer windows use
+    ``history_pairs`` in oldest-to-newest order. They keep the complete T5
+    prefix and append eight fixed-width, path-aware long-history statistics.
     """
     if distance_scale_um <= 0:
         raise ValueError("distance_scale_um must be positive")
     candidate_feature_dim(current_pair.feature_dim, graph_window_size)
-    if graph_window_size == 3:
-        if prior_pair is not None:
-            raise ValueError("prior_pair must be omitted when graph_window_size=3")
-        if oldest_pair is not None:
-            raise ValueError("oldest_pair must be omitted when graph_window_size=3")
-    elif graph_window_size == 4:
-        if prior_pair is None:
-            raise ValueError("prior_pair is required when graph_window_size=4")
-        if oldest_pair is not None:
-            raise ValueError("oldest_pair must be omitted when graph_window_size=4")
-    else:
-        if prior_pair is None:
-            raise ValueError("prior_pair is required when graph_window_size=5")
-        if oldest_pair is None:
-            raise ValueError("oldest_pair is required when graph_window_size=5")
+    resolved_history = _resolve_history_pairs(
+        previous_pair,
+        history_pairs=history_pairs,
+        prior_pair=prior_pair,
+        oldest_pair=oldest_pair,
+        graph_window_size=graph_window_size,
+        middle_coord_atol=middle_coord_atol,
+    )
+    prior_pair = resolved_history[-1] if resolved_history else None
+    oldest_pair = resolved_history[-2] if len(resolved_history) >= 2 else None
     triplet = RightTransitionTriplet(
         previous_pair,
         current_pair,
         middle_coord_atol=middle_coord_atol,
     )
-    if prior_pair is not None:
-        RightTransitionTriplet(
-            prior_pair,
-            previous_pair,
-            middle_coord_atol=middle_coord_atol,
-        )
-    if oldest_pair is not None:
-        if prior_pair is None:
-            raise RuntimeError("validated T5 history unexpectedly lacks prior_pair")
-        RightTransitionTriplet(
-            oldest_pair,
-            prior_pair,
-            middle_coord_atol=middle_coord_atol,
-        )
     current = triplet.owned_transition
     if candidates.batch_size != current.batch_size:
         raise ValueError("candidate and transition batch dimensions differ")
@@ -465,6 +636,19 @@ def build_candidate_features(
             feature_parts.extend(
                 [jerk_residual, gathered_third_history_mass]
             )
+
+    if graph_window_size >= 6:
+        feature_parts.extend(
+            _long_history_features(
+                resolved_history,
+                previous_pair,
+                current,
+                candidates,
+                target_coords,
+                history.expected_position_um,
+                distance_scale_um=distance_scale_um,
+            )
+        )
 
     features = torch.cat(feature_parts, dim=-1)
     expected_dim = candidate_feature_dim(current.feature_dim, graph_window_size)

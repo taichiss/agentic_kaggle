@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import torch
@@ -29,7 +29,7 @@ class CandidateAttentionResidual(nn.Module):
     """Jointly score the bounded parent candidates for each target node.
 
     The attention axis is the unordered candidate set, not time. Temporal
-    evidence remains encoded in each candidate's three-frame features.
+    evidence remains encoded in each candidate's configured graph-window features.
     """
 
     def __init__(
@@ -89,7 +89,7 @@ class CandidateAttentionResidual(nn.Module):
 
 
 class TemporalGraphResidualHead(nn.Module):
-    """Refine frozen host logits with bounded three-frame graph context."""
+    """Refine frozen host logits with bounded, variable-length graph context."""
 
     def __init__(
         self,
@@ -204,25 +204,11 @@ class TemporalGraphResidualHead(nn.Module):
         current_pair: FrozenPair | None = None,
         candidates: ParentCandidates | None = None,
         *,
+        history_pairs: Sequence[FrozenPair] | None = None,
         prior_pair: FrozenPair | None = None,
         oldest_pair: FrozenPair | None = None,
     ) -> TemporalGraphOutput:
         """Refine ``t -> t+1`` using the configured graph window."""
-        if self.config.graph_window_size == 3:
-            if prior_pair is not None:
-                raise ValueError("prior_pair must be omitted when graph_window_size=3")
-            if oldest_pair is not None:
-                raise ValueError("oldest_pair must be omitted when graph_window_size=3")
-        elif self.config.graph_window_size == 4:
-            if prior_pair is None:
-                raise ValueError("prior_pair is required when graph_window_size=4")
-            if oldest_pair is not None:
-                raise ValueError("oldest_pair must be omitted when graph_window_size=4")
-        else:
-            if prior_pair is None:
-                raise ValueError("prior_pair is required when graph_window_size=5")
-            if oldest_pair is None:
-                raise ValueError("oldest_pair is required when graph_window_size=5")
         if isinstance(previous_pair, RightTransitionTriplet):
             if current_pair is not None:
                 raise ValueError("current_pair must be omitted when passing a triplet")
@@ -254,6 +240,7 @@ class TemporalGraphResidualHead(nn.Module):
             previous,
             current,
             candidates,
+            history_pairs=history_pairs,
             prior_pair=prior_pair,
             oldest_pair=oldest_pair,
             graph_window_size=self.config.graph_window_size,

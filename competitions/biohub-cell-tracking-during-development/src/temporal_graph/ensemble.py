@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 
 import torch
 from torch import nn
@@ -102,25 +103,11 @@ class TemporalGraphLinkEnsemble(nn.Module):
         previous_pair: FrozenPair | RightTransitionTriplet,
         current_pair: FrozenPair | None = None,
         *,
+        history_pairs: Sequence[FrozenPair] | None = None,
         prior_pair: FrozenPair | None = None,
         oldest_pair: FrozenPair | None = None,
     ) -> TemporalGraphOutput:
         graph_window_size = self.mlp_head.config.graph_window_size
-        if graph_window_size == 3:
-            if prior_pair is not None:
-                raise ValueError("prior_pair must be omitted when graph_window_size=3")
-            if oldest_pair is not None:
-                raise ValueError("oldest_pair must be omitted when graph_window_size=3")
-        elif graph_window_size == 4:
-            if prior_pair is None:
-                raise ValueError("prior_pair is required when graph_window_size=4")
-            if oldest_pair is not None:
-                raise ValueError("oldest_pair must be omitted when graph_window_size=4")
-        else:
-            if prior_pair is None:
-                raise ValueError("prior_pair is required when graph_window_size=5")
-            if oldest_pair is None:
-                raise ValueError("oldest_pair is required when graph_window_size=5")
         if isinstance(previous_pair, RightTransitionTriplet):
             if current_pair is not None:
                 raise ValueError("current_pair must be omitted when passing a triplet")
@@ -149,6 +136,7 @@ class TemporalGraphLinkEnsemble(nn.Module):
             previous,
             current,
             candidates,
+            history_pairs=history_pairs,
             prior_pair=prior_pair,
             oldest_pair=oldest_pair,
             graph_window_size=graph_window_size,
