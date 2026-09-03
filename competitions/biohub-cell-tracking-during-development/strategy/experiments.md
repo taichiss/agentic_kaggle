@@ -14,6 +14,8 @@ run ID, or checksum sufficient to identify them.
 | EXP-0011 | 2026-08-28 | H014 candidate-set self-attention improves parent choice by modelling competition among the nearest eight candidates | frozen EXP-0009 cache `c5e97a56`; frozen EXP-0004 e30 logits | `7277812` + experiment working tree | `configs/exp-0011-tgraph3-candidate-attention-10e.toml` | 20260828 / identical EXP-0009 calibration split | base 0.922163; best 0.922372 at e1 (+2 links); e10 0.920704 (-14 links); MLP best 0.922684 (+5 links) | not_submitted | `artifacts/EXP-0011/`; W&B `693a7de8` | attention lowers CE more but does not beat the independent MLP; residual magnitude, not candidate interaction capacity, is the immediate limiter | test a bounded residual scale/gate before any cache-v2 temporal GNN/GRU |
 | EXP-0012 | 2026-08-29 | H015 centered, smoothly bounded attention residuals preserve host-correct links while fixing ambiguous links | frozen EXP-0009 cache `c5e97a56`; frozen EXP-0004 e30 logits | `7277812` + experiment working tree | `configs/exp-0012-tgraph3-bounded-attention-10e.toml` | 20260828 / identical EXP-0009 calibration split | base 0.922163; best **0.923101 at e3** (+9 links); e10 0.922476 (+3 links); MLP best 0.922684 (+5 links) | not_submitted | `artifacts/EXP-0012/`; W&B `9d75368c` | valid-candidate centering plus ±0.15 tanh bound converts Attention from net regression to the best local parent-accuracy result | retain e3 best; verify on independent report/LB only after explicit submission request |
 | EXP-0014 | 2026-09-02 | H017 complementary MLP and bounded-Attention link errors can improve the fixed Host graph through score-level combination or agreement gating | frozen EXP-0004 e30 Host + EXP-0009/0012 e3 heads; cache `c5e97a56` | `bf1ee23` | `configs/exp-0014-tgraph3-link-ensemble-abcd.toml` | 20260902 / identical EXP-0009 calibration split | Host 0.922163; MLP 0.922684; Attention **0.923101**; bounded 50:50 0.922372; gate 0.922476 | A `55943665`, B `55943911`, C `55943722`, D `55944373`; all pending | Dataset v1 + four private GPU Notebook v1 outputs under `artifacts/EXP-0014/` | all four output contracts passed; agreement gate exactly matches Host min7 on the public clips | read all four scores and compare directly with Host-only min7 ref `55829542` at 0.893 |
+| EXP-0017 | 2026-09-03 | H020 ten-frame graph history adds useful long-horizon motion evidence with the Host image model frozen | frozen EXP-0004 e30 Host + T3/T4/T5 fallbacks; schema-v4 cache `44244943` | `731a11a` + resolved run | `configs/exp-0017-tgraph10-link-ensemble.toml` | 20260902 / embryo fold 0 (`44b6` calibration) | Host 0.921628; MLP 0.922076 e3; Attention 0.921964 e10; bounded 50:50 **0.922189** (+5 links) | ref `55976717` pending | cache W&B `71387c46`; train W&B `451dafae`/`25a1bbcf`; Dataset/Notebook v1 | fixed 50:50 improves the exact local cache and is the best of its four policies | read LB against the shared 0.893 plateau |
+| EXP-0018 | 2026-09-03 | H021 twenty-frame graph history adds useful context beyond T10 under identical frozen controls | frozen EXP-0004 e30 Host + T3/T4/T5/T10 fallbacks; schema-v4 cache `0069d3cf` | `731a11a` + resolved run | `configs/exp-0018-tgraph20-link-ensemble.toml` | 20260902 / embryo fold 0 (`44b6` calibration) | Host 0.917046; MLP **0.917931** e3; Attention 0.917805 e6; bounded 50:50 0.917425 (+3 links) | ref `55976752` pending | cache W&B `148d8609`; train W&B `1490585c`/`0a015899`; Dataset/Notebook v1 | fixed 50:50 remains above Host, though MLP alone is locally stronger | read LB directly against T10 ref `55976717` |
 | EXP-0010 | 2026-08-28 | H012/H013 remaining error can be separated into short false tracks versus missed long-displacement links | frozen EXP-0004 e30 model / public test | `6b88560` | `configs/exp-0010-postprocess-ab.toml` | fixed checkpoint and inference profile | structural gate only; no new heavy CV | corrected min7 ref `55829542`: **0.893**; gate12 ref `55828801`: 0.884 | private Notebook v1 outputs under `artifacts/EXP-0010/` | pruning six-node tracks improves the fixed 0.890 control; widening the relink gate hurts | adopt min7 and reject gate12 |
 | EXP-0013 | 2026-08-29 | H016 min-component 7 transfers to EXP-0008 EMA epoch 30 | official data + fixed EMA e30 wrapper `5a2d5fc` | `2207d45` + packaging working tree | `configs/exp-0013-exp0008-ema-e30-min7.toml` | 20260827 / fold 0; EMA proxy 0.929642 | competition screen pending until EXP-0008 reaches e50 | min-7 ref `55866168`: 0.879; min-6 ref `55877003` pending | Dataset v2; min-7 Notebook v2; min-6 Notebook v1; `artifacts/EXP-0013/` | min-7 transfer is below the established EXP-0004 controls; paired min-6 scoring will isolate the post-process effect | read min-6 LB and compare directly with 0.879 |
 
@@ -378,6 +380,66 @@ Checkpoint SHA-256:
   `57c3b1c6042fe82ab9acc6f28bebeabf95ab8b696600b097a0c725076173a8a6`. Code Submission ref
   `55957329` scored 0.893 public, tying T4, T3, and Host min7. H019 is rejected on the current LB
   evidence; EXP-0017/EXP-0018 extend the same controlled comparison to T10 and T20.
+
+### EXP-0017
+
+- This is the controlled `T_graph=10` extension with `T_image=2`, frozen EXP-0004 completed-epoch-30
+  image/Host weights, fixed candidate geometry, thresholds, division handling, and min-component-7
+  post-processing. Startup dispatch is Host, T3, T4, T5, then T10 as each history becomes eligible.
+- Cache schema v4 preserves the complete T5 feature prefix and adds eight fixed-width, path-aware
+  full-history statistics: linear prediction residual xyz, recent-minus-fitted velocity xyz,
+  complete path mass, and trajectory-fit RMSE. The width is 122 for both T10 and T20; missing a
+  complete historical path makes all eight added values exactly zero.
+- The full T10 cache contains 97,732 training and 8,919 validation examples with candidate recall
+  0.998131 and 0.998768. Construction took 22,916.535 seconds under W&B `71387c46`; fingerprint is
+  `44244943ce89839e6ee8570406fb9c9851f65ab5e4c0913f9ddeb6fd38d847c3` and manifest SHA-256 is
+  `0c5182dde846257aaae21a15e27b2a2d6b9f65de10feebea1e2d8f03b5f833fa`.
+- MLP training took 30.404 seconds and retained epoch 3 at 0.922076 (W&B `451dafae`, checkpoint
+  `97035ef34b6f8db92b6cac5387278949d068c00f2b216fd87dbe8ec6ac84c815`). Bounded Attention took
+  33.334 seconds and retained the last exact best tie at epoch 10 with 0.921964 (W&B `25a1bbcf`,
+  checkpoint `17fe0e8326f3cf05eaaaa3030bdf0972abb8af7f0ca7c119038713d561f92f51`). Both retain epoch-5
+  and epoch-10 periodic checkpoints.
+- On 8,919 exact validation rows, Host, MLP, Attention, and centered bounded-logit 50:50 obtain
+  8,220, 8,224, 8,223, and 8,225 correct parents. The deployment ensemble fixes 11 Host mistakes,
+  regresses six Host-correct links, and is the best local policy at 0.922189; the two heads disagree
+  on 43 rows.
+- The content-addressed bundle has eight heads and fallback order T10/T5/T4/T3/Host; manifest
+  SHA-256 is `2f817346f46a4f68d27434fbf53f83947867cf1a4e971494aed10c382bbbba2c`.
+  Private Dataset <https://www.kaggle.com/datasets/suzukitaichi/biohub-exp-0017-tgraph10-link-5050>
+  version 1 is attached to GPU Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0017-tgraph10-bounded-logit-5050-submit>,
+  version 1. It completed inference in 352.776 seconds and emitted 162,867 nodes plus 155,865 edges.
+  The 318,732-row CSV SHA-256 is
+  `77f581649193f2134381d4f6512b885e8b02659ff2d2231dbcfdf8f1b9558b2d`; Code Submission ref
+  `55976717` is pending.
+
+### EXP-0018
+
+- This is the identical controlled comparison at `T_graph=20`. The only primary-experiment change
+  from EXP-0017 is graph history length; early transitions use Host, T3, T4, T5, and T10 fallbacks
+  before the T20 head becomes eligible.
+- The full T20 schema-v4 cache contains 85,772 training and 7,908 validation examples with candidate
+  recall 0.998115 and 0.998737. Construction took 23,242.793 seconds under W&B `148d8609`;
+  fingerprint is `0069d3cf9949b982b0298f799d1818dd0d2cf194099fbaca6b8d5fa8f9a7bf89` and manifest SHA-256 is
+  `b9849fdb19705a38faacc519a691527f3d4be8c74f215d2a2735581774a164f0`.
+- MLP training took 27.658 seconds and retained epoch 3 at 0.917931 (W&B `1490585c`, checkpoint
+  `6815ac93a8ba982776b85227c45f0f04ce3927b368f0b034878c700e39d6e097`). Bounded Attention took
+  30.514 seconds and retained the last exact best tie at epoch 6 with 0.917805 (W&B `0a015899`,
+  checkpoint `283486033ad614d90e04b4718d97f7afaa4fd83a672988973e810275c6d49642`). Both retain epoch-5
+  and epoch-10 periodic checkpoints.
+- On 7,908 exact validation rows, Host, MLP, Attention, and centered bounded-logit 50:50 obtain
+  7,252, 7,259, 7,258, and 7,255 correct parents. The fixed deployment ensemble fixes eight Host
+  mistakes and regresses five for a +3-link local signal at 0.917425. MLP alone is locally best at
+  +7; the controlled LB arm nevertheless keeps the same 50:50 policy used for T3/T4/T5/T10.
+- The content-addressed bundle has ten heads and fallback order T20/T10/T5/T4/T3/Host; manifest
+  SHA-256 is `8ebc6c7704b374c8111fab384941bc37c92e1f8c92eee9fa74ba991148d8b3a8`.
+  Private Dataset <https://www.kaggle.com/datasets/suzukitaichi/biohub-exp-0018-tgraph20-link-5050>
+  version 1 is attached to GPU Notebook
+  <https://www.kaggle.com/code/suzukitaichi/biohub-exp-0018-tgraph20-bounded-logit-5050-submit>,
+  version 1. It completed inference in 338.973 seconds and emitted 162,875 nodes plus 155,873 edges.
+  The 318,748-row CSV SHA-256 is
+  `f365327673a1ba8880c2b5d89441af2e91b64aeb927aeddb28a767cc22202fe5`; Code Submission ref
+  `55976752` is pending.
 
 ### EXP-0013
 

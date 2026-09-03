@@ -20,8 +20,8 @@ validation_partition = "calibration"
 image_window_size = 2
 graph_window_size = 10
 # Filled from the completed EXP-0017 cache manifest before packaging.
-cache_fingerprint = "0000000000000000000000000000000000000000000000000000000000000000"
-cache_manifest_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+cache_fingerprint = "44244943ce89839e6ee8570406fb9c9851f65ab5e4c0913f9ddeb6fd38d847c3"
+cache_manifest_sha256 = "0c5182dde846257aaae21a15e27b2a2d6b9f65de10feebea1e2d8f03b5f833fa"
 
 [fallbacks.t5]
 graph_window_size = 5
@@ -40,15 +40,15 @@ cache_manifest_sha256 = "6296240ca44fa9b6b9ce3d98ba56e774621b67b2e460a2b0f26ece6
 
 [heads.primary_mlp]
 experiment_id = "EXP-0017-MLP"
-completed_epoch = 0
+completed_epoch = 3
 checkpoint_path = "artifacts/EXP-0017/mlp/best_model.pth"
-checkpoint_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+checkpoint_sha256 = "97035ef34b6f8db92b6cac5387278949d068c00f2b216fd87dbe8ec6ac84c815"
 
 [heads.primary_attention]
 experiment_id = "EXP-0017-ATTN"
-completed_epoch = 0
+completed_epoch = 10
 checkpoint_path = "artifacts/EXP-0017/attention/best_model.pth"
-checkpoint_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+checkpoint_sha256 = "17fe0e8326f3cf05eaaaa3030bdf0972abb8af7f0ca7c119038713d561f92f51"
 architecture = "candidate_attention"
 attention_heads = 4
 residual_logit_bound = 0.15
@@ -127,6 +127,7 @@ freeze_postprocess = true
 effective_postprocess_profile = "public-applicable-v1-min-component-7"
 control_experiment_id = "EXP-0016"
 control_submission_ref = 55957329
+control_public_score = 0.893
 
 [submission]
 competition = "biohub-cell-tracking-during-development"
@@ -135,9 +136,12 @@ dataset_title = "Biohub EXP-0017 TGraph10 Link 5050"
 kernel_id = "suzukitaichi/biohub-exp-0017-tgraph10-bounded-logit-5050-submit"
 kernel_title = "Biohub EXP-0017 TGraph10 Bounded Logit 5050 Submit"
 submission_message = "EXP-0017 T_graph=10 bounded-logit 50:50 min-component-7"
-status = "training"
+status = "pending"
 requires_explicit_request = true
 authorized_at = "2026-09-03"
+notebook_version = 1
+submission_ref = 55976717
+submitted_at = "2026-09-03T07:15:39.193000Z"
 
 [output]
 artifact_dir = "artifacts/EXP-0017"

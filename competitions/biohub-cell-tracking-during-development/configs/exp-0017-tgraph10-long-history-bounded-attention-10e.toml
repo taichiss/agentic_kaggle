@@ -66,7 +66,7 @@ include_detection_confidence = false
 [cache]
 directory = "artifacts/EXP-0017/cache-v4"
 source_experiment_id = "EXP-0017-MLP"
-source_manifest_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+source_manifest_sha256 = "0c5182dde846257aaae21a15e27b2a2d6b9f65de10feebea1e2d8f03b5f833fa"
 validation_manifest = "artifacts/EXP-0009/validation_split_fallback.json"
 host_pair_batch_size = 1
 detection_probability_threshold = 0.99

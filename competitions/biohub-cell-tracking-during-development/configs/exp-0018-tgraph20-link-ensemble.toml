@@ -20,14 +20,14 @@ validation_partition = "calibration"
 image_window_size = 2
 graph_window_size = 20
 # Filled from the completed EXP-0018 cache manifest before packaging.
-cache_fingerprint = "0000000000000000000000000000000000000000000000000000000000000000"
-cache_manifest_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+cache_fingerprint = "0069d3cf9949b982b0298f799d1818dd0d2cf194099fbaca6b8d5fa8f9a7bf89"
+cache_manifest_sha256 = "b9849fdb19705a38faacc519a691527f3d4be8c74f215d2a2735581774a164f0"
 
 [fallbacks.t10]
 graph_window_size = 10
 # Filled from EXP-0017 before packaging.
-cache_fingerprint = "0000000000000000000000000000000000000000000000000000000000000000"
-cache_manifest_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+cache_fingerprint = "44244943ce89839e6ee8570406fb9c9851f65ab5e4c0913f9ddeb6fd38d847c3"
+cache_manifest_sha256 = "0c5182dde846257aaae21a15e27b2a2d6b9f65de10feebea1e2d8f03b5f833fa"
 
 [fallbacks.t5]
 graph_window_size = 5
@@ -46,30 +46,30 @@ cache_manifest_sha256 = "6296240ca44fa9b6b9ce3d98ba56e774621b67b2e460a2b0f26ece6
 
 [heads.primary_mlp]
 experiment_id = "EXP-0018-MLP"
-completed_epoch = 0
+completed_epoch = 3
 checkpoint_path = "artifacts/EXP-0018/mlp/best_model.pth"
-checkpoint_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+checkpoint_sha256 = "6815ac93a8ba982776b85227c45f0f04ce3927b368f0b034878c700e39d6e097"
 
 [heads.primary_attention]
 experiment_id = "EXP-0018-ATTN"
-completed_epoch = 0
+completed_epoch = 6
 checkpoint_path = "artifacts/EXP-0018/attention/best_model.pth"
-checkpoint_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+checkpoint_sha256 = "283486033ad614d90e04b4718d97f7afaa4fd83a672988973e810275c6d49642"
 architecture = "candidate_attention"
 attention_heads = 4
 residual_logit_bound = 0.15
 
 [heads.t10_fallback_mlp]
 experiment_id = "EXP-0017-MLP"
-completed_epoch = 0
+completed_epoch = 3
 checkpoint_path = "artifacts/EXP-0017/mlp/best_model.pth"
-checkpoint_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+checkpoint_sha256 = "97035ef34b6f8db92b6cac5387278949d068c00f2b216fd87dbe8ec6ac84c815"
 
 [heads.t10_fallback_attention]
 experiment_id = "EXP-0017-ATTN"
-completed_epoch = 0
+completed_epoch = 10
 checkpoint_path = "artifacts/EXP-0017/attention/best_model.pth"
-checkpoint_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+checkpoint_sha256 = "17fe0e8326f3cf05eaaaa3030bdf0972abb8af7f0ca7c119038713d561f92f51"
 architecture = "candidate_attention"
 attention_heads = 4
 residual_logit_bound = 0.15
@@ -155,9 +155,12 @@ dataset_title = "Biohub EXP-0018 TGraph20 Link 5050"
 kernel_id = "suzukitaichi/biohub-exp-0018-tgraph20-bounded-logit-5050-submit"
 kernel_title = "Biohub EXP-0018 TGraph20 Bounded Logit 5050 Submit"
 submission_message = "EXP-0018 T_graph=20 bounded-logit 50:50 min-component-7"
-status = "training"
+status = "pending"
 requires_explicit_request = true
 authorized_at = "2026-09-03"
+notebook_version = 1
+submission_ref = 55976752
+submitted_at = "2026-09-03T07:17:34.610000Z"
 
 [output]
 artifact_dir = "artifacts/EXP-0018"
