@@ -1,0 +1,72 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #752356: Three changes on top of the 0.464 base: one lost 0.008, one pair reached 0.465, and what we think is left
+  Author: Aryan Awasthi
+  Posted: 2026-10-24 15:22:10.331000
+  Votes: 0  Comments: 0
+
+TL;DR
+
+We started from the public 0.464 base (dmitriigluzdov's The Data Behind Spectra to Structures, credited in our notebooks) and tested three changes on it. Results below. We are sharing the negative result and one bench that we found useful.
+
+
+
+
+Change on the 0.464 base
+Public score
+
+
+
+
+none (the base)
+0.464
+
+
+engine-2 max_depth 6 → 7
+0.456 (−0.008)
+
+
+candidate-level PubChem gate + features-frozen generation
+0.465 (+0.001)
+
+
+
+
+The last two changes were submitted together, so we can't say which one produced the +0.001.
+
+Our changes
+
+
+
+Depth 7 (two lines). On older bases it had given +0.003 and +0.004. On this base it lost 0.008, so the engine-2 rankers here look already tuned around depth 6.
+
+Candidate-level PubChem gate. After the ICEBERG/GLACIER re-order, the PubChem candidate at rank 1 can differ from the one whose channel-level S / popularity / margin the promotion gate used. We recompute the gate on the promoted candidate's own evidence, thresholds unchanged, and write an audit CSV of which decisions changed.
+
+Features-frozen generation ("genfix"). Engine 1's ranker uses list-relative features (ranks, z-scores, gap to best, softmax, formula share), so adding generated candidates re-scores the originals; we measured their top 5 reshuffling in roughly half of molecules. Genfix keeps the original engine-1 run exactly, runs a second wider generation (20 parents, 100 per parent, 500 total), and inserts only structures the first run lacks, on the first run's score scale minus a penalty (δ = 2). The originals cannot be re-scored.
+
+
+A bench that sees the problem
+
+On a "thin class-1" bench (class-1 answers keep only 1-5 library spectra), ungated gen20 pushed the correct answer off rank 1 in 18 of 270 molecules (6.7%); genfix did so in 0 of 270. This is the first bench of ours that sees the failure that cost ungated gen20 −0.010 on the leaderboard. None of our benches is calibrated to the leaderboard, so we use it as a safety check, not a forecast.
+
+What the field is doing
+
+From dariushafshar's public-chain table (481 versions): the leaders are one lineage. The big repeatable steps (+0.008 each) all came from giving the ICEBERG/GLACIER simulators evidence on more molecules (N1A proxies, the N1 challenger). PubChem promotion thresholds bought +0.006 once. Around 20 other tweaks (gate thresholds, a sixth slot, LOTUS and popularity weights) were flat.
+
+Would we reach gold?
+
+Gold (about 0.471) is roughly one more molecule on the public set, since one molecule at rank 1 is worth about +0.0076. With what we have we expect to fall short. The levers we can see are: (1) forward-model coverage for molecules that still lack ICEBERG/GLACIER scores; (2) retraining the engine-1 ranker with source flags (the real class-3 lever, but 10-40 CPU hours per setting); (3) a neural re-rank inside the top 25. We put our odds of 0.471 this month at low.
+
+Questions
+
+
+
+Has anyone separated the gate fix from other changes on the 0.465?
+
+Has anyone measured ICEBERG/GLACIER coverage by class?
+
+Has anyone seen depth 7 help on this base?
+
+
+Credits: prvsiyan, Ahmed Berat Özer, Igor Zharov, Seyit Kaan Güneş, Dmitrii Gluzdov, Saner Turhaner (sanpier), dariushafshar.
+
+No comments

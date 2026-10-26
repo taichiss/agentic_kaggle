@@ -1,0 +1,43 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #751373: Which third-party pretrained spectrum models are OK? (MS2DeepScore, FIORA, SIRIUS/CSI:FingerID)
+  Author: GEN.CHOVY
+  Posted: 2026-10-21 15:24:27.176000
+  Votes: 1  Comments: 4
+
+Following up on the earlier clarification that any weights need the original training code plus permitted training data, could you confirm how this applies to a few commonly used open models and artifacts?
+
+
+
+Models trained only on public libraries (GNPS / MassBank / MoNA) with public training code, e.g. MS2DeepScore 2.0 or FIORA-OS: allowed?
+
+SIRIUS / CSI:FingerID: the training set isn't fully public and may include NIST, so I assume not allowed?
+
+Chemical language / graph models pretrained on PubChem structures only (no spectra), used just as a prior over candidates: allowed?
+
+For weights whose training code is public, is it enough to have the code and the permitted data, or does every intermediate file (e.g. a ranker's training table shipped in a public notebook) need to be reproducible bit-for-bit?
+
+PubChemLite (a CC BY 4.0 subset of PubChem) as a candidate source, with attribution: fine?
+
+
+Thanks, just want to make sure we don't build on something that gets disqualified later.
+
+Comments:
+├─ David Healey (2026-10-22 21:23:15.250000) [+0]
+│  Models trained only on public libraries: correct, allowed
+│  
+│  SIRIUS / CSI:FingerID: correct, not allowed
+│  
+│  Chemical language / graph models correct, allowed
+│  
+│  We need the code that generates the interm...
+  ├─ XZXZZX (2026-10-25 03:25:55.170000) [+0]
+  │  Thank you for the answer. Two short follow-ups; a yes/no per item is enough.
+  │  
+  │  
+  │  
+  │  
+  │  Intermediates (your point 4). Is it sufficient that the code that generates the intermediates (candidate tables, ran...
+├─ Satwik (2026-10-22 00:52:22.177000) [+0]
+│  I think a general rule to follow based on the hosts' previous comments is that both training data and training code need to be publicly available under a valid license for it to be eligible.
+├─ GEN.CHOVY (2026-10-21 15:43:04.610000) [+0]
+│  Follow-up question on one specific case: coleygroup released MIST checkpoints on Zenodo (record 23303289) on Oct 20 under MIT, with the training code public. They are trained on MassSpecGym; the "a...

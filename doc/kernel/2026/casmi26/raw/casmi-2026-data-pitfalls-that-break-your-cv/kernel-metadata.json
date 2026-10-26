@@ -1,0 +1,23 @@
+{
+  "id": "kitopl/casmi-2026-data-pitfalls-that-break-your-cv",
+  "id_no": 135039729,
+  "title": "CASMI 2026: Data Pitfalls That Break Your CV",
+  "code_file": "casmi-2026-data-pitfalls-that-break-your-cv.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": false,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [],
+  "dataset_sources": [
+    "kitopl/casmi-2026-scoring-keys-and-contamination-map"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [
+    "enveda-CASMI26-molecule-id-mass-spectra"
+  ],
+  "model_sources": [],
+  "docker_image": "gcr.io/kaggle-images/python@sha256:dafd4ce5668bbf1ad422e4c109e0f18c9623c3a7c7f48b0235f13142755c40b9",
+  "machine_shape": "None"
+}

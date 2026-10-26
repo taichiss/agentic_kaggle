@@ -1,0 +1,15 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #750252: Pretrained models whose training data includes CC BY-NC sources (e.g., HMDB)
+  Author: uki706
+  Posted: 2026-10-17 13:22:00.676000
+  Votes: 1  Comments: 3
+
+Hi organizers, a quick question on external models. Some public de novo generators (for example DiffMS, MIT weights on Zenodo 15122968, and DualLGD, CC BY 4.0 weights on Zenodo 20281201) were pretrained on structure lists that include HMDB, which is licensed CC BY-NC 4.0. The code is MIT and the weights are free and public. Is using such pretrained weights allowed under the external data and model rules? Thank you!
+
+Comments:
+├─ nofreewill42 (2026-10-20 09:04:52.417000) [+0]
+│  If you use that model, will it make your solution also Non-Commercial? If yes then I suspect that you can't use it.
+  ├─ Marie Killian (2026-10-21 16:04:11.300000) [+0]
+  │  As announced in 750330, we have removed the restriction on noncommercial license open source data.
+├─ Marie Killian (2026-10-19 16:17:53.800000) [+0]
+│  Yes, these weights are allowed. (In 750330, the rules on external data were clarified and HMDB is allowed.). Just please make sure that, for any weights used, the original training code and access ...

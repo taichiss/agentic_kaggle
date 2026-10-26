@@ -1,0 +1,54 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #741359: Welcome to CASMI 2026!
+  Author: David Healey
+  Posted: 2026-09-14 19:17:02.470000
+  Votes: 27  Comments: 11
+
+Welcome to CASMI 2026! Identifying molecules from their mass spectra is one of the most important challenges in life sciences, but the number of machine learning scientists who have worked on mass spectra is very small relative to the size and importance of the scientific problem. This creates a great opportunity to have a large impact in a short amount of time. Hence this competition!  
+
+The kinds of methods that have been developed in recent years against standing benchmarks like MassSpecGym span a wide variety of approaches that resemble those used across technology and life sciences. We are very excited to see the approaches this community comes up with to tackle this problem. We are especially excited to be providing spectra for many molecules whose structures have not been previously described. 
+
+A note on external data and licensing
+
+We want everyone to have a fair and enjoyable competition, so a quick reminder on the use of external data and models.
+
+Per the competition rules, the winning solution cannot include any licenses that would otherwise prohibit (EDIT)   redistribution. When you submit a winning solution, you grant us, the Competition Sponsor, a license to that solution and represent that you have the unrestricted right to grant it. Any external data, models, or tools you rely on must be compatible with that license.
+
+We're aware that datasets exist which carry licenses that fall into this category, i.e. terms that (EDIT) restrict  redistribution. These should be avoided. Solutions built on data or tools that (EDIT) are not open source  will not be eligible to win, and we reserve the right to disqualify any submission that does not comply or can’t be reproduced with allowed data and tools.
+
+As always, any external data used must be free to use, publicly available and equally accessible to all participants.
+
+Special thanks to the Kaggle team Ashley, Walter, and Addison for all their support!
+
+Happy modeling! 
+
+EDIT 17 Oct 2026 please see the discussion topic here.  Open source external data with noncommercial provisions are acceptable
+https://www.kaggle.com/competitions/enveda-CASMI26-molecule-id-mass-spectra/discussion/750330
+
+Comments:
+├─ kenneth uchegbu (2026-10-09 08:28:44.667000) [+0]
+│  please who can help me with the reson why code has been saying submission error for like 4 submissions now?
+  ├─ Oktavianus Misro Adrianto (2026-10-17 11:30:08.997000) [+0]
+  │  Maybe check your internet connection.
+├─ Amirah Alimi (2026-10-03 12:41:53.387000) [+0]
+│  Looking to form or join a team for CASMI 2026 - need two more people.
+│  
+│  Where I'm at: I've completed a thorough EDA pass on the training data molecule-level train/validation splitting (to avoid spec...
+  ├─ kenneth uchegbu (2026-10-03 16:25:20.467000) [+0]
+  │  i already responded to your message. can you hmu on Linkedin for further discussion. Username: Kenneth Uchegbu
+  ├─ Luis Angel Urdez Rojas (2026-10-04 05:43:48.873000) [+0]
+  │  Please contact me Angel Urdez
+  ├─ TICY (2026-10-06 04:56:43.757000) [+0]
+  │  Hi Amin,
+  │  
+  │  I saw your team-up post. I work on text-based person search (TBPS) — cross-modal retrieval, embedding learning, and re-ranking, so analysing retrieval baselines is squarely in my area, an...
+    ├─ Amirah Alimi (2026-10-06 09:10:22.687000) [+0]
+    │  Amirah Alimi contact
+├─ Naseem Akhtar (2026-10-02 00:18:40.510000) [+0]
+│  What if I learn every concept from Gemini?? Means of python , data science and every skill needed?? Is it that reliable or I should use some different app?? Please guide me.
+  ├─ kenneth uchegbu (2026-10-02 20:45:35.200000) [+0]
+  │  Using gemini is very reliable. Also, you will need to watch youtube tutorials or register for a course that will be guiding you on how to go about learning. Lastly, practice with previous competiti...
+├─ kenneth uchegbu (2026-10-01 19:28:33.437000) [+0]
+│  please what technique do i use to Concatenate key spectral metadata as tabular features: precursor_mz, ionization_mode, adduct (one-hot encoded), collision_energy_ev, and instrument_type.
+├─ [deleted] (2026-09-17 11:37:04.610000) [+0]
+│  [deleted]

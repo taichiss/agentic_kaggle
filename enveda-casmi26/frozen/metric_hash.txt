@@ -1,0 +1,8 @@
+ff85865743f163f633f559cb96eb2dd694c46013ff8bdb714648dd09092b22f2  src/casmi26/metrics/breakdown.py
+75b57f7418192c3fc2819abadb7af8bba42ad23e4d54a4c3d91ed40949ee2559  src/casmi26/metrics/__init__.py
+Metric scorer identity:
+  official_metric: MRR@25
+  scoring_key: canonical_inchikey14 (RDKit tautomer canonical + MolToInchiKey[:14])
+  rdkit_version_pin_from_official: 2026.03.3
+  rdkit_version_local: 2026.09.1
+  frozen_date: 2026-10-25T14:05:52Z

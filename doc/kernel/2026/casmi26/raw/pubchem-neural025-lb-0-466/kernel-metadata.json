@@ -1,0 +1,32 @@
+{
+  "id": "sanpier/pubchem-neural025-lb-0-466",
+  "id_no": 139991948,
+  "title": "PubChem + Neural025 \u2014 LB 0.466 \ud83d\udd25 ",
+  "code_file": "pubchem-neural025-lb-0-466.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": false,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [
+    "gpu"
+  ],
+  "dataset_sources": [
+    "",
+    "sanpier/casmi-spectrum-model-v1",
+    "dmitriigluzdov/casmi26-fold-safe-fpnet",
+    "dmitriigluzdov/casmi26-natural-product-knowledge-table",
+    "dmitriigluzdov/casmi26-natural-product-panel-benchmark",
+    "dmitriigluzdov/casmi26-pubchem-popularity-prior",
+    "dmitriigluzdov/casmi26-attributed-v4g-reproduction-assets",
+    "sanpier/catalogue-experiment-saner"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [
+    "enveda-CASMI26-molecule-id-mass-spectra"
+  ],
+  "model_sources": [],
+  "docker_image": "gcr.io/kaggle-private-byod/python@sha256:37c64f7dd9c54116ecd1bcc88817c5469b88387388fade02bfa8bf3fc647d461",
+  "machine_shape": "NvidiaTeslaT4"
+}

@@ -1,0 +1,26 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #751300: Has anyone managed to improve their Class 3 score?
+  Author: Bull
+  Posted: 2026-10-21 09:42:41.013000
+  Votes: 7  Comments: 6
+
+I've been working on improving my Class 3 score for the past two weeks, but I still haven't managed to get any improvement on the leaderboard.
+
+My methods show improvements on local validation problems I've created from the training data, but those improvements don't translate to the LB at all.
+
+How is everyone else doing with Class 3?
+
+Comments:
+├─ Tra Crew (2026-10-23 09:04:25.583000) [+1]
+│  I managed a class 3 lever with consistent tiny leaderboard gains but I am having a little trouble getting any more than +.003-.004 for weeks now..
+│   I think I may be close to another lever worth a +...
+  ├─ Bull (2026-10-23 12:31:42.273000) [+0]
+  │  Are you doing local validation for Class 3? If so, is there a correlation between your local validation scores and the leaderboard scores?
+├─ Mansur Nurmukhambetov (2026-10-21 12:51:56.797000) [+1]
+│  Same here, I have my local / proxy class-3 metrics move, but the LB basically flat for me too. I don’t really trust validation carved from training anymore; feels optimistic vs true novelty (analog...
+├─ ZavodRobotov (2026-10-23 13:43:07.587000) [+0]
+│  Is there main problem is overfitting or underfitting? Train, validation, and LB datasets are small or big? Is the class balance shifted between CV and LB?
+  ├─ Bull (2026-10-23 13:56:34.297000) [+0]
+  │  I think my local validation problems are not accurately representative of the Class 3 problems on LB.
+    ├─ ZavodRobotov (2026-10-23 14:05:37.543000) [+0]
+    │  data balance (or class balance) shift is a very common reason of inconsistency of CV and LB

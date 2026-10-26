@@ -1,0 +1,102 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #748882: Consolidated open questions before final selection: reproducibility of official checkpoints, TabPFN / FRIGID, PubChem counts, scorer behaviour (yes/no is enough)
+  Author: WEI ZIHE12
+  Posted: 2026-10-13 13:02:08.662000
+  Votes: 2  Comments: 13
+
+Hello hosts,
+
+Thank you for the detailed answers so far (748065, 745841, 742991). Below is a consolidated list of points that are still open across several threads, ordered by how much they affect solution design. A short yes/no on each is enough.
+
+A. Reproducibility and compliance
+
+
+
+
+Officially released checkpoints. You confirmed that the MassSpecGym-trained GLACIER/ICEBERG checkpoints (coleygroup/ms-pred) and DreaMS are fine. For these, is it sufficient for a winning team to deliver the exact released checkpoint, a pointer to the authors' public training code and data, and our own complete fine-tuning and inference code? Or must the team also re-run the pretraining itself? For DreaMS, does the approval refer to the self-supervised backbone (ssl_model.ckpt)?
+
+
+Retraining a shared architecture. Following 748065 (1): if a team retrains a participant-shared model architecture itself on allowed data, with code it delivers, and its two selected submissions use only those retrained weights, is that sufficient? And can you confirm that the compliance review covers only the two selected submissions?
+
+
+B. Specific models and data
+
+
+
+
+TabPFN. Is TabPFN v2 (Prior Labs License: Apache 2.0 with an attribution requirement; pretrained on synthetic tabular tasks only) eligible as a ranking component? Separately, are TabPFN 2.5 and later eligible, given that their weights carry a non-commercial license?
+
+
+FRIGID (746430, still open). Can the official FRIGID checkpoints on Zenodo (record 19685145, CC BY-NC 4.0; diffusion decoder plus MIST encoders) be used as released, or must they be retrained with the Apache-2.0 code on allowed data?
+
+
+PubChem-derived counts and natural-product databases. Does the PubChem approval (741857) also cover public CID-PMID, CID-Patent and CID-SID counts used as ranking priors, not only structure subsets? Are LOTUS and NPAtlas fine as structure sources under their own open licenses, without separate approval by name?
+
+
+C. Data and scoring
+
+
+
+
+Scorer behaviour (748029, still open). Under first-match MRR, appending valid, distinct guesses after an unchanged rank-1 guess should never lower a row's score. Is that guaranteed in the live scorer, or are there row-level timeouts, limits or validation steps that could make a longer list score lower?
+
+
+Electron-mass correction (746954). Was the correction applied to the hidden test also applied to train.parquet and to the public Enveda-180 Zenodo release, or only to the rerun test? Which ion modes and fields were affected, so that teams do not apply it twice?
+
+
+Public/private split. Without disclosing class proportions: is the 31% / 69% public/private split stratified in any way, for example by novelty class?
+
+
+Thank you!
+
+Comments:
+├─ LeeDongHyuk (2026-10-24 14:07:47.850000) [+0]
+│  Hi @mariekillian, adding to the question above, since it affects how many teams prepare their final selections (most top public notebooks load the same participant-shared FPNet / ranker artifacts)....
+├─ Jusamonix (2026-10-14 07:00:10.583000) [+0]
+│  Hi Marie or David,
+│  
+│  Thank you for the clarifications in 748065, 748882 and 745615. Four short follow-ups for teams that are NOT claiming a prize (leaderboard and medals only). A yes/no per item is ...
+  ├─ Marie Killian (2026-10-14 18:59:49.600000) [+0]
+  │  Hi @jusaburohtohyama ! Thank you for asking for clarification.
+  │  
+  │  
+  │  
+  │  Third party weights that cannot be reproduced with the original training code and permitted training data are not allowed. All solu...
+    ├─ Jusamonix (2026-10-17 09:02:31.523000) [+0]
+    │  Hi @mariekillian,
+    │  
+    │  Thank you for the clear answers. Three short follow-ups on how this will be applied at the end of the competition:
+    │  
+    │  
+    │  
+    │  
+    │  If both of a team's two selected final submissions are repr...
+    ├─ Marie Killian (2026-10-21 16:00:57.930000) [+0]
+    │  Hi @jusaburohtohyama! Hope these answers help:
+    │  1, 2. At this point in the competition, prior submissions that are not fully reproducible will not be eligible to win but will not disqualify your fut...
+    ├─ Jusamonix (2026-10-23 07:06:55.280000) [+0]
+    │  Hi @mariekillian,
+    │  
+    │  Thank you for the clarification. 
+    │  
+    │  One follow-up: if a team's two final selected submissions are not fully reproducible, does this affect only prize eligibility, or also the team...
+├─ Marie Killian (2026-10-13 20:48:38.123000) [+0]
+│  Thank you for asking for clarification! Here are answers to your questions:
+│  
+│  A. Reproducibility and compliance
+│  
+│  
+│  
+│  For the approved MassSpecGym, GLACIER/ICEBERG, and DreaMS checkpoints, it is suffic...
+  ├─ WEI ZIHE12 (2026-10-14 07:02:24.673000) [+0]
+  │  Many thanks!!!
+  ├─ WEI ZIHE12 (2026-10-14 08:03:06.837000) [+0]
+  │  Follow-up on the PubChem counts approval in this thread. Thank you for confirming that CID-PMID, CID-Patent and CID-SID counts are allowed as ranking features. To make sure we stay within "applicab...
+    ├─ Marie Killian (2026-10-14 18:32:37.870000) [+0]
+    │  Per compound counts calculated from publicly available PubChem data are permitted. Any information gathered by following references in PubChem would depend on the licensing of that particular source.
+    ├─ [deleted] (2026-10-15 02:41:41.013000) [+0]
+    │  [deleted]
+    ├─ WEI ZIHE12 (2026-10-15 02:42:22.440000) [+0]
+    │  Thank you!!!
+  ├─ WEI ZIHE12 (2026-10-14 08:09:10.143000) [+0]
+  │  Also, are public leaderboard scores rounded or truncated to three decimals?

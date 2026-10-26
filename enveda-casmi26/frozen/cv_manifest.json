@@ -1,0 +1,110 @@
+{
+  "manifest_version": "2026-10-25",
+  "purpose": "CASMI26 CV 設計の正本。この manifest に書かれた split の外では採用判定を行わない。",
+  "comp_slug": "enveda-CASMI26-molecule-id-mass-spectra",
+  "metric": {
+    "name": "MRR@25",
+    "scoring_key": "canonical_inchikey14",
+    "scoring_key_definition": "RDKit MolStandardize TautomerEnumerator.Canonicalize → MolToInchiKey → str[:14]",
+    "rdkit_version_official_pin": "2026.03.3",
+    "metric_hash_file": "enveda-casmi26/frozen/metric_hash.txt"
+  },
+  "source_data": {
+    "train.parquet": {
+      "path": "data/input/enveda-CASMI26-molecule-id-mass-spectra/train.parquet",
+      "sha256": "9423f90ec08b941a9646b535bf0606183e86ff0c5a297978f5a70693d41bcd98",
+      "rows": 2539608,
+      "structures": 277566,
+      "verified_match_official_pin": true,
+      "verified_against": "casmi26-identity-disjoint-validation-folds/SPLIT_METHOD.json train_sha256"
+    },
+    "test.parquet": {
+      "path": "data/input/enveda-CASMI26-molecule-id-mass-spectra/test.parquet",
+      "sha256": "2fa29c4aa06e93b48e0cd6619fd2de3f4e956f0019d242141678b7287f2b43e0",
+      "rows": 1213,
+      "molecules": 400,
+      "note": "配布 test は 100% enveda-180 で、hidden test (timsTOF 計測の NP) とは分布が異なる"
+    }
+  },
+  "cv_strategies": [
+    {
+      "name": "identity_disjoint_5fold_PRIMARY",
+      "rank": 1,
+      "description": "Identity-disjoint 5 fold。構造単位で disjoint (Morgan r2 2048bit Tanimoto >= 0.7 クラスタリング後に分割)。公式スコアラ 2026.03.3 で canonicalize した上での identity group を分断しない。",
+      "fold_source": "data/input/external/casmi26/casmi26-identity-disjoint-validation-folds/spectra_folds.parquet",
+      "fold_source_sha256_official": "68446abc365cd0a175c8fcf8081828989e92a65d3493312848792d3465d91403",
+      "n_folds": 5,
+      "fold_sizes_structures": [55514, 55514, 55514, 55512, 55512],
+      "fold_sizes_spectra": [511832, 507768, 506894, 512086, 501028],
+      "seed": 20260930,
+      "usage": "全モデル実験の primary CV。採用判定 (両ホールドアウトで勝ったものだけ採用) の 1 本目。"
+    },
+    {
+      "name": "scaffold_disjoint_5fold_SECONDARY",
+      "rank": 2,
+      "description": "Scaffold-disjoint 5 fold。Murcko scaffold 単位で disjoint。identity より厳しく、新規 scaffold に対する汎化能力を測る。",
+      "fold_source": "data/input/external/casmi26/casmi26-identity-disjoint-validation-folds/spectra_folds.parquet (fold_scaffold 列)",
+      "n_folds": 5,
+      "fold_sizes_structures": [55514, 55514, 55514, 55512, 55512],
+      "fold_sizes_spectra": [509519, 507431, 506259, 506636, 509763],
+      "largest_scaffold_group": 7715,
+      "usage": "採用判定の 2 本目。identity-disjoint で勝っても scaffold-disjoint で負けるものは採用しない。"
+    },
+    {
+      "name": "enveda_np_examples_holdout_TARGET_DOMAIN",
+      "rank": 1,
+      "description": "`enveda-np-examples` library (1,184 spectra, 310 structures) をホールドアウト。配布 test (100% enveda-180) ではなく hidden test (timsTOF 計測の NP) に最も近い distribution。",
+      "fold_source": "data/input/external/casmi26/casmi26-identity-disjoint-validation-folds/spectra_splits.parquet (library='enveda-np-examples')",
+      "n_folds": 1,
+      "heldout_structures": 310,
+      "heldout_spectra_primary": 1184,
+      "heldout_spectra_all": 57273,
+      "note": "kernel 分析で判明: enveda-np-examples は timsTOF+NP の唯一の proxy で、全 55,599 spectra が他ライブラリと inchikey14 で 100% コンタミ → identity_disjoint fold と組み合わせて使うこと必須。",
+      "usage": "LB との乖離を最初に測る目標ドメインホールドアウト。全提出前にここで ablation を取る。"
+    },
+    {
+      "name": "instrument_type_holdout_timsTOF_TARGET",
+      "rank": 2,
+      "description": "`instrument_type='timsTOF'` ホールドアウト。test は 100% timsTOF なので、timsTOF サブセットでの性能が LB との相関が高い想定。",
+      "fold_source": "data/input/external/casmi26/casmi26-identity-disjoint-validation-folds/spectra_splits.parquet (split='instrument_type')",
+      "note": "ただし train の timsTOF サブセット (約 45%) を holdout すると残りが Orbitrap/QTOF 系になり、学習ドメインが test から離れる。使う場合は identity_disjoint と組み合わせる。",
+      "usage": "secondary 検証。primary 判定には使わない。"
+    }
+  ],
+  "scoring_pipeline": {
+    "steps": [
+      "1. 提出候補 SMILES を RDKit で parse",
+      "2. TautomerEnumerator.Canonicalize で tautomer 正規化",
+      "3. MolToInchiKey で InChIKey 計算、先頭 14 文字を取得",
+      "4. truth SMILES も同じパイプラインで canonical_inchikey14 を計算",
+      "5. 候補 25 本の中で truth と一致する最初の順位を見つけ、1/rank を MRR 寄与",
+      "6. 25 本に含まれなければ 0 点、分母は常に 400"
+    ],
+    "implementation": "src/casmi26/metrics/breakdown.py",
+    "canonical_tests": "tests/casmi26/test_breakdown.py"
+  },
+  "forbidden_cv_patterns": [
+    {
+      "pattern": "random row split without identity grouping",
+      "reason": "同一分子の複数スペクトルが train/val に分かれてリーク (bio-hub L2 と同じ失敗)。"
+    },
+    {
+      "pattern": "ingest_lib holdout alone",
+      "reason": "enveda-np-examples は全ライブラリと inchikey14 で 100% コンタミ (kitopl Data Pitfalls 検出)。library 単体でホールドアウトしても他 lib にリーク。"
+    },
+    {
+      "pattern": "raw inchikey14 (non-canonical) for scoring",
+      "reason": "3,167 構造 (1.15%) が公式 canonicalize で collapse、0.48% MRR 損失。常に canonical_inchikey14 で scoring。"
+    },
+    {
+      "pattern": "using precursor_error_ppm as query-side filter",
+      "reason": "label-derived quantity (hidden test 時に利用不可)。ローカル CV が架空に上がる (kitopl Data Pitfalls で +0.085 の virtual gain を実測)。"
+    }
+  ],
+  "adoption_rule": "両ホールドアウトで勝ったものだけ採用。primary 判定は (identity_disjoint_5fold + enveda_np_examples_holdout) の 2 系で両方上がったものだけ。片方だけ上がった場合は実験 notes に理由を書いて保留。",
+  "known_version_mismatch_risk": {
+    "issue": "ローカル RDKit 2026.09.1 vs 公式スコアラ pin 2026.03.3",
+    "impact": "canonical_inchikey14 が稀に differ する可能性。Week 1 で '公式スコアラ (ポータブル版 or Kaggle Notebook 版) との差分測定テスト' を追加し、差分が有意なら 2026.03.3 を pin する。",
+    "action": "enveda-casmi26/strategy/todo.md の Phase D (Week 1) に 'RDKit version diff test' を追加"
+  }
+}

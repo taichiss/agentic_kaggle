@@ -1,0 +1,19 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #750330: Clarification regarding permitted external data sources
+  Author: David Healey
+  Posted: 2026-10-17 19:42:56.995000
+  Votes: 21  Comments: 0
+
+Hi all,
+
+We’ve received many inquiries regarding use of external data, and have decided to remove the restriction on noncommercial license open source data (for example, CC-BY-NC). We have  been approving them each individually anyway, but from here on, solutions can use external data that is open sourced with noncommercial provisions.  I will edit the welcome message accordingly.
+
+External data that is not open source, is not freely available to all, or is proprietary remains against the rules. We have in particular received questions regarding NIST.  NIST is not permitted, as it is not open or freely available and the data including derivatives such as model weights cannot be redistributed.
+
+As a reminder, we reserve the right to check all solutions for compliance and remove from the competition participants found in violation. 
+
+Thanks all, and happy modeling!
+
+David
+
+No comments

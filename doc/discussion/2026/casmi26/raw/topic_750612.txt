@@ -1,0 +1,13 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #750612: Clarification on pretrained weights and training code
+  Author: Truthseeking
+  Posted: 2026-10-19 07:08:09.733000
+  Votes: 0  Comments: 1
+
+Clarification on pretrained weights and training code
+
+Following the discussion on train.parquet and open-source models: does the requirement to provide "original training code and access to permitted training data" apply to models trained exclusively on train.parquet? For example, if a competitor releases weights for an FPNet model trained only on train.parquet but does not release the training script, are those weights eligible for use in a winning solution?
+
+Comments:
+├─ Marie Killian (2026-10-19 16:26:44.700000) [+0]
+│  No, the requirement applies to all weights, including competitor released weights trained on train.parquet. You need to have access to the original training code to include weights in your solution.

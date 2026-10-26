@@ -1,0 +1,23 @@
+{
+  "id": "hengck23/dreams-structure-from-spectrum-retrival-demo",
+  "id_no": 136641677,
+  "title": "DreaMS : structure from spectrum retrival demo",
+  "code_file": "dreams-structure-from-spectrum-retrival-demo.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": false,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [],
+  "dataset_sources": [
+    "hengck23/hengck23-dreams-enveda-casmi26"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [
+    "enveda-CASMI26-molecule-id-mass-spectra"
+  ],
+  "model_sources": [],
+  "docker_image": "gcr.io/kaggle-private-byod/python@sha256:37c64f7dd9c54116ecd1bcc88817c5469b88387388fade02bfa8bf3fc647d461",
+  "machine_shape": "NvidiaTeslaT4"
+}

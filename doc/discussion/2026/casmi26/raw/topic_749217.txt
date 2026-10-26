@@ -1,0 +1,56 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #749217: Compliance: is the approved-dataset list exhaustive, and does "trained on NIST" reach models whose training corpus CONTAINS NIST-derived data?
+  Author: Marco Pereira
+  Posted: 2026-10-14 10:57:36.311000
+  Votes: 0  Comments: 9
+
+Four yes/no questions on dataset compliance, asked narrowly because we can act on one-line answers.
+
+We have read the answers compiled in the 748270 table and the threads it cites (741359, 744338, 744556), and we believe we follow them. Four points remain ambiguous, and each one changes what we may ship.
+
+
+
+
+Is the approved list EXHAUSTIVE, or is the rule "anything not NIST-derived is acceptable"? The 748270 table liberates COCONUT, PubChemLite, ChEBI, LIPID MAPS, MassSpecGym, GLACIER/ICEBERG, DreaMS, CFM-ID 4, GNPS/MassBank/MoNA releases, GNPS-NIST14-MATCHES, Enveda-180, PubChem and train.parquet. Is using a collection NOT on that list permitted as long as it is not NIST-derived — or is the list itself the rule?
+
+
+Does "trained on NIST" reach a MODEL whose training corpus merely CONTAINS NIST-derived data? This is the practical version of the question and it is the one that blocks us. A concrete case: DreaMS is MIT-licensed and its code and weights are freely released — but its pre-training corpus, GeMS, redistributes DreaMS_Atlas/nist20_mona_clean_merged_spectra_dreams_hidden_nist20.hdf5, i.e. a NIST20 derivative. Does using DreaMS (a) as released, (b) retrained on a NIST-free corpus, or (c) not at all, follow from your rule? We ask because the answer is not deducible: the model is not NIST-derived, but its training data is.
+
+
+MassSpecGym models specifically. The host note we have (742991) says MassSpecGym and models trained on it are fair game. Does that hold for every checkpoint released on the MassSpecGym Hub, or only for those whose training split excludes any NIST-derived spectra? If some are excluded, is there a list, or a rule we can apply ourselves?
+
+
+Reference spectra released by GNPS/MassBank/MoNA. Most of these libraries are redistributions that aggregate multiple upstream sources. Is the correct procedure to (i) take the release as a whole, (ii) audit the per-record provenance and drop specific records, or (iii) only use an explicitly NIST-free subset? GNPS-NIST14-MATCHES is on the approved list despite the name, so we want to be sure we are not over- or under-reading it.
+
+
+Our reading, stated so it can be corrected: we will treat any artifact whose own manifest or archive contents show a NIST20/NIST-derived member as excluded, and we will audit provenance from inside the artifact (manifests, hashes, archive listings) rather than from names or documentation. If that rule is stricter than yours, we would rather be told than assume.
+
+A one-line answer to each — or a single "the list is exhaustive; audit per-record" — is all we need. Thank you.
+
+Comments:
+├─ Marco Pereira (2026-10-19 17:29:23.960000) [+0]
+│  One procedural question about the Final Submissions, because the rules leave one case open and it changes what we do.
+│  
+│  The rules say we may select up to two Final Submissions, and that a Final Subm...
+├─ Marco Pereira (2026-10-15 13:28:52.190000) [+0]
+│  Follow-up with what we found when we went to check, because it narrows my earlier question to one specific point.
+│  
+│  I asked whether a fine-tune of an approved model inherits that model's approval. W...
+  ├─ Marie Killian (2026-10-16 17:11:10.777000) [+0]
+  │  Thank you for clarifying! Any third-party derivatives (including fine-tuned models) must have the original training code and access to the permitted training data to show how they were developed. S...
+├─ Marco Pereira (2026-10-15 12:49:03.940000) [+0]
+│  One follow-up, and it is a yes/no that decides whether we rebuild something.
+│  
+│  Your Q2 answer — "the relevant question is whether NIST-derived data was used to train the weights" — is clear for a ba...
+├─ Marco Pereira (2026-10-14 11:46:54.667000) [+0]
+│  Withdrawing question 1, and narrowing this to the three that are still open.
+│  
+│  Q1 is answered elsewhere on this forum — "Competitors are not limited to the external datasets that have been explicitl...
+  ├─ Marie Killian (2026-10-14 19:53:38.527000) [+0]
+  │  Q2 As David stated in 748799, “If the model weights aren’t a derivative of NIST then they are not in violation of the NIST license so should be fine.” The relevant question is whether NIST-derived ...
+    ├─ WEI ZIHE12 (2026-10-15 11:07:47.587000) [+0]
+    │  Thank you for the clarification in 3538798. Following your criterion ("whether NIST-derived data was used to train the weights"), could you confirm that these three official checkpoints are allowed...
+    ├─ Marie Killian (2026-10-16 16:58:06.393000) [+0]
+    │  Yes, all of those are allowed.
+    ├─ WEI ZIHE12 (2026-10-17 00:57:52.583000) [+0]
+    │  Thanks a lot!!!

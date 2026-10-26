@@ -1,0 +1,250 @@
+{
+  "metadata": {
+    "metric": "MRR@25",
+    "n_molecules": 400,
+    "k_max": 25,
+    "scoring_key": "canonical_inchikey14 (RDKit tautomer canonical + first 14 chars of InChIKey)"
+  },
+  "exchange_rates_per_rank": [
+    {
+      "rank": 1,
+      "delta_mrr_per_molecule": 0.0025,
+      "note": "1 分子を miss → rank 1 に移すと全体 MRR は +0.002500"
+    },
+    {
+      "rank": 2,
+      "delta_mrr_per_molecule": 0.00125,
+      "note": "1 分子を miss → rank 2 に移すと全体 MRR は +0.001250"
+    },
+    {
+      "rank": 3,
+      "delta_mrr_per_molecule": 0.0008333333333333334,
+      "note": "1 分子を miss → rank 3 に移すと全体 MRR は +0.000833"
+    },
+    {
+      "rank": 5,
+      "delta_mrr_per_molecule": 0.0005,
+      "note": "1 分子を miss → rank 5 に移すと全体 MRR は +0.000500"
+    },
+    {
+      "rank": 10,
+      "delta_mrr_per_molecule": 0.00025,
+      "note": "1 分子を miss → rank 10 に移すと全体 MRR は +0.000250"
+    },
+    {
+      "rank": 25,
+      "delta_mrr_per_molecule": 0.0001,
+      "note": "1 分子を miss → rank 25 に移すと全体 MRR は +0.000100"
+    }
+  ],
+  "pairwise_rank_moves": [
+    {
+      "from_rank": 1,
+      "to_rank": 2,
+      "delta_mrr_per_molecule": -0.00125,
+      "molecules_to_lose_0_01": 8,
+      "note": "rank 1 → 2 に 1 分子落とすと -0.001250 / 分子"
+    },
+    {
+      "from_rank": 1,
+      "to_rank": 3,
+      "delta_mrr_per_molecule": -0.0016666666666666668,
+      "molecules_to_lose_0_01": 6,
+      "note": "rank 1 → 3 に 1 分子落とすと -0.001667 / 分子"
+    },
+    {
+      "from_rank": 1,
+      "to_rank": 5,
+      "delta_mrr_per_molecule": -0.002,
+      "molecules_to_lose_0_01": 5,
+      "note": "rank 1 → 5 に 1 分子落とすと -0.002000 / 分子"
+    },
+    {
+      "from_rank": 1,
+      "to_rank": 10,
+      "delta_mrr_per_molecule": -0.0022500000000000003,
+      "molecules_to_lose_0_01": 5,
+      "note": "rank 1 → 10 に 1 分子落とすと -0.002250 / 分子"
+    },
+    {
+      "from_rank": 1,
+      "to_rank": 25,
+      "delta_mrr_per_molecule": -0.0024,
+      "molecules_to_lose_0_01": 5,
+      "note": "rank 1 → 25 に 1 分子落とすと -0.002400 / 分子"
+    },
+    {
+      "from_rank": 2,
+      "to_rank": 5,
+      "delta_mrr_per_molecule": -0.00075,
+      "molecules_to_lose_0_01": 14,
+      "note": "rank 2 → 5 に 1 分子落とすと -0.000750 / 分子"
+    },
+    {
+      "from_rank": 5,
+      "to_rank": 10,
+      "delta_mrr_per_molecule": -0.00025,
+      "molecules_to_lose_0_01": 40,
+      "note": "rank 5 → 10 に 1 分子落とすと -0.000250 / 分子"
+    },
+    {
+      "from_rank": 10,
+      "to_rank": 25,
+      "delta_mrr_per_molecule": -0.00015000000000000001,
+      "molecules_to_lose_0_01": 67,
+      "note": "rank 10 → 25 に 1 分子落とすと -0.000150 / 分子"
+    }
+  ],
+  "rank1_vs_rank2to25_elasticity": {
+    "rank_moves_vs_rank1_gain": {
+      "miss_to_rank1": 0.0025,
+      "rank2_to_rank1": 0.00125,
+      "rank3_to_rank2": 0.0004166666666666667,
+      "rank5_to_rank4": 0.00012499999999999998,
+      "rank10_to_rank9": 2.777777777777775e-05,
+      "rank25_to_rank24": 4.166666666666658e-06
+    },
+    "ratio_rank1_vs_rank25_to_24": 600.0000000000013,
+    "ratio_rank1_vs_rank10_to_9": 90.0000000000001,
+    "note": "miss→rank1 は rank 25→24 の 600 倍、rank 10→9 の 90 倍効く。→ 下位の順位微調整は限界効用が急減、rank 1-3 を触る変更が主戦場。"
+  },
+  "class_contribution_simulation": {
+    "sizes": {
+      "class1": 68,
+      "class2": 272,
+      "class3": 60
+    },
+    "rank_dist": {
+      "class1": {
+        "top1": 0.8,
+        "max_miss_rank": 5
+      },
+      "class2": {
+        "top1": 0.4,
+        "max_miss_rank": 20
+      },
+      "class3": {
+        "top1": 0.05,
+        "max_miss_rank": 25
+      }
+    },
+    "overall_mrr": 0.4098308538189536,
+    "top1_accuracy": 0.37,
+    "class_mrr": {
+      "class1": 0.8526960784313726,
+      "class2": 0.3834652999459617,
+      "class3": 0.02744077681577682
+    },
+    "class_contributions_to_overall": {
+      "class1": 0.14495833333333336,
+      "class2": 0.26075640396325395,
+      "class3": 0.004116116522366523
+    },
+    "class_counts": {
+      "class1": 68,
+      "class2": 272,
+      "class3": 60
+    },
+    "rank_counts": {
+      "0": 147,
+      "1": 148,
+      "2": 9,
+      "3": 5,
+      "4": 9,
+      "5": 4,
+      "6": 9,
+      "7": 3,
+      "8": 4,
+      "9": 3,
+      "10": 3,
+      "11": 6,
+      "12": 4,
+      "13": 6,
+      "14": 3,
+      "15": 3,
+      "16": 9,
+      "17": 6,
+      "18": 4,
+      "19": 7,
+      "20": 6,
+      "21": 1,
+      "22": 1
+    }
+  },
+  "reverse_engineer_lb_0_467": {
+    "target_mrr": 0.467,
+    "patterns": [
+      {
+        "pattern": "A_top1_only",
+        "n_rank1": 187,
+        "n_miss": 213,
+        "achieved_mrr": 0.4675,
+        "note": "全部 rank 1、残り miss。187/400 = 0.468"
+      },
+      {
+        "pattern": "B_rank12_mix",
+        "n_rank1": 100,
+        "n_rank2": 174,
+        "n_miss": 126,
+        "achieved_mrr": 0.4675,
+        "note": "rank1=100, rank2=174, miss=126, MRR=0.468"
+      },
+      {
+        "pattern": "B_rank12_mix",
+        "n_rank1": 130,
+        "n_rank2": 114,
+        "n_miss": 156,
+        "achieved_mrr": 0.4675,
+        "note": "rank1=130, rank2=114, miss=156, MRR=0.468"
+      },
+      {
+        "pattern": "B_rank12_mix",
+        "n_rank1": 150,
+        "n_rank2": 74,
+        "n_miss": 176,
+        "achieved_mrr": 0.4675,
+        "note": "rank1=150, rank2=74, miss=176, MRR=0.468"
+      },
+      {
+        "pattern": "B_rank12_mix",
+        "n_rank1": 170,
+        "n_rank2": 34,
+        "n_miss": 196,
+        "achieved_mrr": 0.4675,
+        "note": "rank1=170, rank2=34, miss=196, MRR=0.468"
+      },
+      {
+        "pattern": "B_rank12_mix",
+        "n_rank1": 180,
+        "n_rank2": 14,
+        "n_miss": 206,
+        "achieved_mrr": 0.4675,
+        "note": "rank1=180, rank2=14, miss=206, MRR=0.468"
+      },
+      {
+        "pattern": "C_top1_plus_rank2to5",
+        "n_rank1": 120,
+        "n_rank2to5_uniform": 208,
+        "n_miss": 72,
+        "achieved_mrr": 0.4668333333333333,
+        "note": "rank1=120(30%), rank2-5 一様 208 本"
+      },
+      {
+        "pattern": "C_top1_plus_rank2to5",
+        "n_rank1": 140,
+        "n_rank2to5_uniform": 146,
+        "n_miss": 114,
+        "achieved_mrr": 0.46710416666666665,
+        "note": "rank1=140(35%), rank2-5 一様 146 本"
+      },
+      {
+        "pattern": "C_top1_plus_rank2to5",
+        "n_rank1": 160,
+        "n_rank2to5_uniform": 84,
+        "n_miss": 156,
+        "achieved_mrr": 0.467375,
+        "note": "rank1=160(40%), rank2-5 一様 84 本"
+      }
+    ]
+  }
+}

@@ -1,0 +1,99 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #745072: Prize eligibility: code and weights shared in public Kaggle datasets with an "Other (non-commercial)" licence
+  Author: gennexuslabsDDM
+  Posted: 2026-10-02 03:27:01.940000
+  Votes: 7  Comments: 20
+
+Hi David and the Enveda team,
+
+Many public notebooks in this competition run inference code and model weights stored in public Kaggle datasets. Examples are ahmedberatozer/casmi26-v4b-models, 
+  -fpnet-full1, -v2-pool, -v3-models, -iceberg and -glacier. Their licence field is "Other". The v4b-models description says the assets are for use "under the 
+  (respective) source licenses (non-commercial, with attribution)", because they are derived from the competition training data (CC BY-NC) and COCONUT (CC BY 4.0). The 
+  training scripts for the weights are not published.
+
+We have two questions about prize-eligible solutions:
+
+
+
+
+Does Foundational Rule 6.b (Public Code Sharing) also cover code that was shared publicly for this competition inside Kaggle datasets? That rule says shared code is 
+deemed licensed under an OSI-approved licence that does not limit commercial use. If it does, a winning solution could include that code and deliver it under the MIT 
+winner licence.
+
+
+Under rule 2.5.3, can a winning solution use those published pretrained weights as they are? We would deliver our own training and inference code plus references to 
+the public datasets, even though the code used to train the weights is not public.
+
+A short answer would help the many teams building on the public notebooks. Thank you!
+
+Comments:
+├─ Mansur Nurmukhambetov (2026-10-11 22:36:44.460000) [+1]
+│  Hi @ahmedberatozer , thank you for publishing the casmi26 v4b/v2/fpnet datasets, they made this competition much more accessible. Following David's clarification that train.parquet-derived artefact...
+├─ David Healey (2026-10-09 20:42:50.440000) [+1]
+│  Hello, thank you for your patience.
+│  
+│  
+│  
+│  
+│  train.parquet should be considered open source, as it is a compilation of open sourced libraries. (The noncommercial provision on the kaggle data license was...
+├─ Mike.X (2026-10-06 07:40:28.920000) [+1]
+│  Looks like the organizers aren’t going to do anything about it.
+  ├─ nofreewill42 (2026-10-07 06:59:29.223000) [+0]
+  │  So it's possible you think that the top 100 will be eliminated and the first without using anything forbidden is 101th, getting 1st price? and then looking for the 2nd who hasnt gone against the ru...
+    ├─ MarvinTMB (2026-10-09 05:21:31.970000) [+0]
+    │  Why do you assume all the top is using forbidden code/data?
+    ├─ gennexuslabsDDM (2026-10-09 06:08:44.023000) [+1]
+    │  Thanks for stopping by, and congrats on 0.484, that's a seriously impressive lead! Agreed, nobody should assume that. This thread only asks the hosts to clarify 
+    │    ▎ which licenses are prize-eligib...
+    ├─ sixk_tagged (2026-10-09 09:05:23.417000) [+0]
+    │  Well done on the lead, I hope you keep breaking highs &lt;3
+├─ Asan Ashirov (2026-10-04 05:07:10.213000) [+1]
+│  Adding to the questions above: several of these datasets (for example ahmedberatozer/casmi26-v4b-models, casmi26-v2-pool and casmi26-fpnet-full1) contain code together with models and tables derive...
+├─ Truthseeking (2026-10-02 11:35:30.803000) [+1]
+│  Hi David, a follow-up on the question above. Several public notebooks use ahmedberatozer/casmi26-v4b-models, -v3-models, -fpnet-full1 and -v2-pool. As far as we can tell they contain models and can...
+├─ Mike.X (2026-10-02 06:57:07.923000) [+1]
+│  I also have a few questions below.🤣
+│  
+│  
+│    
+│  
+│      
+│  Public code in Kaggle datasets
+│      Does Foundational Rule 6.b also apply to source code shared publicly through a Kaggle Dataset? If so, is that code ...
+├─ Truthseeking (2026-10-21 18:38:40.127000) [+0]
+│  In discussion 745072 you wrote: “A team cannot use shared weights without the original training code.” Our solution would use two third-party components whose training code is not published: ahmedb...
+├─ kowero (2026-10-12 22:30:06.733000) [+0]
+│  Hi David and the Enveda team,
+│  
+│  Thanks for the clarifications in this thread. Before we choose final submissions, we want to make sure a solution built partly on public competition datasets is prize...
+  ├─ Marie Killian (2026-10-14 18:26:56.123000) [+1]
+  │  Hi @kowero Thank you for asking for clarification!
+  │  
+  │  
+  │  
+  │  A winning solution can include third party weights, including those shared by other competitors, only if it provides the original training code...
+├─ kenneth uchegbu (2026-10-09 08:30:06.693000) [+0]
+│  please who can help me with the reson why code has been saying submission error for like 4 submissions now? what could possibly be wrong?
+  ├─ Shehab Alshehabi (2026-10-09 09:54:17.183000) [+0]
+  │  Are you sure you are following the submission format correctly? Have you checked your notebook produces a submissions.csv in the correct format?
+  │  
+  │  From the competitions page:
+  │  
+  │  
+  │    
+  │  Fewer than 25 gues...
+    ├─ kenneth uchegbu (2026-10-09 10:49:52.573000) [+0]
+    │  ok. Thank you very much. i will do that.
+├─ Gisel Regina Benítez Calvillo (2026-10-09 01:33:55.990000) [+0]
+│  Hi David and the Enveda team, thank you for the clarification in thread 745841 that models trained on train.parquet and redistributed artifacts are fine. Could you please confirm how this applies t...
+├─ Subhranil Paul (2026-10-07 14:17:34.923000) [+0]
+│  Hi, thank you for publishing the casmi26 code and datasets. They've been a huge help to many of us in this competition.
+│  A quick licensing question: the casmi / fe_v4 code inside casmi26-v4b-models ...
+├─ Jusamonix (2026-10-07 05:46:47.933000) [+0]
+│  Hi David, +1 to the open questions in this thread. Two points that have not been asked yet:
+│  
+│  
+│  
+│  Scope of the compliance review. Will the end-of-competition check look only at the two submissions a t...
+├─ Shalini S (2026-10-07 02:07:49.160000) [+0]
+│  Hi David, thank you for the Oct 5 clarification in thread 745841 that train.parquet "can be treated effectively as open-source and any model trained on it is fine, redistributed artifacts are fine....

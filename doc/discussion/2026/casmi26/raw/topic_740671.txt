@@ -1,0 +1,91 @@
+Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)
+Topic #740671: How to get started + Competition's Official Discord
+  Author: Ashley Oldacre
+  Posted: 2026-09-10 18:30:44.192000
+  Votes: 5  Comments: 18
+
+Welcome! 
+
+Information for newbies
+
+New to machine learning and data science? No question is too basic or too simple. Feel free to start your own thread, or use this thread as a place to post any first-timer clarifying questions for the Kaggle community to help you with!
+
+New to Kaggle? Take a look at a few videos to learn a bit more about site etiquette, Kaggle lingo, and how to enter a competition using Kaggle Notebooks. Publish and share your models on Kaggle Models!
+
+Participants under 18 years old: If you are under 18 years old and want to participate in this competition, you need to submit a couple of forms:
+
+
+
+Form #1: Parent/Guardian consent for minor's use of kaggle.com. You only have to fill this out once, and it is valid for any competitions on Kaggle. If you already filled this out in the past, you can move on to the next form. 
+
+Form #2: Parent/Guardian consent for minor's participation in Kaggle competition. You have to fill out form #2 for this and any future competitions you want to join. 
+Kids under 13 years of age are not allowed to participate on Kaggle. If you have any questions, please leave a comment and we'll follow up with you!
+
+
+Looking for a team? Express your interest in joining a team through our Team Up feature.
+
+Remember: Kaggle is for everyone. Whether you're teaming up or sharing tips in the competition forum, we expect everyone to follow our Kaggle community guidelines.
+
+Competition's Official Discord
+
+In addition to this competition forum, you can continue the discussion in our official Kaggle Discord Server here:
+
+discord.gg/kaggle
+
+The Discord is a great place to ask getting started questions, chat about the nuances of this competition, and connect with potential team mates. Learn more about Discord at our announcement here. Here are a few things to keep in mind though:
+
+1. Discord Competition Channels are 'Public' - Don't Share Private Information
+
+Discord channels for specific competitions are considered 'public' spaces where you are allowed to talk about competition details. Please remember that private sharing of competition code or data outside of your team is, as always, not permitted. Code sharing must always be done publicly through the Kaggle forums/notebooks.
+
+2. Discord Competition Channels are Not Monitored by Staff - Keep Important Information on the Kaggle Forums
+
+Kaggle Staff and Hosts running competitions will not monitor Discord or be available to answer questions in Discord. This is intended to be a more casual space to discuss competitions and help each other. Please keep important questions, insights, writeups, and other valuable conversation on the Kaggle forums. 
+
+Happy modeling!
+
+Comments:
+├─ kenneth uchegbu (2026-10-09 08:29:32.153000) [+0]
+│  please who can help me with the reson why code has been saying submission error for like 4 submissions now? Thank you very much
+├─ Amirah Alimi (2026-10-03 10:39:51.703000) [+0]
+│  Looking to form or join a team for CASMI 2026 - need two more people.
+│  
+│  Where I'm at: I've completed a thorough EDA pass on the training data molecule-level train/validation splitting (to avoid spec...
+  ├─ kenneth uchegbu (2026-10-03 10:53:04.363000) [+0]
+  │  Hey Amirah. I am very much interested. You can hit me up on Linkedin with Kenneth Uchegbu or Whatsapp 08100168681
+    ├─ kenneth uchegbu (2026-10-03 10:54:52.670000) [+0]
+    │  I have been into machine learning for 5 months now and i am very much eager to learn any difficult thing and win the price
+├─ kenneth uchegbu (2026-10-01 19:25:55.073000) [+0]
+│  please what is the route to Concatenate key spectral metadata as tabular features: precursor_mz, ionization_mode, adduct (one-hot encoded), collision_energy_ev, and instrument_type.
+  ├─ Naseem Akhtar (2026-10-01 19:32:28.627000) [+0]
+  │  Can we team up?
+├─ Naseem Akhtar (2026-09-30 14:12:11.900000) [+0]
+│  Is there anyone to team up with me to                                  do this competition together?
+  ├─ PC Jimmmy (2026-09-30 16:14:41.103000) [+0]
+  │  I suggest you fill out more of your profile- improves the chances that someone from your school/country/etc will want to join up with you.  Blank profiles are poor advertising.
+    ├─ Naseem Akhtar (2026-09-30 16:16:48.673000) [+0]
+    │  But what should I write when I don't know anything?
+    ├─ PC Jimmmy (2026-09-30 16:27:43.057000) [+0]
+    │  Male here - sorry dude :)
+    │  
+    │  Your profile - fill out your schooling etc.  For example on my profile
+    │  
+    │  Mineral Engineer - Colorado School of Mines
+    │  Captain - US Army Corps of Engineers
+    │  PPG Industries - ...
+    ├─ Naseem Akhtar (2026-09-30 16:31:38.593000) [+0]
+    │  Can you help me get connected to some female mentor??
+    ├─ Naseem Akhtar (2026-09-30 16:32:13.793000) [+0]
+    │  Please can you do so???
+    ├─ PC Jimmmy (2026-10-01 16:16:00.110000) [+0]
+    │  Sorry - don't know any on that level.
+├─ Naseem Akhtar (2026-09-30 14:07:48.830000) [+0]
+│  I am just a newbie here starting to learn python. I need female buddies to start my coding journey with. I am very interested in this competition and ready to give full time to it. Just need the wh...
+  ├─ kenneth uchegbu (2026-10-01 19:20:07.703000) [+0]
+  │  Have you built any machine learning project before?
+    ├─ Naseem Akhtar (2026-10-01 23:45:51.177000) [+0]
+    │  No, I haven't built any project.
+    ├─ kenneth uchegbu (2026-10-03 03:45:21.717000) [+0]
+    │  ohhh. it is going to be a difficult one then. cause even me that has built some projects is finding it difficult
+    ├─ Naseem Akhtar (2026-10-03 04:34:03.510000) [+0]
+    │  But I am just ready to give my full time to it by leaving everything else.
