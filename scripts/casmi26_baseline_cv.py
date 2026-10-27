@@ -40,11 +40,12 @@ from casmi26.baseline.pipeline import (
     SpectralIndex,
     run_baseline,
 )
-from casmi26.baseline.spectra import clean_library
+from casmi26.baseline.spectra import CleanConfig, clean_library
 
 TRAIN = Path("data/input/enveda-CASMI26-molecule-id-mass-spectra/train.parquet")
 FOLDS = Path("data/input/external/casmi26/casmi26-identity-disjoint-validation-folds")
 COCO = Path("data/input/external/casmi26/coconut-casmi26-candidates")
+PCL = Path("data/input/external/casmi26/casmi26-pubchemlite-cc0-candidate-fingerprints")
 CACHE = Path("data/working/casmi26/library_clean.npz")
 SEED = 20260930
 MAX_SPECTRA = 9  # test の 1 分子あたり最大スペクトル数
@@ -90,13 +91,30 @@ def main() -> int:
         "drop: pool からも除く (DB 未収録)",
     )
     ap.add_argument(
+        "--precursor-window",
+        type=float,
+        default=0.0,
+        help="> 0 なら m/z > precursor - W のピークを類似度計算から除く (0 = V17 と同じ)",
+    )
+    ap.add_argument(
+        "--extra-pool",
+        choices=["none", "pubchemlite"],
+        default="none",
+        help="候補 pool に追加する構造 DB",
+    )
+    ap.add_argument(
         "--reference",
         choices=["none", "other"],
         default="none",
         help="none: ホールドアウト構造の全スペクトルを除く / other: query と同じソースだけ除く",
     )
     args = ap.parse_args()
-    cfg = BaselineConfig(workers=args.workers)
+    cfg = BaselineConfig(
+        workers=args.workers, clean=CleanConfig(precursor_window=args.precursor_window)
+    )
+    cache = CACHE
+    if args.precursor_window > 0:
+        cache = CACHE.with_name(f"library_clean_pw{args.precursor_window:g}.npz")
 
     meta = pq.read_table(
         TRAIN,
@@ -144,10 +162,11 @@ def main() -> int:
                 spectra=[raw[int(r)] for r in sub.index],
                 neutral_masses=nm,
                 ion_mode=mode,
+                precursor_mzs=sub["precursor_mz"].to_numpy(np.float64),
             )
         )
 
-    lib = clean_library(TRAIN, CACHE, cfg.clean)
+    lib = clean_library(TRAIN, cache, cfg.clean)
     held = meta["group"].isin(held_groups)
     if args.reference == "other":
         same_source = (
@@ -166,15 +185,33 @@ def main() -> int:
     # pool に残すかどうかは train 側の構造表で決める (TECHNICAL_NOTES Validation Protocol 2)
     st_pool = st if args.pool_heldout == "keep" else st[~st["identity_group"].isin(held_groups)]
     st_ok = st_pool.drop_duplicates("scorer_key")
+    ex_mass, ex_smiles, ex_keys = np.zeros(0), np.zeros(0, object), np.zeros(0, object)
+    if args.extra_pool == "pubchemlite":
+        with open(PCL / "pubchemlite_meta.pkl", "rb") as f:
+            pm = pickle.load(f)
+        ex_mass = np.load(PCL / "pubchemlite_mass.npy")
+        ex_smiles = np.asarray(pm["smiles"], object)
+        ex_keys = np.asarray(pm["keys"], object)
     pool = CandidatePool(
-        mass=np.concatenate([co_mass, st_ok["mono_mass"].to_numpy()]),
-        smiles=np.concatenate([np.asarray(cm["smiles"], object), st_ok["smiles"].to_numpy(object)]),
-        known_key=np.concatenate(
-            [np.full(len(co_mass), None, object), st_ok["scorer_key"].to_numpy(object)]
+        mass=np.concatenate([co_mass, ex_mass, st_ok["mono_mass"].to_numpy()]),
+        smiles=np.concatenate(
+            [np.asarray(cm["smiles"], object), ex_smiles, st_ok["smiles"].to_numpy(object)]
         ),
-        source=np.array(["coconut"] * len(co_mass) + ["train"] * len(st_ok), object),
+        known_key=np.concatenate(
+            [
+                np.full(len(co_mass) + len(ex_mass), None, object),
+                st_ok["scorer_key"].to_numpy(object),
+            ]
+        ),
+        source=np.array(
+            ["coconut"] * len(co_mass) + [args.extra_pool] * len(ex_mass) + ["train"] * len(st_ok),
+            object,
+        ),
     )
-    log(f"pool: {len(co_mass):,} COCONUT + {len(st_ok):,} train structures")
+    log(
+        f"pool: {len(co_mass):,} COCONUT + {len(ex_mass):,} {args.extra_pool}"
+        f" + {len(st_ok):,} train"
+    )
     key_to_smiles = dict(zip(st["scorer_key"], st["smiles"], strict=False))
 
     res = run_baseline(queries, index, pool, key_to_smiles, cfg, log=log)
@@ -184,7 +221,7 @@ def main() -> int:
     classes = assign_classes(
         truth,
         reference_keys=index.keys,
-        database_keys=res.database_keys | set(cm["keys"]) | set(st_ok["scorer_key"]),
+        database_keys=res.database_keys | set(cm["keys"]) | set(ex_keys) | set(st_ok["scorer_key"]),
     )
     stages = [StageSpec("pool", None), StageSpec("ranker", 1)]
     dec = decompose(truth, res.stages, stages=stages, classes=classes)
@@ -221,6 +258,8 @@ def main() -> int:
         "split": args.split,
         "pool_heldout": args.pool_heldout,
         "reference": args.reference,
+        "precursor_window": args.precursor_window,
+        "extra_pool": args.extra_pool,
         "molecules": dec.count,
         "spectra": int(len(q_rows)),
         "mrr": dec.mrr,

@@ -24,6 +24,9 @@ class CleanConfig:
     power: float = 1.0
     ent_weight: bool = True
     mz_tol: float = 0.01
+    # > 0 なら m/z > precursor_mz - precursor_window のピーク (precursor 本体・同位体・
+    # precursor より重いピーク) を類似度計算の前に除く。0 は V17 と同じ (除かない)
+    precursor_window: float = 0.0
 
 
 @njit(cache=True, fastmath=True)
@@ -197,6 +200,18 @@ def _clean_fill(off, mz, it, new_off, out_mz, out_it, floor, topk, power, ent_we
             out_it[a + i] = oi[i]
 
 
+def drop_precursor_region(
+    off: np.ndarray, mz: np.ndarray, it: np.ndarray, prec: np.ndarray, window: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """各スペクトルから m/z > prec - window のピークを除く (flat 配列のまま)。"""
+    row = np.repeat(np.arange(len(off) - 1), np.diff(off))
+    keep = mz <= (prec[row] - window)
+    cnt = np.bincount(row[keep], minlength=len(off) - 1)
+    new_off = np.zeros(len(off), np.int64)
+    np.cumsum(cnt, out=new_off[1:])
+    return new_off, mz[keep], it[keep]
+
+
 def clean_flat(
     off: np.ndarray, mz: np.ndarray, it: np.ndarray, cfg: CleanConfig
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -243,12 +258,14 @@ def clean_library(train_path: Path, cache_path: Path | None, cfg: CleanConfig) -
         off = off - off[0]
         mz = mzc.values.to_numpy(zero_copy_only=False).astype(np.float32)
         it = itc.values.to_numpy(zero_copy_only=False).astype(np.float32)
+        prec = t.column("precursor_mz").to_numpy(zero_copy_only=False).astype(np.float64)
+        if cfg.precursor_window > 0:
+            off, mz, it = drop_precursor_region(off, mz, it, prec, cfg.precursor_window)
         o2, m2, i2 = clean_flat(off, mz, it, cfg)
         offs.append(o2[1:] + base)
         base += int(o2[-1])
         mzs.append(m2)
         its.append(i2)
-        prec = t.column("precursor_mz").to_numpy(zero_copy_only=False).astype(np.float64)
         add = np.asarray(t.column("adduct").to_pylist(), dtype=object)
         nms.append(neutral_mass(prec, add))
         del t, mzc, itc, mz, it

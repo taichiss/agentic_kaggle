@@ -1,0 +1,435 @@
+<title>CASMI26 スペクトル診断</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Week 1 報告と同じ縦長レポート。冒頭に結論と判定表、以降は 候補 pool → フラグメント → 基準ピーク → 次の手。 */
+:root {
+  --bg: #f3f6f7; --surface: #ffffff; --ink: #11181c; --ink-2: #47535a; --muted: #6f7b82; --line: #dbe2e5;
+  --accent: #0d6876; --accent-soft: #e1eff1;
+  --np: #2a78d6; --f0: #eb6834;
+  --k1: #2a78d6; --k2: #1baf7a; --k3: #eda100; --k4: #eb6834; --k5: #6250d6; --k6: #a9b3b8; --k7: #e3e8ea;
+  --good: #0f7b3d; --warn: #a86400; --bad: #c0362f;
+  --good-bg: #e3f3e8; --warn-bg: #fbf0dc; --bad-bg: #fbe6e4;
+  --f-display: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --f-body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1316; --surface: #151c20; --ink: #e8eef0; --ink-2: #aab6bc; --muted: #7f8c92; --line: #26323a;
+  --accent: #56b8c4; --accent-soft: #15333a; --np: #3987e5; --f0: #d95926;
+  --k1: #3987e5; --k2: #199e70; --k3: #c98500; --k4: #d95926; --k5: #9085e9; --k6: #56646b; --k7: #2a353b;
+  --good: #4cc27c; --warn: #e3a33b; --bad: #ef7a72; --good-bg: #13301f; --warn-bg: #352a12; --bad-bg: #3a1a18; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1316; --surface: #151c20; --ink: #e8eef0; --ink-2: #aab6bc; --muted: #7f8c92; --line: #26323a;
+  --accent: #56b8c4; --accent-soft: #15333a; --np: #3987e5; --f0: #d95926;
+  --k1: #3987e5; --k2: #199e70; --k3: #c98500; --k4: #d95926; --k5: #9085e9; --k6: #56646b; --k7: #2a353b;
+  --good: #4cc27c; --warn: #e3a33b; --bad: #ef7a72; --good-bg: #13301f; --warn-bg: #352a12; --bad-bg: #3a1a18; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: clamp(28px, 4.6vw, 42px); font-weight: 900; line-height: 1.25; }
+h2 { font-size: 23px; font-weight: 700; line-height: 1.4; }
+h3 { font-size: 16px; font-weight: 700; }
+p { margin: 0; max-width: 72ch; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--ink-2); }
+header.hero { padding-top: 40px; display: grid; gap: 18px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.fact { background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fact .k { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+.fact .v { font-family: var(--f-mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.fact .n { font-size: 12px; color: var(--ink-2); }
+section { display: grid; gap: 20px; }
+.sec-head { display: grid; gap: 6px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card .take { color: var(--ink-2); font-size: 14px; }
+.src { font-size: 12px; color: var(--muted); font-family: var(--f-mono); word-break: break-all; }
+.chart { width: 100%; position: relative; }
+.chart svg { display: block; overflow: visible; }
+.pill { font-family: var(--f-mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; letter-spacing: 0.04em; line-height: 1.6; display: inline-block; }
+.pill.good { background: var(--good-bg); color: var(--good); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.bad { background: var(--bad-bg); color: var(--bad); }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 620px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12.5px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid var(--line); }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--ink-2); font-size: 14px; max-width: 80ch; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); z-index: 5; line-height: 1.5; }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; font-size: 14px; color: var(--ink-2); max-width: 82ch; }
+ol.plain b { color: var(--ink); }
+footer { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Enveda CASMI 2026 · EXP-0003 · 質量スペクトル診断 · 2026-10-27</div>
+  <h1>誤答の 8 割は、正解と同じ分子式の異性体だった</h1>
+  <p class="lede">候補 pool とランカーの失敗を、precursor 質量・フラグメント・同位体・基準ピーク・付加イオンという質量スペクトルの基本から切り分けた。precursor 質量の読み取りは正確で、分子式の決定にも改善の余地は小さい。問題は、同じ分子式の異性体を見分ける証拠が弱いことと、その証拠を V17 の実装が取りこぼしていることにある。</p>
+  <div class="facts">
+    <div class="fact"><span class="k">誤答 1 位が同じ分子式</span><span class="v">77–87%</span><span class="n">NP / fold0 × A / B</span></div>
+    <div class="fact"><span class="k">断片を作れていない NP 分子</span><span class="v">26%</span><span class="n">結合数 34 超で列挙を打ち切り</span></div>
+    <div class="fact"><span class="k">precursor 除去の効果</span><span class="v">+0.05〜0.07</span><span class="n">Class 2 の融合 MRR、Class 1 は不変</span></div>
+    <div class="fact"><span class="k">断片スコアの改善</span><span class="v">+0.05〜0.07</span><span class="n">変種 V3、断片チャネル単独</span></div>
+    <div class="fact"><span class="k">PubChemLite のカバー率</span><span class="v">3%→96%</span><span class="n">NP、pool から除いた条件</span></div>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">判定一覧</div>
+    <h2>原理ごとの問いと結論</h2>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>問い</th><th>判定</th><th>根拠</th></tr></thead>
+      <tbody>
+        <tr><td>precursor 質量・同位体の取り違え</td><td><span class="pill good">問題なし</span></td><td>誤差の 99% が 6 ppm 以内（系統誤差 +1.6 ppm）。同位体ピークを precursor と取り違えた疑いは 0 本</td></tr>
+        <tr><td>分子式の決定</td><td><span class="pill good">改善余地小</span></td><td>窓の中の分子式は 3–5 種しかなく、誤答の 77–87% が正解と同じ分子式</td></tr>
+        <tr><td>特定の断片の見落とし</td><td><span class="pill bad">要修正</span></td><td>結合数 34 超の分子では断片を 1 つも作っていない（NP の 26%）。上限撤廃で該当分子の断片 MRR 0.115 → 0.286</td></tr>
+        <tr><td>組合せ（3 結合以上の切断）の見落とし</td><td><span class="pill good">主因ではない</span></td><td>追加で説明できる強度は正解 4–5%、誤答 6% で差がない</td></tr>
+        <tr><td>質量許容差</td><td><span class="pill warn">広すぎる</span></td><td>一致の誤差は中央値 8–10 ppm、90% 点 36–44 ppm。0.01 Da を 10 ppm にすると改善</td></tr>
+        <tr><td>同位体ピーク</td><td><span class="pill warn">一部で有効</span></td><td>強度の 1.6–1.7% と少ないが、除去すると fold0 で +0.038</td></tr>
+        <tr><td>付加イオン（Na⁺・K⁺・NH₄⁺・2 量体）</td><td><span class="pill bad">弱い</span></td><td>説明できない強度が 26–45%（NP）。2 量体 [2M+Na]⁺ は 97%。担体を足しても改善しない</td></tr>
+        <tr><td>基準ピークと precursor</td><td><span class="pill bad">要修正</span></td><td>precursor ピークが異性体どうしの類似度を水増し。除くと Class 2 が +0.05〜0.07</td></tr>
+        <tr><td>pool 外の分子</td><td><span class="pill good">救える（NP）</span></td><td>PubChemLite で NP のカバー率 3.2% → 96%。候補が増える代償は −0.011</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">候補 pool 1 · precursor 質量</div>
+    <h2>precursor は正しく読めていて、±8.5 ppm 窓でほぼ全部を拾える</h2>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>窓の幅と、正解が窓に入る割合</h3>
+      <div class="chart" id="c-cover"></div>
+      <div class="legend"><span><i style="background:var(--np)"></i>NP（250 分子）</span><span><i style="background:var(--f0)"></i>fold0（400 分子）</span></div>
+      <p class="take">中性質量の誤差の中央値は +1.6 ppm（NP）/ +1.7 ppm（fold0）。V17 の注記「timsTOF は +1.4 ppm ずれる」と一致する。±5 ppm でも NP 97.6%、fold0 100% が入る。</p>
+      <div class="src">ms_diag_*.json · precursor</div>
+    </div>
+    <div class="card">
+      <h3>窓の幅と候補数（中央値）</h3>
+      <div class="chart" id="c-win"></div>
+      <p class="take">窓を狭めても候補はあまり減らない（NP は ±8.5 → ±5 ppm で 53 → 48.5 件）。同じ質量の異性体が窓の大半を占めるため。なお、±30 ppm の予備窓は「窓が空のときだけ」働くので、PubChemLite 追加で誤差 8.5 ppm 超の 1 分子を取りこぼした。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">候補 pool 2 · 窓の中身とランカーの誤り方</div>
+    <h2>窓は異性体だらけで、ランカーは同じ分子式の別構造に負けている</h2>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>窓の構成（中央値）</h3>
+      <div class="chart" id="c-comp"></div>
+      <div class="legend"><span><i style="background:var(--k1)"></i>正解と同じ分子式の候補</span><span><i style="background:var(--k6)"></i>それ以外</span></div>
+      <p class="take">窓の中の分子式は中央値 3 種（NP）/ 5 種（fold0）。正解の分子式が窓内で唯一なのは 4% だけ。</p>
+    </div>
+    <div class="card">
+      <h3>誤答 1 位のうち、正解と同じ分子式の割合</h3>
+      <div class="chart" id="c-conf"></div>
+      <div class="legend"><span><i style="background:var(--np)"></i>NP</span><span><i style="background:var(--f0)"></i>fold0</span></div>
+      <p class="take">誤答と正解の Tanimoto は中央値 0.20–0.36 で、骨格から違う異性体。分子式の決定（同位体パターンや質量欠損）を改善しても効かず、構造の違いを映す証拠が要る。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">候補 pool 3 · PubChemLite</div>
+    <h2>PubChemLite を足すと、pool 外の天然物の大半を救える</h2>
+  </div>
+  <div class="card">
+    <h3>NP ホールドアウトでの効果</h3>
+    <div class="chart" id="c-pcl"></div>
+    <div class="legend"><span><i style="background:var(--k1)"></i>MRR@25（A 固定融合）</span><span><i style="background:var(--k6)"></i>正解が窓に入る割合</span></div>
+    <p class="take">手元の PubChemLite（38.6 万構造）は COCONUT と重複せず、train とも 2.6 万件しか重ならない。それでも NP の正解構造の 97.6% を含む。一方 fold0（enveda-180 の drug-like）は 0.5% しか含まない。候補が 53 → 88 件に増えても、正解が薄まる損は −0.011 にとどまった。</p>
+    <div class="src">EXP-0003/np_drop_pcl, np_keep_pcl · EXP-0001/np_keep, np_drop</div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">フラグメント 1 · ピーク帰属</div>
+    <h2>見落としは特定の断片の種類に偏っていない。差がつくのは単純な開裂断片だけ</h2>
+    <p class="lede">正解構造と、A の誤答 1 位の構造で、同じスペクトルのピークを帰属した（強度シェア）。各ピークは precursor → 同位体 → 断片 → ロス → 3 結合切断 → 付加イオンの順で、最初に当てはまった区分に入れる。</p>
+  </div>
+  <div class="card">
+    <h3>帰属の内訳（強度シェア）</h3>
+    <div class="chart" id="c-ann"></div>
+    <div class="legend" id="lg-ann"></div>
+  </div>
+  <div class="card">
+    <h3>正解 − 誤答（強度シェアの差、ポイント）</h3>
+    <div class="chart" id="c-diff"></div>
+    <div class="legend"><span><i style="background:var(--np)"></i>NP</span><span><i style="background:var(--f0)"></i>fold0</span></div>
+    <p class="take">正解の方がよく説明できるのは「H 移動なし / あり」の単純な開裂断片だけ。中性ロス・連続ロス・3 結合切断は、むしろ誤答の方をよく説明する。異性体どうしは H₂O や CO のような汎用的なロスを共有するので、これらを足すと識別が悪くなる。</p>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>adduct 別：説明できない強度（NP、正解構造）</h3>
+      <div class="chart" id="c-adduct"></div>
+      <p class="take">proton 付加体（[M+H]⁺ 21%、[M−H]⁻ 8%）に比べ、Na⁺・K⁺・NH₄⁺ 付加体は 26–45% が説明できない。Na⁺・K⁺ 付加体は precursor が強度の 30% を占め、開裂が進んでいない。hidden test の adduct は [M+H]⁺ 79%、[M−H]⁻ 16% なので、影響は限定的。</p>
+      <div class="src">annotation_truth_by_adduct（括弧内はスペクトル数）</div>
+    </div>
+    <div class="card">
+      <h3>2 量体 [2M+Na]⁺ は単量体に解離する（fold0）</h3>
+      <div class="tbl" style="border:0"><table style="min-width:0">
+        <thead><tr><th>adduct（本数）</th><th>単量体イオンの強度シェア</th><th>基準ピークが単量体</th></tr></thead>
+        <tbody>
+          <tr><td>[2M+Na]⁺（350）</td><td class="num">74%</td><td class="num">97%</td></tr>
+          <tr><td>[2M−H]⁻（97）</td><td class="num">65%</td><td class="num">72%</td></tr>
+          <tr><td>[2M+H]⁺（140）</td><td class="num">49%</td><td class="num">69%</td></tr>
+        </tbody></table></div>
+      <p class="take">[2M+Na]⁺ の基準ピークは単量体 [M+Na]⁺ で、proton 付加を前提にした断片スコアでは説明できない（96.6% が説明不能）。hidden test には 2 量体の adduct が 1 本もないので、fold0 の CV はこれを含む分だけ歪んでいる。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">フラグメント 2 · スコアの変種</div>
+    <h2>結合数上限・許容差・同位体を直すと、断片チャネルが +29%</h2>
+    <p class="lede">候補窓の中で、断片の説明率だけで並べたときの MRR@25。変種は左から順に積み上げる（V7 だけは V0 からの単独変更）。</p>
+  </div>
+  <div class="card">
+    <h3>変種ごとの断片チャネル単独 MRR@25</h3>
+    <div class="chart" id="c-var"></div>
+    <div class="legend"><span><i style="background:var(--np)"></i>NP</span><span><i style="background:var(--f0)"></i>fold0</span><span><i style="background:var(--k5)"></i>NP のうち結合数 34 超（66 分子）</span></div>
+    <p class="take">最良は V3（上限撤廃 + 10 ppm + 同位体除去）で、V0 比 NP +0.070、fold0 +0.048。結合数 34 超の NP 分子では 0.115 → 0.322。中性ロス（V4）と付加イオン担体（V5）を足すと下がる。H 移動を ±1 に絞る効果（V7）は +0.005〜0.010 と小さい。</p>
+    <div class="src">frag_channel_mrr · 一致の質量誤差：中央値 7.9 ppm（NP）/ 9.5 ppm（fold0）、90% 点 36 / 44 ppm</div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">基準ピークと類似度</div>
+    <h2>precursor ピークが異性体どうしの類似度を水増ししていた</h2>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>基準ピーク（最も強いピーク）の帰属</h3>
+      <div class="chart" id="c-base"></div>
+      <div class="legend"><span><i style="background:var(--k1)"></i>断片</span><span><i style="background:var(--k4)"></i>precursor 本体</span><span><i style="background:var(--k3)"></i>ロス系</span><span><i style="background:var(--k6)"></i>その他</span><span><i style="background:var(--k7)"></i>説明できない</span></div>
+      <p class="take">NP では 15.6% のスペクトルで基準ピークが precursor（30–45 eV では 21%）。窓の候補は全員 precursor の質量が同じなので、このピークはどの候補とも一致する。</p>
+    </div>
+    <div class="card">
+      <h3>類似度から precursor 付近を除いたときの融合 MRR@25</h3>
+      <div class="chart" id="c-pw"></div>
+      <div class="legend"><span><i style="background:var(--k6)"></i>除く前</span><span><i style="background:var(--accent)"></i>除いた後（m/z &gt; precursor − 0.5 を除去）</span></div>
+      <p class="take">Class 2 では、誤った異性体とのライブラリ類似度の中央値が 0.575 → 0.524 に下がり、融合が +0.051（NP）/ +0.072（fold0）上がる。正解の reference がある Class 1 はほぼ変わらない（0.914 → 0.916）。</p>
+      <div class="src">EXP-0003/*_pw · EXP-0001/*_keep · EXP-0002/np_other</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">次に試すこと</div>
+    <h2>すぐ効く修正 2 つと、異性体を見分ける特徴への投資</h2>
+  </div>
+  <ol class="plain">
+    <li><b>パイプラインに反映して CV と LB を取り直す。</b>類似度の precursor 除去と断片スコア V3 を既定にする。LB の予測を事前に書いてから提出する</li>
+    <li><b>候補 pool に PubChemLite を追加する。</b>予備窓の発動条件も「窓が空のときだけ」から見直す（+1.6 ppm 補正後の ±10 ppm など）</li>
+    <li><b>異性体を見分ける特徴を学習済みランカーに入れる。</b>誤答の大半は同じ分子式の別構造なので、FP 予測（fold-safe FPNet / MIST）や順方向シミュレータ（ICEBERG）のような構造に敏感な特徴が要る</li>
+    <li><b>CV の query を test にある adduct に限る。</b>fold0 は test にない 2 量体を 15% 含む</li>
+    <li><b>Na⁺・NH₄⁺ 付加体の断片則は、識別に効くことを確かめてから入れる。</b>汎用的なロスの追加は逆効果だった</li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">この分析の限界</div>
+    <h2>帰属は近似で、転位反応を網羅していない</h2>
+  </div>
+  <ul class="plain">
+    <li>ピーク帰属は 1〜3 結合の切断と既知のロス表に基づく近似。「説明できない」には未知の転位、共溶出、ノイズが混ざる</li>
+    <li>誤答は A の 1 位だけと比べた。B の誤答や 2〜10 位との比較はしていない</li>
+    <li>断片チャネルの MRR は単独で並べた値。融合後の効果は CV で確かめ直す必要がある</li>
+    <li>PubChemLite の効果は NP（天然物）でしか測れていない。drug-like な fold0 の正解は 0.5% しか含まれない</li>
+  </ul>
+</section>
+
+<footer>出典：enveda-casmi26/experiments/EXP-0003/（README.md、ms_diag_np.json、ms_diag_fold0.json、各条件の summary.json）、EXP-0001、EXP-0002。</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(function(){
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const tip = document.getElementById('tip');
+function bindTip(node, html){
+  node.addEventListener('pointerenter', () => { tip.innerHTML = html; tip.hidden = false; });
+  node.addEventListener('pointermove', e => { tip.style.left = e.pageX + 'px'; tip.style.top = e.pageY + 'px'; });
+  node.addEventListener('pointerleave', () => { tip.hidden = true; });
+}
+function txt(svg, x, y, s, o = {}) {
+  const t = el('text', { x, y, fill: o.fill || css('--ink-2'), 'font-size': o.size || 12, 'font-family': o.mono ? css('--f-mono') : css('--f-body'), 'text-anchor': o.anchor || 'start', 'dominant-baseline': o.base || 'middle', 'font-weight': o.weight || 400 }, svg);
+  t.textContent = s; return t;
+}
+function svgIn(id, h){ const box = document.getElementById(id); box.innerHTML = ''; const w = box.clientWidth; const s = el('svg', { width: w, height: h, viewBox: `0 0 ${w} ${h}`, role: 'img' }, box); return [s, w]; }
+function hbar(svg, x, y, w, h, fill, round){ const r = round ? Math.min(4, w / 2, h / 2) : 0; const d = `M${x},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x} Z`; return el('path', { d, fill }, svg); }
+function vbar(svg, x, y, w, h, fill){ const r = Math.min(4, w / 2, Math.max(h, 0) / 2); const d = `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`; return el('path', { d, fill }, svg); }
+const pct = v => (v * 100).toFixed(1) + '%';
+
+function grid(s, m, pw, ph, max, ticks, fmt) {
+  ticks.forEach(v => { const y = m.t + ph - v / max * ph; el('line', { x1: m.l, x2: m.l + pw, y1: y, y2: y, stroke: css('--line') }, s); txt(s, m.l - 6, y, fmt(v), { anchor: 'end', mono: 1, size: 11, fill: css('--muted') }); });
+}
+
+// 1. coverage line chart
+const COVER = { x: [1, 2, 3, 5, 8.5, 10, 15, 20], np: [0.288, 0.668, 0.872, 0.976, 0.992, 1, 1, 1], f0: [0.22, 0.575, 0.89, 1, 1, 1, 1, 1] };
+function cover(){
+  const H = 230; const [s, w] = svgIn('c-cover', H); const m = { l: 44, r: 12, t: 12, b: 34 }; const pw = w - m.l - m.r, ph = H - m.t - m.b;
+  const X = v => m.l + v / 20 * pw, Y = v => m.t + ph - v * ph;
+  grid(s, m, pw, ph, 1, [0, 0.25, 0.5, 0.75, 1], v => (v * 100).toFixed(0) + '%');
+  [0, 5, 10, 15, 20].forEach(v => txt(s, X(v), m.t + ph + 14, v + ' ppm', { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }));
+  el('line', { x1: X(8.5), x2: X(8.5), y1: m.t, y2: m.t + ph, stroke: css('--ink-2'), 'stroke-dasharray': '3 3' }, s);
+  txt(s, X(8.5) + 4, m.t + ph - 12, 'V17 の ±8.5 ppm', { size: 11, fill: css('--ink-2') });
+  [['np', '--np', 'NP'], ['f0', '--f0', 'fold0']].forEach(([k, c, lab]) => {
+    el('polyline', { points: COVER.x.map((x, i) => `${X(x)},${Y(COVER[k][i])}`).join(' '), fill: 'none', stroke: css(c), 'stroke-width': 2 }, s);
+    COVER.x.forEach((x, i) => { const d = el('circle', { cx: X(x), cy: Y(COVER[k][i]), r: 4, fill: css(c), stroke: css('--surface'), 'stroke-width': 2 }, s); bindTip(d, `${lab} ±${x} ppm：${pct(COVER[k][i])}`); });
+  });
+}
+const WIN = { x: ['±3', '±5', '±8.5', '±15'], np: [38.5, 48.5, 53, 70.5], f0: [40, 62, 88.5, 162] };
+function win(){
+  const H = 230; const [s, w] = svgIn('c-win', H); const m = { l: 36, r: 6, t: 14, b: 30 }; const pw = w - m.l - m.r, ph = H - m.t - m.b; const max = 180;
+  grid(s, m, pw, ph, max, [0, 60, 120, 180], v => v);
+  const gw = pw / WIN.x.length, bw = Math.min(26, (gw - 14) / 2);
+  WIN.x.forEach((lab, i) => { const gx = m.l + i * gw + (gw - bw * 2 - 2) / 2;
+    [['np', '--np', 'NP'], ['f0', '--f0', 'fold0']].forEach(([k, c, n], j) => { const v = WIN[k][i], bh = v / max * ph; const b = vbar(s, gx + j * (bw + 2), m.t + ph - bh, bw, bh, css(c)); bindTip(b, `${n} ${lab} ppm：${v} 件`);
+      txt(s, gx + j * (bw + 2) + bw / 2, m.t + ph - bh - 8, v, { anchor: 'middle', mono: 1, size: 10.5, fill: css('--ink') }); });
+    txt(s, m.l + i * gw + gw / 2, m.t + ph + 16, lab + ' ppm', { anchor: 'middle', size: 11.5, fill: css('--ink') }); });
+}
+
+// 2. window composition
+function comp(){
+  const rows = [['NP', 39.5, 53], ['fold0', 35.5, 88]]; const rh = 44, lw = 60; const [s, w] = svgIn('c-comp', rows.length * rh + 22); const pw = w - lw - 70; const max = 90;
+  [0, 30, 60, 90].forEach(v => { const x = lw + v / max * pw; el('line', { x1: x, x2: x, y1: 0, y2: rows.length * rh, stroke: css('--line') }, s); txt(s, x, rows.length * rh + 12, v + ' 件', { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  rows.forEach(([n, same, tot], i) => { const y = i * rh + 8, h = rh - 18;
+    txt(s, lw - 10, y + h / 2, n, { anchor: 'end', size: 12.5, fill: css('--ink') });
+    const a = hbar(s, lw, y, same / max * pw - 2, h, css('--k1'), false); bindTip(a, `${n}：同じ分子式 ${same} 件`);
+    const b = hbar(s, lw + same / max * pw, y, (tot - same) / max * pw, h, css('--k6'), true); bindTip(b, `${n}：それ以外 ${tot - same} 件`);
+    txt(s, lw + tot / max * pw + 8, y + h / 2, `${same} / ${tot}`, { mono: 1, size: 11.5, fill: css('--ink') }); });
+}
+function conf(){
+  const H = 200; const [s, w] = svgIn('c-conf', H); const m = { l: 40, r: 6, t: 16, b: 30 }; const pw = w - m.l - m.r, ph = H - m.t - m.b;
+  grid(s, m, pw, ph, 1, [0, 0.5, 1], v => (v * 100).toFixed(0) + '%');
+  const d = { 'A 固定融合': [0.836, 0.767], 'B analog 単独': [0.874, 0.811] }; const keys = Object.keys(d); const gw = pw / keys.length, bw = Math.min(40, (gw - 20) / 2);
+  keys.forEach((k, i) => { const gx = m.l + i * gw + (gw - bw * 2 - 2) / 2;
+    d[k].forEach((v, j) => { const bh = v * ph; const b = vbar(s, gx + j * (bw + 2), m.t + ph - bh, bw, bh, css(j ? '--f0' : '--np')); bindTip(b, `${k} · ${j ? 'fold0' : 'NP'}：${pct(v)}`);
+      txt(s, gx + j * (bw + 2) + bw / 2, m.t + ph - bh - 9, (v * 100).toFixed(0) + '%', { anchor: 'middle', mono: 1, size: 11, fill: css('--ink') }); });
+    txt(s, m.l + i * gw + gw / 2, m.t + ph + 16, k, { anchor: 'middle', size: 12, fill: css('--ink') }); });
+}
+
+// 3. PubChemLite
+function pcl(){
+  const rows = [['pool から除く', 0.0042, 0.032], ['除く + PubChemLite', 0.1753, 0.960], ['pool に残す', 0.1944, 0.996], ['残す + PubChemLite', 0.1833, 0.992]];
+  const narrow = document.getElementById('c-pcl').clientWidth < 520; const rh = 46, lw = narrow ? 120 : 150; const [s, w] = svgIn('c-pcl', rows.length * rh + 22); const pw = w - lw - 70;
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => { const x = lw + v * pw; el('line', { x1: x, x2: x, y1: 0, y2: rows.length * rh, stroke: css('--line') }, s); txt(s, x, rows.length * rh + 12, v.toFixed(2), { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  rows.forEach(([n, mrr, cov], i) => { const y = i * rh + 6;
+    txt(s, lw - 10, y + 17, n, { anchor: 'end', size: 12.5, fill: css('--ink') });
+    const a = hbar(s, lw, y, Math.max(mrr * pw, 2), 15, css('--k1'), true); bindTip(a, `${n}：MRR@25 ${mrr.toFixed(3)}`);
+    txt(s, lw + Math.max(mrr * pw, 2) + 6, y + 8, mrr.toFixed(3), { mono: 1, size: 11, fill: css('--ink') });
+    const b = hbar(s, lw, y + 19, Math.max(cov * pw, 2), 15, css('--k6'), true); bindTip(b, `${n}：カバー率 ${pct(cov)}`);
+    txt(s, lw + Math.max(cov * pw, 2) + 6, y + 27, pct(cov), { mono: 1, size: 11, fill: css('--ink-2') }); });
+}
+
+// 4. annotation
+const CATS = ['precursor', 'precursor_isotope', 'above_precursor', 'frag_exact', 'isotope_of_peak', 'frag_hshift', 'neutral_loss', 'consecutive_loss', 'frag_3break', 'adduct_ion', 'unexplained'];
+const CAT_JA = { precursor: 'precursor 本体', precursor_isotope: 'precursor 同位体', above_precursor: 'precursor より重い', frag_exact: '断片（H 移動なし）', isotope_of_peak: '¹³C 同位体', frag_hshift: '断片（±H 移動）', neutral_loss: 'precursor からの中性ロス', consecutive_loss: '断片からの連続ロス', frag_3break: '3 結合切断', adduct_ion: '付加イオン担体', unexplained: '説明できない' };
+const ANN = {
+  'NP 正解': [0.086, 0.017, 0.001, 0.178, 0.016, 0.314, 0.007, 0.123, 0.054, 0.005, 0.199],
+  'NP 誤答': [0.088, 0.017, 0.001, 0.139, 0.013, 0.284, 0.014, 0.148, 0.061, 0.003, 0.230],
+  'fold0 正解': [0.051, 0.010, 0.001, 0.181, 0.017, 0.430, 0.001, 0.058, 0.041, 0.001, 0.208],
+  'fold0 誤答': [0.051, 0.010, 0.001, 0.155, 0.016, 0.271, 0.002, 0.115, 0.062, 0.000, 0.317],
+};
+const GROUPS = [['precursor 系', [0, 1, 2], '--k6'], ['断片（H 移動なし）', [3], '--k1'], ['断片（±H 移動）', [5], '--k2'], ['¹³C 同位体', [4], '--k3'], ['ロス系', [6, 7], '--k4'], ['3 結合切断・付加イオン', [8, 9], '--k5'], ['説明できない', [10], '--k7']];
+function ann(){
+  const rows = Object.keys(ANN); const rh = 38, lw = 86; const [s, w] = svgIn('c-ann', rows.length * rh + 22); const pw = w - lw - 8;
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => { const x = lw + v * pw; el('line', { x1: x, x2: x, y1: 0, y2: rows.length * rh, stroke: css('--line') }, s); txt(s, x, rows.length * rh + 12, (v * 100).toFixed(0) + '%', { anchor: v === 0 ? 'start' : v === 1 ? 'end' : 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  rows.forEach((r, i) => { const y = i * rh + 7, h = rh - 14; let x = lw; const tot = ANN[r].reduce((a, b) => a + b, 0);
+    txt(s, lw - 10, y + h / 2, r, { anchor: 'end', size: 12, fill: css('--ink') });
+    GROUPS.forEach(([n, idx, c], gi) => { const v = idx.reduce((a, k) => a + ANN[r][k], 0) / tot; const bw = v * pw; const last = gi === GROUPS.length - 1;
+      const seg = hbar(s, x, y, Math.max(bw - (last ? 0 : 2), 0.5), h, css(c), last); bindTip(seg, `${r} · ${n}：${pct(v)}`);
+      if (bw > 34) txt(s, x + 5, y + h / 2, (v * 100).toFixed(0), { mono: 1, size: 10.5, fill: ['--k6', '--k3', '--k7'].includes(c) ? css('--ink') : css('--surface') });
+      x += bw; }); });
+  document.getElementById('lg-ann').innerHTML = GROUPS.map(([n, , c]) => `<span><i style="background:var(${c})"></i>${n}</span>`).join('');
+}
+function diff(){
+  const order = [3, 5, 10, 7, 8, 6, 4, 9, 0]; const rh = 28; const narrow = document.getElementById('c-diff').clientWidth < 520; const lw = narrow ? 128 : 170;
+  const [s, w] = svgIn('c-diff', order.length * rh + 24); const pw = w - lw - 10; const lo = -0.12, hi = 0.18; const X = v => lw + (v - lo) / (hi - lo) * pw;
+  [-0.1, 0, 0.1].forEach(v => { el('line', { x1: X(v), x2: X(v), y1: 0, y2: order.length * rh, stroke: v === 0 ? css('--ink-2') : css('--line') }, s); txt(s, X(v), order.length * rh + 12, (v > 0 ? '+' : '') + (v * 100).toFixed(0), { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  txt(s, X(hi), order.length * rh + 12, '正解が多い →', { anchor: 'end', size: 10.5, fill: css('--muted') });
+  order.forEach((k, i) => { const y = i * rh + rh / 2; txt(s, lw - 10, y, CAT_JA[CATS[k]], { anchor: 'end', size: 12, fill: css('--ink') });
+    [['NP', '--np', -5], ['fold0', '--f0', 5]].forEach(([n, c, dy]) => { const d = ANN[n + ' 正解'][k] - ANN[n + ' 誤答'][k];
+      el('line', { x1: X(0), x2: X(d), y1: y + dy, y2: y + dy, stroke: css(c), 'stroke-width': 6, 'stroke-linecap': 'round' }, s);
+      const hit = el('rect', { x: Math.min(X(0), X(d)) - 4, y: y + dy - 5, width: Math.abs(X(d) - X(0)) + 8, height: 10, fill: 'transparent' }, s); bindTip(hit, `${n} · ${CAT_JA[CATS[k]]}：${(d >= 0 ? '+' : '') + (d * 100).toFixed(1)} pt`); }); });
+}
+const AD = [['[M−H]⁻', 259, 0.082], ['[M+CH₂O₂−H]⁻', 95, 0.099], ['[M+H]⁺', 555, 0.210], ['[M+Na]⁺', 75, 0.258], ['[M−H₂O+H]⁺', 24, 0.335], ['[M+NH₄]⁺', 90, 0.419], ['[M+K]⁺', 15, 0.454]];
+function adduct(){
+  const rh = 30, lw = 132; const [s, w] = svgIn('c-adduct', AD.length * rh + 22); const pw = w - lw - 50; const max = 0.5;
+  [0, 0.25, 0.5].forEach(v => { const x = lw + v / max * pw; el('line', { x1: x, x2: x, y1: 0, y2: AD.length * rh, stroke: css('--line') }, s); txt(s, x, AD.length * rh + 12, (v * 100).toFixed(0) + '%', { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  AD.forEach(([n, c, v], i) => { const y = i * rh + 6, h = rh - 12; txt(s, lw - 10, y + h / 2, `${n}（${c}）`, { anchor: 'end', size: 12, fill: css('--ink') });
+    const b = hbar(s, lw, y, v / max * pw, h, css(v > 0.25 ? '--k4' : '--k1'), true); bindTip(b, `${n}：説明できない ${pct(v)}（${c} 本）`);
+    txt(s, lw + v / max * pw + 6, y + h / 2, (v * 100).toFixed(0) + '%', { mono: 1, size: 11, fill: css('--ink') }); });
+}
+
+// 5. variants
+const VAR = [['V0', 'V17', 0.238, 0.620, 0.115], ['V1', '上限撤廃', 0.281, 0.620, 0.286], ['V2', '+10 ppm', 0.304, 0.630, 0.323], ['V3', '+同位体除去', 0.308, 0.668, 0.322], ['V4', '+ロス', 0.243, 0.544, 0.266], ['V5', '+担体', 0.232, 0.537, 0.260], ['V6', 'V5 ±1H', 0.232, 0.520, 0.261], ['V7', 'V0 ±1H', 0.248, 0.625, 0.113]];
+function variants(){
+  const H = 260; const [s, w] = svgIn('c-var', H); const m = { l: 36, r: 6, t: 16, b: 42 }; const pw = w - m.l - m.r, ph = H - m.t - m.b; const max = 0.7;
+  grid(s, m, pw, ph, max, [0, 0.2, 0.4, 0.6], v => v.toFixed(1));
+  const gw = pw / VAR.length, bw = Math.min(16, (gw - 8) / 3);
+  VAR.forEach(([id, lab, np, f0, big], i) => { const gx = m.l + i * gw + (gw - bw * 3 - 4) / 2;
+    if (i === 3) el('rect', { x: m.l + i * gw + 1, y: m.t, width: gw - 2, height: ph, fill: css('--accent'), opacity: 0.08 }, s);
+    [[np, '--np', 'NP'], [f0, '--f0', 'fold0'], [big, '--k5', 'NP 結合数 34 超']].forEach(([v, c, n], j) => { const bh = v / max * ph; const b = vbar(s, gx + j * (bw + 2), m.t + ph - bh, bw, bh, css(c)); bindTip(b, `${id} ${lab} · ${n}：${v.toFixed(3)}`); });
+    txt(s, m.l + i * gw + gw / 2, m.t + ph + 14, id, { anchor: 'middle', mono: 1, size: 11.5, fill: css('--ink'), weight: i === 3 ? 600 : 400 });
+    if (w > 560) txt(s, m.l + i * gw + gw / 2, m.t + ph + 30, lab, { anchor: 'middle', size: 10.5, fill: css('--muted') }); });
+}
+
+// 6. base peak & precursor removal
+const BASE = { NP: [0.596, 0.156, 0.091, 0.042, 0.115], fold0: [0.702, 0.067, 0.025, 0.030, 0.176] };
+const BG = [['断片', '--k1'], ['precursor 本体', '--k4'], ['ロス系', '--k3'], ['その他', '--k6'], ['説明できない', '--k7']];
+function base(){
+  const rows = Object.keys(BASE); const rh = 40, lw = 60; const [s, w] = svgIn('c-base', rows.length * rh + 22); const pw = w - lw - 8;
+  [0, 0.5, 1].forEach(v => { const x = lw + v * pw; el('line', { x1: x, x2: x, y1: 0, y2: rows.length * rh, stroke: css('--line') }, s); txt(s, x, rows.length * rh + 12, (v * 100).toFixed(0) + '%', { anchor: v === 0 ? 'start' : v === 1 ? 'end' : 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  rows.forEach((r, i) => { const y = i * rh + 8, h = rh - 16; let x = lw; const tot = BASE[r].reduce((a, b) => a + b, 0);
+    txt(s, lw - 10, y + h / 2, r, { anchor: 'end', size: 12.5, fill: css('--ink') });
+    BASE[r].forEach((v0, k) => { const v = v0 / tot, bw = v * pw, last = k === BASE[r].length - 1; const seg = hbar(s, x, y, Math.max(bw - (last ? 0 : 2), 0.5), h, css(BG[k][1]), last); bindTip(seg, `${r} · ${BG[k][0]}：${pct(v)}`);
+      if (bw > 30) txt(s, x + 5, y + h / 2, (v * 100).toFixed(0), { mono: 1, size: 10.5, fill: k === 0 || k === 1 ? css('--surface') : css('--ink') }); x += bw; }); });
+}
+function pw(){
+  const rows = [['NP Class 2', 0.194, 0.245], ['fold0 Class 2', 0.096, 0.167], ['NP Class 1', 0.914, 0.916]]; const rh = 40, lw = 96; const [s, w] = svgIn('c-pw', rows.length * rh + 22); const pwd = w - lw - 60;
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => { const x = lw + v * pwd; el('line', { x1: x, x2: x, y1: 0, y2: rows.length * rh, stroke: css('--line') }, s); txt(s, x, rows.length * rh + 12, v.toFixed(2), { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  rows.forEach(([n, a, b], i) => { const y = i * rh + rh / 2; txt(s, lw - 10, y, n, { anchor: 'end', size: 12, fill: css('--ink') });
+    el('line', { x1: lw + a * pwd, x2: lw + b * pwd, y1: y, y2: y, stroke: css('--accent'), 'stroke-width': 3 }, s);
+    const d1 = el('circle', { cx: lw + a * pwd, cy: y, r: 6, fill: css('--k6'), stroke: css('--surface'), 'stroke-width': 2 }, s); bindTip(d1, `${n}：除く前 ${a.toFixed(3)}`);
+    const d2 = el('circle', { cx: lw + b * pwd, cy: y, r: 6, fill: css('--accent'), stroke: css('--surface'), 'stroke-width': 2 }, s); bindTip(d2, `${n}：除いた後 ${b.toFixed(3)}`);
+    txt(s, lw + b * pwd + 10, y, `+${(b - a).toFixed(3)}`, { mono: 1, size: 11.5, fill: css('--ink'), weight: 500 }); });
+}
+
+function all(){ cover(); win(); comp(); conf(); pcl(); ann(); diff(); adduct(); variants(); base(); pw(); }
+let t; all(); addEventListener('resize', () => { clearTimeout(t); t = setTimeout(all, 120); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+if (document.fonts) document.fonts.ready.then(all);
+})();
+</script>

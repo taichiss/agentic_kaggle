@@ -40,3 +40,14 @@
 - **解釈:** p1 が Discussion の独立推定 (16–17%) と一致し、ずれは説明できた。hidden test の約 57% は正解が COCONUT ∪ train にないと推定され、今の pool では MRR 上限が約 0.43。Class 1 はライブラリ、Class 2 は analog が強い
 - **指標感度との整合:** pool 外の分子を pool に入れて rank 1 にできれば 1 分子 +0.0025。57% (推定 228 分子) が対象で、ランカー改善より上限が大きい
 - **次に試すこと:** PubChemLite / PubChem tier で pool 拡張 (最優先)、ライブラリ一致の信頼度で切り替える学習済みランカー (予測 LB ≈ 0.288)
+
+### EXP-0003: 質量スペクトルの原理から見た失敗要因
+- **日付:** 2026-10-27
+- **config:** `scripts/casmi26_ms_diagnostics.py`、CV は `--precursor-window 0.5` / `--extra-pool pubchemlite`。詳細は [EXP-0003/README.md](../experiments/EXP-0003/README.md)
+- **CV score:** precursor 除去で A: np/keep 0.194→0.245、fold0/keep 0.096→0.167、np/other 0.914→0.916。PubChemLite: np/drop 0.004→0.175、np/keep 0.194→0.183
+- **LB score:** 新規提出なし
+- **仮説:** ランカーの損失は、断片の見落とし・同位体・基準ピーク・付加イオンなど、質量スペクトルの基本的な扱いの誤りに分解できる
+- **結果:** precursor 質量は正確 (+1.6 ppm の系統誤差、同位体の取り違え 0)。窓は異性体だらけ (分子式 3–5 種、同じ分子式 36–40 件)、誤答の 77–87% が同じ分子式。MetFrag-lite は結合数 34 超 (NP の 26%) で断片を作らず、許容差 0.01 Da は広すぎる。中性ロス・3 結合切断は識別に効かない。precursor ピークが異性体の類似度を水増し
+- **解釈:** 分子式レベルの改善は効かず、異性体を見分ける証拠が要る。すぐ効くのは precursor 除去 (+0.05〜0.07) と断片スコア V3 (断片単独 +0.05〜0.07)
+- **指標感度との整合:** 誤答は 1 位の取り違えが中心で、rank 1 を直す変更 (sensitivity §4) に当たる
+- **次に試すこと:** precursor 除去 + V3 を既定にして CV と LB 提出、PubChemLite の pool 追加、FP 予測・ICEBERG などの構造に敏感な特徴を学習済みランカーに入れる、CV query を test の adduct に限定

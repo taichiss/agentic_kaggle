@@ -1,0 +1,411 @@
+{
+  "split": "np",
+  "molecules": 250,
+  "spectra": 1128,
+  "precursor": {
+    "spectrum_ppm_q10_50_90": [
+      -0.6076900666350636,
+      1.5566729125326106,
+      3.1405188970641675
+    ],
+    "molecule_abs_ppm_q50_90_99": [
+      1.499759175882314,
+      3.192828066193787,
+      6.0260715865116445
+    ],
+    "coverage_by_window_ppm": {
+      "1": 0.288,
+      "2": 0.668,
+      "3": 0.872,
+      "5": 0.976,
+      "8.5": 0.992,
+      "10": 1.0,
+      "15": 1.0,
+      "20": 1.0
+    },
+    "isotope_misassigned_spectra": 0,
+    "median_window_size_by_ppm": {
+      "3": 38.5,
+      "5": 48.5,
+      "8.5": 53.0,
+      "15": 70.5
+    },
+    "by_adduct": [
+      {
+        "adduct": "[M+CH2O2-H]-",
+        "count": 95,
+        "median": 0.216,
+        "abs_p90": 2.113
+      },
+      {
+        "adduct": "[M+Cl]-",
+        "count": 6,
+        "median": -0.257,
+        "abs_p90": 2.119
+      },
+      {
+        "adduct": "[M+H]+",
+        "count": 555,
+        "median": 2.011,
+        "abs_p90": 3.406
+      },
+      {
+        "adduct": "[M+K]+",
+        "count": 15,
+        "median": 1.355,
+        "abs_p90": 6.073
+      },
+      {
+        "adduct": "[M+NH4]+",
+        "count": 90,
+        "median": 1.39,
+        "abs_p90": 3.123
+      },
+      {
+        "adduct": "[M+Na]+",
+        "count": 75,
+        "median": 1.647,
+        "abs_p90": 3.916
+      },
+      {
+        "adduct": "[M-2H2O+H]+",
+        "count": 8,
+        "median": 1.58,
+        "abs_p90": 3.273
+      },
+      {
+        "adduct": "[M-H2O+H]+",
+        "count": 24,
+        "median": 1.961,
+        "abs_p90": 3.863
+      },
+      {
+        "adduct": "[M-H2O-H]-",
+        "count": 1,
+        "median": -4.448,
+        "abs_p90": 4.448
+      },
+      {
+        "adduct": "[M-H]-",
+        "count": 259,
+        "median": 0.604,
+        "abs_p90": 2.025
+      }
+    ]
+  },
+  "window": {
+    "n_candidates_median": 53.0,
+    "n_formulas_median": 3.0,
+    "n_same_formula_as_truth_median": 39.5,
+    "share_truth_formula_unique": 0.04
+  },
+  "confusion_top1": {
+    "A": {
+      "n_wrong_top1": 232,
+      "same_formula": 0.8362068965517241,
+      "tanimoto_q10_50_90": [
+        0.09728260869565218,
+        0.26429738562091504,
+        0.7457318952234206
+      ]
+    },
+    "B": {
+      "n_wrong_top1": 151,
+      "same_formula": 0.8741721854304636,
+      "tanimoto_q10_50_90": [
+        0.11320754716981132,
+        0.36486486486486486,
+        0.7446808510638298
+      ]
+    }
+  },
+  "truth_bonds_over_34": 0.264,
+  "annotation_mean": {
+    "decoy": {
+      "i_precursor": 0.0881,
+      "i_precursor_isotope": 0.0173,
+      "i_above_precursor": 0.0014,
+      "i_frag_exact": 0.1392,
+      "i_isotope_of_peak": 0.0135,
+      "i_frag_hshift": 0.2841,
+      "i_neutral_loss": 0.014,
+      "i_consecutive_loss": 0.1484,
+      "i_frag_3break": 0.0609,
+      "i_adduct_ion": 0.0031,
+      "i_unexplained": 0.23,
+      "n_precursor": 0.0161,
+      "n_precursor_isotope": 0.014,
+      "n_above_precursor": 0.0088,
+      "n_frag_exact": 0.107,
+      "n_isotope_of_peak": 0.0209,
+      "n_frag_hshift": 0.1972,
+      "n_neutral_loss": 0.0077,
+      "n_consecutive_loss": 0.192,
+      "n_frag_3break": 0.0725,
+      "n_adduct_ion": 0.0033,
+      "n_unexplained": 0.3604
+    },
+    "truth": {
+      "i_precursor": 0.086,
+      "i_precursor_isotope": 0.017,
+      "i_above_precursor": 0.0014,
+      "i_frag_exact": 0.1777,
+      "i_isotope_of_peak": 0.0161,
+      "i_frag_hshift": 0.3138,
+      "i_neutral_loss": 0.0071,
+      "i_consecutive_loss": 0.1234,
+      "i_frag_3break": 0.0537,
+      "i_adduct_ion": 0.0047,
+      "i_unexplained": 0.1992,
+      "n_precursor": 0.0162,
+      "n_precursor_isotope": 0.0138,
+      "n_above_precursor": 0.0085,
+      "n_frag_exact": 0.1261,
+      "n_isotope_of_peak": 0.0256,
+      "n_frag_hshift": 0.2006,
+      "n_neutral_loss": 0.005,
+      "n_consecutive_loss": 0.1708,
+      "n_frag_3break": 0.0729,
+      "n_adduct_ion": 0.0041,
+      "n_unexplained": 0.3565
+    }
+  },
+  "annotation_truth_by_size": {
+    "False": {
+      "i_precursor": 0.0964,
+      "i_precursor_isotope": 0.016,
+      "i_above_precursor": 0.0014,
+      "i_frag_exact": 0.1754,
+      "i_isotope_of_peak": 0.0135,
+      "i_frag_hshift": 0.3187,
+      "i_neutral_loss": 0.0079,
+      "i_consecutive_loss": 0.1374,
+      "i_frag_3break": 0.0602,
+      "i_adduct_ion": 0.0034,
+      "i_unexplained": 0.1697
+    },
+    "True": {
+      "i_precursor": 0.0629,
+      "i_precursor_isotope": 0.0191,
+      "i_above_precursor": 0.0013,
+      "i_frag_exact": 0.1828,
+      "i_isotope_of_peak": 0.0218,
+      "i_frag_hshift": 0.3028,
+      "i_neutral_loss": 0.0055,
+      "i_consecutive_loss": 0.0923,
+      "i_frag_3break": 0.0393,
+      "i_adduct_ion": 0.0076,
+      "i_unexplained": 0.2647
+    }
+  },
+  "annotation_truth_by_adduct": {
+    "[M+CH2O2-H]-": {
+      "i_precursor": 0.0262,
+      "i_precursor_isotope": 0.0066,
+      "i_above_precursor": 0.0003,
+      "i_frag_exact": 0.3311,
+      "i_isotope_of_peak": 0.0529,
+      "i_frag_hshift": 0.377,
+      "i_neutral_loss": 0.0001,
+      "i_consecutive_loss": 0.0852,
+      "i_frag_3break": 0.0212,
+      "i_adduct_ion": 0.0007,
+      "i_unexplained": 0.0988,
+      "n_spectra": 95
+    },
+    "[M+Cl]-": {
+      "i_precursor": 0.1275,
+      "i_precursor_isotope": 0.0073,
+      "i_above_precursor": 0.0011,
+      "i_frag_exact": 0.2576,
+      "i_isotope_of_peak": 0.0571,
+      "i_frag_hshift": 0.3192,
+      "i_neutral_loss": 0.0,
+      "i_consecutive_loss": 0.0941,
+      "i_frag_3break": 0.0043,
+      "i_adduct_ion": 0.0016,
+      "i_unexplained": 0.1301,
+      "n_spectra": 6
+    },
+    "[M+H]+": {
+      "i_precursor": 0.0627,
+      "i_precursor_isotope": 0.0118,
+      "i_above_precursor": 0.0005,
+      "i_frag_exact": 0.156,
+      "i_isotope_of_peak": 0.0108,
+      "i_frag_hshift": 0.3368,
+      "i_neutral_loss": 0.0037,
+      "i_consecutive_loss": 0.1365,
+      "i_frag_3break": 0.0716,
+      "i_adduct_ion": 0.0,
+      "i_unexplained": 0.2096,
+      "n_spectra": 555
+    },
+    "[M+K]+": {
+      "i_precursor": 0.296,
+      "i_precursor_isotope": 0.1129,
+      "i_above_precursor": 0.0221,
+      "i_frag_exact": 0.0073,
+      "i_isotope_of_peak": 0.0,
+      "i_frag_hshift": 0.0319,
+      "i_neutral_loss": 0.0102,
+      "i_consecutive_loss": 0.0332,
+      "i_frag_3break": 0.0165,
+      "i_adduct_ion": 0.0161,
+      "i_unexplained": 0.4539,
+      "n_spectra": 15
+    },
+    "[M+NH4]+": {
+      "i_precursor": 0.0131,
+      "i_precursor_isotope": 0.0015,
+      "i_above_precursor": 0.0002,
+      "i_frag_exact": 0.1511,
+      "i_isotope_of_peak": 0.0096,
+      "i_frag_hshift": 0.2196,
+      "i_neutral_loss": 0.0039,
+      "i_consecutive_loss": 0.1161,
+      "i_frag_3break": 0.0559,
+      "i_adduct_ion": 0.0102,
+      "i_unexplained": 0.4188,
+      "n_spectra": 90
+    },
+    "[M+Na]+": {
+      "i_precursor": 0.2998,
+      "i_precursor_isotope": 0.0611,
+      "i_above_precursor": 0.0046,
+      "i_frag_exact": 0.037,
+      "i_isotope_of_peak": 0.0004,
+      "i_frag_hshift": 0.0977,
+      "i_neutral_loss": 0.0424,
+      "i_consecutive_loss": 0.1229,
+      "i_frag_3break": 0.0218,
+      "i_adduct_ion": 0.0549,
+      "i_unexplained": 0.2575,
+      "n_spectra": 75
+    },
+    "[M-2H2O+H]+": {
+      "i_precursor": 0.0513,
+      "i_precursor_isotope": 0.0131,
+      "i_above_precursor": 0.0032,
+      "i_frag_exact": 0.039,
+      "i_isotope_of_peak": 0.0005,
+      "i_frag_hshift": 0.1002,
+      "i_neutral_loss": 0.0582,
+      "i_consecutive_loss": 0.0966,
+      "i_frag_3break": 0.0073,
+      "i_adduct_ion": 0.0,
+      "i_unexplained": 0.6305,
+      "n_spectra": 8
+    },
+    "[M-H2O+H]+": {
+      "i_precursor": 0.1214,
+      "i_precursor_isotope": 0.0258,
+      "i_above_precursor": 0.0056,
+      "i_frag_exact": 0.0524,
+      "i_isotope_of_peak": 0.0077,
+      "i_frag_hshift": 0.1921,
+      "i_neutral_loss": 0.0386,
+      "i_consecutive_loss": 0.1741,
+      "i_frag_3break": 0.0479,
+      "i_adduct_ion": 0.0,
+      "i_unexplained": 0.3345,
+      "n_spectra": 24
+    },
+    "[M-H2O-H]-": {
+      "i_precursor": 0.3609,
+      "i_precursor_isotope": 0.0,
+      "i_above_precursor": 0.0017,
+      "i_frag_exact": 0.0,
+      "i_isotope_of_peak": 0.0,
+      "i_frag_hshift": 0.6172,
+      "i_neutral_loss": 0.0,
+      "i_consecutive_loss": 0.0049,
+      "i_frag_3break": 0.0016,
+      "i_adduct_ion": 0.0,
+      "i_unexplained": 0.0137,
+      "n_spectra": 1
+    },
+    "[M-H]-": {
+      "i_precursor": 0.1048,
+      "i_precursor_isotope": 0.0186,
+      "i_above_precursor": 0.0016,
+      "i_frag_exact": 0.2426,
+      "i_isotope_of_peak": 0.0219,
+      "i_frag_hshift": 0.3693,
+      "i_neutral_loss": 0.0035,
+      "i_consecutive_loss": 0.1143,
+      "i_frag_3break": 0.041,
+      "i_adduct_ion": 0.0,
+      "i_unexplained": 0.0823,
+      "n_spectra": 259
+    }
+  },
+  "exact_match_ppm_q50_90_95_99": [
+    7.910111955162001,
+    35.66505292432524,
+    49.35455116240136,
+    81.92227416284965
+  ],
+  "base_peak_category_share": {
+    "frag_hshift": 0.3803,
+    "frag_exact": 0.2154,
+    "precursor": 0.156,
+    "unexplained": 0.1152,
+    "consecutive_loss": 0.0842,
+    "frag_3break": 0.0372,
+    "neutral_loss": 0.0071,
+    "adduct_ion": 0.0035,
+    "precursor_isotope": 0.0009
+  },
+  "base_peak_by_ce": [
+    {
+      "ce_bin": "≤15",
+      "n": 1,
+      "prec_rel_median": 0.0,
+      "base_is_precursor": 0.0,
+      "entropy_median": 2.0141
+    },
+    {
+      "ce_bin": "15-30",
+      "n": 111,
+      "prec_rel_median": 0.1566,
+      "base_is_precursor": 0.1351,
+      "entropy_median": 1.921
+    },
+    {
+      "ce_bin": "30-45",
+      "n": 620,
+      "prec_rel_median": 0.0439,
+      "base_is_precursor": 0.2145,
+      "entropy_median": 2.6436
+    },
+    {
+      "ce_bin": ">45",
+      "n": 396,
+      "prec_rel_median": 0.0,
+      "base_is_precursor": 0.0707,
+      "entropy_median": 2.9033
+    }
+  ],
+  "frag_channel_mrr": {
+    "V0 V17 そのまま": 0.23833146296336372,
+    "V1 結合数上限を撤廃": 0.2806526541324625,
+    "V2 +許容差 10 ppm": 0.30428380720381426,
+    "V3 +同位体ピーク除去": 0.30755168105740505,
+    "V4 +中性ロス・連続ロス": 0.24273445930445325,
+    "V5 +付加イオン担体": 0.23244397140206274,
+    "V6 V5 で H 移動を ±1 に制限": 0.23165993000109564,
+    "V7 V0 で H 移動を ±1 に制限": 0.2477517518862914
+  },
+  "frag_channel_mrr_big_molecules": {
+    "V0 V17 そのまま": 0.11453236508633648,
+    "V1 結合数上限を撤廃": 0.2858969830339379,
+    "V2 +許容差 10 ppm": 0.32267668681796224,
+    "V3 +同位体ピーク除去": 0.32242329374171996,
+    "V4 +中性ロス・連続ロス": 0.2663509690931598,
+    "V5 +付加イオン担体": 0.26048912035644356,
+    "V6 V5 で H 移動を ±1 に制限": 0.2611869827348478,
+    "V7 V0 で H 移動を ±1 に制限": 0.11286690800349879
+  },
+  "n_big_molecules": 66
+}

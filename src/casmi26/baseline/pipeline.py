@@ -46,6 +46,7 @@ class Query:
     spectra: Sequence[tuple[np.ndarray, np.ndarray]]  # 生の (m/z, 強度)
     neutral_masses: np.ndarray
     ion_mode: float  # +1 positive / -1 negative (平均)
+    precursor_mzs: np.ndarray | None = None  # spectra と同順。precursor_window > 0 で使う
 
 
 class SpectralIndex:
@@ -155,7 +156,10 @@ def run_baseline(
     per_q = []
     for i, q in enumerate(queries):
         specs = []
-        for mz, it in q.spectra:
+        for si, (mz, it) in enumerate(q.spectra):
+            if c.precursor_window > 0 and q.precursor_mzs is not None:
+                keep = np.asarray(mz) <= q.precursor_mzs[si] - c.precursor_window
+                mz, it = np.asarray(mz)[keep], np.asarray(it)[keep]
             qm, qp = clean(
                 np.asarray(mz, np.float32),
                 np.asarray(it, np.float32),

@@ -34,6 +34,10 @@
 - [x] 最弱ベースラインの fold-safe 再現: V17 の ch1–3 のみ (FPNet・学習済みランカーはリークするため不使用)。np/keep=0.1944, fold0/keep=0.0955
 - [x] 最弱ベースラインの Kaggle 提出: A 固定融合 LB 0.191 / B analog 単独 LB 0.247。CV の方向は一致、幅は CV が約 6 倍過大 (EXP-0001/README.md)
 - [x] CV と LB の幅のずれの原因切り分け → EXP-0002。Class 1 ≈ 15% / pool 外 ≈ 57% と逆算、ずれは説明できた
+- [x] 質量スペクトル診断 → EXP-0003 (precursor・窓・ピーク帰属・基準ピーク・PubChemLite)
+- [ ] **precursor 除去 (0.5) + 断片スコア V3 を既定に** して CV を回し直し、LB 予測を書いて提出
+- [ ] CV の query を test にある adduct に限定 (fold0 は test にない 2 量体を 15% 含む)
+- [ ] 予備窓 (±30 ppm) の発動条件を見直す (+1.6 ppm 補正 / 窓が空のときだけ、をやめる)
 - [ ] **候補 pool の拡張 (最優先)**: PubChemLite (`casmi26-pubchemlite-cc0-candidate-fingerprints`) / PubChem tier を pool に追加し、候補数増による Class 1/2 の順位低下も同時に測る
 - [x] 誤差分解でボトルネック特定 → ランカー段が損失の 80–90%。[strategy/current.md](current.md) に反映
 - [ ] Week 1 Exit 条件: ボトルネック順位の特定 → keep 条件では達成。Class 3 比率 (drop 条件の現実的な見積もり) は未確定

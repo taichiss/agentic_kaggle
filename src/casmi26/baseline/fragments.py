@@ -75,6 +75,12 @@ def fragment_masses(smi: str, max_breaks: int = 2, max_bonds: int = 34) -> np.nd
             for j in range(i + 1, nb):
                 for c in _components(n, bonds, {i, j}):
                     out.add(float(w[c].sum()))
+    if max_breaks >= 3:
+        for i in range(nb):
+            for j in range(i + 1, nb):
+                for k in range(j + 1, nb):
+                    for c in _components(n, bonds, {i, j, k}):
+                        out.add(float(w[c].sum()))
     return np.array(sorted(out))
 
 

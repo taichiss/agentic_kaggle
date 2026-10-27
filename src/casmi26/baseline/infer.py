@@ -58,6 +58,7 @@ def build_queries(test: pd.DataFrame) -> list[Query]:
                 spectra=spectra,
                 neutral_masses=nm,
                 ion_mode=mode,
+                precursor_mzs=sub["precursor_mz"].to_numpy(np.float64),
             )
         )
     return queries

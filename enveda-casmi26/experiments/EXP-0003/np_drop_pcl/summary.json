@@ -1,0 +1,47 @@
+{
+  "split": "np",
+  "pool_heldout": "drop",
+  "reference": "none",
+  "precursor_window": 0.0,
+  "extra_pool": "pubchemlite",
+  "molecules": 250,
+  "spectra": 1128,
+  "mrr": 0.17528050590201888,
+  "top1": 0.064,
+  "pool_coverage": 0.96,
+  "class_counts": {
+    "class2": 243,
+    "class3": 7
+  },
+  "loss_share_by_stage": {
+    "pool": 0.04,
+    "ranker": 0.7847194940979811,
+    "top1": 0.0
+  },
+  "channel_mrr": {
+    "channel_lib": 0.06653757649060381,
+    "channel_analog": 0.4880940635912449,
+    "channel_frag": 0.23334514355269773
+  },
+  "config": {
+    "ppm_win": 8.5,
+    "ppm_fallback": 30.0,
+    "analog_win": 200.0,
+    "n_analog": 100,
+    "sim_power": 4.0,
+    "w_lib": 1.0,
+    "w_analog": 1.0,
+    "w_frag": 0.25,
+    "workers": 11,
+    "clean": {
+      "floor": 0.002,
+      "topk": 256,
+      "power": 1.0,
+      "ent_weight": true,
+      "mz_tol": 0.01,
+      "precursor_window": 0.0
+    }
+  },
+  "seed": 20260930,
+  "elapsed_sec": 477.0483808517456
+}
