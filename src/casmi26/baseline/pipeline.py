@@ -205,7 +205,7 @@ def run_baseline(
         return fp_cache[smi]
 
     # Phase 5: 特徴量と融合
-    rows: dict[str, list[tuple[str, str, int]]] = {
+    rows: dict[str, list[tuple[str, str, int, str]]] = {
         n: [] for n in ("pool", "ranker", "channel_lib", "channel_analog", "channel_frag")
     }
     diag = []
@@ -269,13 +269,16 @@ def run_baseline(
             ("channel_frag", fr),
         ):
             order = np.argsort(-sc, kind="stable")
-            rows[name].extend((q.molecule_id, ckeys[o], r) for r, o in enumerate(order, start=1))
+            rows[name].extend(
+                (q.molecule_id, ckeys[o], r, str(pool.smiles[idx[o]]))
+                for r, o in enumerate(order, start=1)
+            )
         diag.append(
             (q.molecule_id, target, n, float(lv.max()), float(analogs[0][1]) if analogs else 0.0)
         )
 
     stages = {
-        n: pd.DataFrame(v, columns=["molecule_id", "candidate_key", "rank"])
+        n: pd.DataFrame(v, columns=["molecule_id", "candidate_key", "rank", "smiles"])
         for n, v in rows.items()
     }
     db_keys = {k for k in cand_key.values() if k is not None}

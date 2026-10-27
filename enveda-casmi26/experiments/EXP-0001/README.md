@@ -59,3 +59,19 @@ metric_sensitivity.md §4 の「rank 1–3 を直す変更を優先」と整合:
 1. **学習済みランカーの導入 (roadmap #1 と同じ作業)。** fold-train 側から query を作り (ライブラリはさらにその query の identity group を除く nested 構成)、HistGBM pointwise と LightGBM LambdaRank を同じ特徴量で比較する。単一チャネルの結果から、少なくとも analog 単独の 0.535 (np) を超えるはず。
 2. ライブラリ一致の扱い: `lib − lvmax`、`lvmax` などの相対特徴量を入れて、ゲートを学習させる。
 3. Class 3 比率の見積もり: train 構造を含む COCONUT か PubChemLite pool で drop 条件を作り直す。
+
+## LB 提出 (A / B) — 提出前の予想 (2026-10-27 記入、結果を見る前に固定)
+
+| 提出 | kernel | 使う順位 | ローカル CV (np / fold0) |
+|---|---|---|---|
+| A | `yuitomurano/casmi26-exp0001-a-fusion` | 3 チャネル固定融合 (`ranker`) | 0.194 / 0.096 |
+| B | `yuitomurano/casmi26-exp0001-b-analog` | analog 単独 (`channel_analog`) | 0.535 / 0.598 |
+
+- test 推論はライブラリと pool に train 全体を使う (ホールドアウトなし)。コードは `src/casmi26/baseline/infer.py`、notebook は `scripts/casmi26_prepare_kernel.py` が生成
+- 確かめたいこと: CV で B が +0.34 勝つ判断が LB に引き継がれるか。CV には Class 1 (reference あり) がなく、hidden test には推定 16–17% ある。Class 1 ではライブラリ一致が正解を指すので A が有利になりうる
+- **予想:** B ≥ A。判定は Public LB のノイズ (124 分子前後、SE ≈ ±0.03) を踏まえて次の 3 区分にする
+  - B − A > +0.03 → CV の方向が LB に引き継がれる。以降も両ホールドアウトで判定
+  - |B − A| ≤ 0.03 → 判定不能 (下記の注意を参照)
+  - A − B > +0.03 → CV が Class 1 を欠くせいで判断を誤る。Class 1 を模した検証 (同一構造の別装置スペクトルだけ残す) を追加する
+- **注意:** 配布 `test.parquet` (enveda-180) でのローカル試走では、A と B の top-1 が 93% の分子で一致した (top-25 集合の重なりは平均 55%)。hidden test でも同程度に一致すると LB 差はノイズ内に収まる可能性が高い
+- ローカル試走: 12 コアで 7 分 23 秒 (CPU 4,393 秒)、最大メモリ 3.3 GB。Kaggle の 4 コア CPU では 20 分前後の見込み。候補 25 本未満で `CCO` 埋めになる分子は 43 / 400

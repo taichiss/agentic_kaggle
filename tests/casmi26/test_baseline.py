@@ -102,3 +102,23 @@ def test_run_baseline_ranks_library_match_first():
     ranker = out.stages["ranker"].sort_values("rank")
     assert ranker.iloc[0]["candidate_key"] == key_a
     assert set(out.stages["pool"]["candidate_key"]) == {key_a, canonical_inchikey14("CCO")}
+
+
+def test_to_submission_pads_and_keeps_sample_order():
+    import pandas as pd
+
+    from casmi26.baseline.infer import PAD_SMILES, TOPN, to_submission, validate_submission
+
+    sample = pd.DataFrame({"molecule_id": ["m2", "m1", "m3"], "smiles": ["CCO"] * 3})
+    stage = pd.DataFrame(
+        [("m1", f"K{i}", i, f"C{'C' * i}O") for i in range(1, 31)] + [("m2", "K", 1, "CN")],
+        columns=["molecule_id", "candidate_key", "rank", "smiles"],
+    )
+    sub = to_submission(stage, sample)
+    validate_submission(sub, sample)
+    assert list(sub["molecule_id"]) == ["m2", "m1", "m3"]
+    m1 = sub.set_index("molecule_id").loc["m1", "smiles"].split(";")
+    assert m1[0] == "CCO" and len(m1) == TOPN and m1[-1] == f"C{'C' * TOPN}O"
+    m2 = sub.set_index("molecule_id").loc["m2", "smiles"].split(";")
+    assert m2[0] == "CN" and m2[1:] == [PAD_SMILES] * (TOPN - 1)
+    assert sub.set_index("molecule_id").loc["m3", "smiles"] == ";".join([PAD_SMILES] * TOPN)

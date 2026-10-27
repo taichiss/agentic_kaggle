@@ -225,9 +225,9 @@ class CleanLibrary:
         return np.diff(self.off)
 
 
-def clean_library(train_path: Path, cache_path: Path, cfg: CleanConfig) -> CleanLibrary:
+def clean_library(train_path: Path, cache_path: Path | None, cfg: CleanConfig) -> CleanLibrary:
     """row group ごとに読んで clean し npz にキャッシュする (全 4 億ピークの一括読込を避ける)。"""
-    if cache_path.exists():
+    if cache_path is not None and cache_path.exists():
         z = np.load(cache_path)
         return CleanLibrary(off=z["off"], mz=z["mz"], it=z["it"], nm=z["nm"])
     pf = pq.ParquetFile(train_path)
@@ -258,6 +258,7 @@ def clean_library(train_path: Path, cache_path: Path, cfg: CleanConfig) -> Clean
         it=np.concatenate(its),
         nm=np.concatenate(nms),
     )
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(cache_path, off=lib.off, mz=lib.mz, it=lib.it, nm=lib.nm)
+    if cache_path is not None:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez(cache_path, off=lib.off, mz=lib.mz, it=lib.it, nm=lib.nm)
     return lib
