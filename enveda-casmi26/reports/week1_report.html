@@ -1,0 +1,430 @@
+<title>CASMI26 Week 1 報告</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Week 0 ページと同じ縦長レポート。各節は「問い → 図 → 読み取り」の順。結論を冒頭に置き、詳細は下へ。 */
+:root {
+  --bg: #f3f6f7; --surface: #ffffff; --ink: #11181c; --ink-2: #47535a; --muted: #6f7b82; --line: #dbe2e5;
+  --accent: #0d6876; --accent-soft: #e1eff1;
+  --a: #2a78d6; --b: #eb6834;               /* 提出 A / B */
+  --c1: #6250d6; --c2: #e87ba4; --c3: #a9b3b8;  /* Class 1 / Class 2 / pool 外 */
+  --got: #1baf7a; --rk: #eda100; --pl: #a9b3b8; /* 得点 / ランカー段の損失 / pool 段の損失 */
+  --good: #0f7b3d; --warn: #a86400; --bad: #c0362f;
+  --good-bg: #e3f3e8; --warn-bg: #fbf0dc; --bad-bg: #fbe6e4;
+  --f-display: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --f-body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1316; --surface: #151c20; --ink: #e8eef0; --ink-2: #aab6bc; --muted: #7f8c92; --line: #26323a;
+  --accent: #56b8c4; --accent-soft: #15333a;
+  --a: #3987e5; --b: #d95926; --c1: #9085e9; --c2: #d55181; --c3: #56646b;
+  --got: #199e70; --rk: #c98500; --pl: #56646b;
+  --good: #4cc27c; --warn: #e3a33b; --bad: #ef7a72;
+  --good-bg: #13301f; --warn-bg: #352a12; --bad-bg: #3a1a18; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1316; --surface: #151c20; --ink: #e8eef0; --ink-2: #aab6bc; --muted: #7f8c92; --line: #26323a;
+  --accent: #56b8c4; --accent-soft: #15333a;
+  --a: #3987e5; --b: #d95926; --c1: #9085e9; --c2: #d55181; --c3: #56646b;
+  --got: #199e70; --rk: #c98500; --pl: #56646b;
+  --good: #4cc27c; --warn: #e3a33b; --bad: #ef7a72;
+  --good-bg: #13301f; --warn-bg: #352a12; --bad-bg: #3a1a18; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: clamp(28px, 4.6vw, 42px); font-weight: 900; line-height: 1.25; }
+h2 { font-size: 23px; font-weight: 700; line-height: 1.4; }
+h3 { font-size: 16px; font-weight: 700; }
+p { margin: 0; max-width: 70ch; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--ink-2); }
+header.hero { padding-top: 40px; display: grid; gap: 18px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.fact { background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fact .k { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+.fact .v { font-family: var(--f-mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.fact .n { font-size: 12px; color: var(--ink-2); }
+section { display: grid; gap: 20px; }
+.sec-head { display: grid; gap: 6px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card .take { color: var(--ink-2); font-size: 14px; }
+.src { font-size: 12px; color: var(--muted); font-family: var(--f-mono); word-break: break-all; }
+.chart { width: 100%; position: relative; }
+.chart svg { display: block; overflow: visible; }
+.pill { font-family: var(--f-mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; letter-spacing: 0.04em; line-height: 1.6; display: inline-block; }
+.pill.good { background: var(--good-bg); color: var(--good); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.bad { background: var(--bad-bg); color: var(--bad); }
+.goal { display: grid; gap: 8px; }
+.goal .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.goal p { font-size: 14px; color: var(--ink-2); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-left: 2px solid var(--line); }
+.steps li { position: relative; padding: 0 0 18px 22px; display: grid; gap: 4px; }
+.steps li::before { content: ""; position: absolute; left: -7px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+.steps li:last-child { padding-bottom: 0; }
+.steps .t { font-weight: 600; }
+.steps .d { font-size: 14px; color: var(--ink-2); max-width: 75ch; }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 560px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.hi { font-weight: 600; color: var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--ink-2); font-size: 14px; max-width: 80ch; }
+.verdict { display: flex; gap: 12px; align-items: flex-start; background: var(--accent-soft); border-radius: 10px; padding: 14px 16px; font-size: 14px; }
+.task { display: grid; gap: 8px; }
+.task .pri { font-family: var(--f-mono); font-size: 12px; color: var(--accent); letter-spacing: 0.08em; }
+.task dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13.5px; }
+.task dt { color: var(--muted); white-space: nowrap; }
+.task dd { margin: 0; color: var(--ink-2); min-width: 0; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); z-index: 5; line-height: 1.5; }
+ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 14px; color: var(--ink-2); max-width: 80ch; }
+footer { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Enveda CASMI 2026 · Week 1 報告 · 2026-10-27</div>
+  <h1>誤差分解と LB 照合の結果、最大のボトルネックは候補 pool だった</h1>
+  <p class="lede">公開 baseline をリークなしで組み直して誤差分解にかけ、2 本の LB 提出と突き合わせた。hidden test の約 57% は、正解が今の候補 pool（COCONUT ∪ train 構造）に入っていないと推定される。ランカーをどれだけ改善しても、今の pool のままでは MRR@25 は約 0.43 で頭打ちになる。</p>
+  <div class="facts">
+    <div class="fact"><span class="k">自前ベスト LB</span><span class="v">0.247</span><span class="n">B：analog チャネル単独</span></div>
+    <div class="fact"><span class="k">推定 pool 外の割合</span><span class="v">57%</span><span class="n">10–90% 区間 48–65%</span></div>
+    <div class="fact"><span class="k">今の pool での上限</span><span class="v">≈0.43</span><span class="n">Class 1 + Class 2 の割合</span></div>
+    <div class="fact"><span class="k">推定 Class 1 割合</span><span class="v">15%</span><span class="n">Discussion 推定 16–17% と一致</span></div>
+    <div class="fact"><span class="k">公開 kernel 最高</span><span class="v">0.467</span><span class="n">PubChem 系候補を使用</span></div>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">狙い</div>
+    <h2>Week 1 の出口条件は「どこを直せば MRR が動くかを特定すること」</h2>
+    <p class="lede">kaggle_flow_v1.md §4 の誤差分解ゲート。公開 kernel の後処理をいじる前に、ボトルネックを仮説ではなく数字で決める。</p>
+  </div>
+  <div class="grid3">
+    <div class="card goal"><div class="row"><span class="pill good">達成</span><h3>誤差分解ツール</h3></div><p>正解がパイプラインのどの段で落ちたかを分子ごとに判定し、MRR の損失を段とクラスに割り振る。損失の合計は 1 − MRR と一致する。</p><div class="src">src/casmi26/analysis/error_decomp.py</div></div>
+    <div class="card goal"><div class="row"><span class="pill warn">一部達成</span><h3>baseline の fold-safe 再現</h3></div><p>公開 baseline（haideptry V17）のうちリークなしで組める 3 チャネルを移植した。FPNet と学習済みランカーは train 全体で学習済みのため使っていない。V17 の LB 0.30–0.34 の再現値ではない。</p><div class="src">src/casmi26/baseline/ · EXP-0001</div></div>
+    <div class="card goal"><div class="row"><span class="pill good">達成</span><h3>CV と LB の整合確認</h3></div><p>CV で差の大きい 2 本を提出し、判断の方向が LB でも成り立つかを事前基準つきで確かめた。幅のずれはクラス構成の逆算で説明できた。</p><div class="src">EXP-0001 提出 A/B · EXP-0002</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">やったこと</div>
+    <h2>4 段階で進めた</h2>
+  </div>
+  <ol class="steps">
+    <li><span class="t">誤差分解ツールを実装</span><span class="d">候補 pool → FP 予測 → シミュレータ → ランカーの任意の段構成に対応。テスト 11 件。</span></li>
+    <li><span class="t">EXP-0001：fold-safe baseline を 4 条件で実行</span><span class="d">検証 split は NP ホールドアウト（250 分子、hidden test に最も近い）と identity fold 0（400 分子）。ホールドアウト構造を候補 pool に残す（keep）か除く（drop）かの 2 通り。ライブラリからはホールドアウト構造のスペクトルをすべて除いた。</span></li>
+    <li><span class="t">LB に 2 本提出：A 固定融合 / B analog 単独</span><span class="d">CV で差が +0.34 ある 2 本を選び、結果を見る前に判定基準（±0.03）を README に固定した。</span></li>
+    <li><span class="t">EXP-0002：Class 1 を模した CV と、クラス構成の逆算</span><span class="d">他ソースの reference スペクトルを残した CV でクラス別 MRR を実測し、2 本の LB と連立して hidden test のクラス構成を解いた。</span></li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">結果 1 · 誤差分解</div>
+    <h2>正解が pool にある条件では、損失の 80–90% がランカー段にあった</h2>
+    <p class="lede">棒 1 本 = MRR の満点 1.0。緑が得点、黄がランカー段で失った分、灰が pool 段で失った分。</p>
+  </div>
+  <div class="card">
+    <h3>条件別の MRR@25 と損失の内訳</h3>
+    <div class="chart" id="c-decomp"></div>
+    <div class="legend"><span><i style="background:var(--got)"></i>得点（MRR@25）</span><span><i style="background:var(--rk)"></i>ランカー段の損失</span><span><i style="background:var(--pl)"></i>pool 段の損失</span></div>
+    <p class="take">keep 条件では pool のカバー率は 99.6–100% で、候補窓（中央値 53–88 件）に正解はほぼ入っている。drop 条件で pool 段の損失がほぼ 100% になるのは、手元の COCONUT データが train 構造を除いた版（重複 0 件）だからで、データセットの作りに由来する最悪ケース。</p>
+    <div class="src">enveda-casmi26/experiments/EXP-0001/&lt;条件&gt;/report.md</div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>単一チャネル vs 固定融合（keep 条件）</h3>
+      <div class="chart" id="c-chan"></div>
+      <div class="legend" id="lg-chan"></div>
+      <p class="take">融合（A）は analog 単独（B）よりはるかに悪い。CV では正解の reference が必ず除かれるので、ライブラリ一致は常に別の異性体を指す。94–99% の分子に一致があり、融合の 1 位の 66–76% がそれに引っ張られた。</p>
+      <div class="src">EXP-0001 report.md §5、diag.parquet</div>
+    </div>
+    <div class="card">
+      <h3>A（固定融合）の最終順位の分布</h3>
+      <div class="chart" id="c-rank"></div>
+      <div class="legend"><span><i style="background:var(--a)"></i>NP / keep（250 分子）</span><span><i style="background:var(--muted)"></i>fold0 / keep（400 分子）</span></div>
+      <p class="take">2–10 位に 84–112 分子が溜まっている。指標感度の実測（rank 1 化が最も効く）から見て、ここを 1 位に上げるランカーの改善が効く。</p>
+      <div class="src">EXP-0001 report.md §3</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">結果 2 · LB 照合</div>
+    <h2>CV の判断の方向は LB でも当たったが、差の大きさは CV が 6 倍過大だった</h2>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>ローカル CV（NP / keep）と Public LB</h3>
+      <div class="chart" id="c-lb"></div>
+      <div class="legend"><span><i style="background:var(--a)"></i>A 固定融合</span><span><i style="background:var(--b)"></i>B analog 単独</span></div>
+      <p class="take">CV の差は +0.34、LB の差は +0.056。B は CV 0.535 に対して LB 0.247 と大きく過大評価された。</p>
+      <div class="src">EXP-0001/README.md「LB 結果」</div>
+    </div>
+    <div class="card">
+      <h3>事前に固定した判定基準</h3>
+      <div class="tbl" style="border:0"><table style="min-width:0">
+        <thead><tr><th>B − A</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td class="num hi">&gt; +0.03</td><td class="hi">CV の方向は LB に引き継がれる <span class="pill good">今回 +0.056</span></td></tr>
+          <tr><td class="num">±0.03 以内</td><td>判定不能</td></tr>
+          <tr><td class="num">&lt; −0.03</td><td>CV に Class 1 がないせいで判断を誤る</td></tr>
+        </tbody></table></div>
+      <p class="take">Public LB は約 124 分子なので、1 本あたりの標準誤差は ±0.03 程度。配布 test では A と B の 1 位が 93% の分子で一致していたため、判定不能もありえた。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">結果 3 · ずれの切り分け（EXP-0002）</div>
+    <h2>CV にない 2 種類の分子を入れると、A と B の LB を同時に説明できた</h2>
+    <p class="lede">Class 1（reference あり）ではライブラリ一致が当たるので A が強い。pool 外の分子は A も B も 0 点。この 2 つを CV で実測したクラス別 MRR に足して、LB と連立させた。</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>クラス別 MRR@25（NP の CV 実測）</th><th>Class 1：他ソースの reference あり</th><th>Class 2：reference なし</th><th>pool 外</th></tr></thead>
+      <tbody>
+        <tr><td><b>A 固定融合</b></td><td class="num hi">0.914</td><td class="num">0.194</td><td class="num">0</td></tr>
+        <tr><td><b>B analog 単独</b></td><td class="num">0.637</td><td class="num hi">0.535</td><td class="num">0</td></tr>
+        <tr><td>（参考）ライブラリ単独</td><td class="num">0.927</td><td class="num">0.053</td><td class="num">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>逆算した hidden test のクラス構成</h3>
+      <div class="chart" id="c-mix"></div>
+      <div class="legend"><span><i style="background:var(--c1)"></i>Class 1</span><span><i style="background:var(--c2)"></i>Class 2</span><span><i style="background:var(--c3)"></i>pool 外</span></div>
+      <div class="chart" id="c-mixci"></div>
+      <p class="take">細い線は 10–90% 区間（LB のノイズ ±0.03 と CV の分子 bootstrap 4,000 回）。fold0 の値で解いてもほぼ同じ（15–19% / 24–29% / 57%）。</p>
+      <div class="src">EXP-0002/bridge_np.json、bridge_fold0.json</div>
+    </div>
+    <div class="card">
+      <h3>A と B それぞれの LB が要求するクラス構成</h3>
+      <div class="chart" id="c-lines"></div>
+      <div class="legend"><span><i style="background:var(--a)"></i>A の LB 0.191 を満たす組</span><span><i style="background:var(--b)"></i>B の LB 0.247 を満たす組</span></div>
+      <p class="take">各線は、その提出の LB を再現する（Class 1 割合, pool 外割合）の組。2 本の交点が推定値になる。Class 1 = 15% は Discussion での独立推定（16–17%）と一致しており、これが唯一の独立した確認。</p>
+      <div class="src">LB_s = p1·M_s(Class 1) + p2·M_s(Class 2)、p3 = 1 − p1 − p2</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">見通し</div>
+    <h2>次に越えるべきは pool の上限 0.43</h2>
+    <p class="lede">今の pool で取れる最大値と、各施策で届く見込みの位置。0.288 と 0.43 は EXP-0002 のクラス構成から計算した予測で、まだ実測していない。</p>
+  </div>
+  <div class="card">
+    <h3>MRR@25 の現在地と天井</h3>
+    <div class="chart" id="c-ladder"></div>
+    <p class="take">切り替えランカー（Class 1 はライブラリ、Class 2 は analog を使う）でも予測は 0.288 で、pool を広げない限り公開 kernel の 0.467 には届かない。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">次のタスク</div>
+    <h2>優先順位は pool 拡張 → 切り替えランカー → 判定ルールの更新</h2>
+  </div>
+  <div class="grid3">
+    <div class="card task"><span class="pri">優先 1</span><h3>候補 pool の拡張</h3>
+      <dl><dt>やること</dt><dd>PubChemLite（手元に取得済み）と PubChem tier を pool に追加する</dd>
+      <dt>狙い</dt><dd>pool 外 57% の一部を取り込み、上限 0.43 を引き上げる</dd>
+      <dt>確かめ方</dt><dd>候補数が増えると Class 1/2 の順位が下がるので、カバー率と順位の両方を測る</dd></dl></div>
+    <div class="card task"><span class="pri">優先 2</span><h3>切り替えランカー</h3>
+      <dl><dt>やること</dt><dd>fold の学習側から学習用 query を作り（nested 構成）、HistGBM と LambdaRank を比べる</dd>
+      <dt>狙い</dt><dd>ライブラリ一致を信じるかどうかを学習させる。予測 LB 0.288</dd>
+      <dt>確かめ方</dt><dd>予測を事前に書いて提出する。外れれば EXP-0002 のモデルを見直す</dd></dl></div>
+    <div class="card task"><span class="pri">優先 3</span><h3>採用判定の更新</h3>
+      <dl><dt>やること</dt><dd>Class 2 系列（np/keep）に加えて Class 1 系列（np/other）も見る</dd>
+      <dt>狙い</dt><dd>CV が改善幅を過大に見積もる問題を減らす</dd>
+      <dt>確かめ方</dt><dd>両者を推定構成（15% / 28%）で重み付けした値が LB に近づくか</dd></dl></div>
+  </div>
+  <div class="card">
+    <h3>残っている小さな宿題</h3>
+    <ul class="plain">
+      <li>Overview の Code Requirements（推論時間制限）とチーム合併締切の確認。今回の kernel は CPU で約 28 分</li>
+      <li>RDKit の版差テスト（ローカル 2026.09.1 と公式 2026.03.3）。Kaggle 上では 2026.03.3 で動作確認済み</li>
+      <li><span class="mono">breakdown.py</span> の lint / 型エラー。指標ハッシュの freeze 対象なので、直すときは metric_hash.txt を同時に更新する</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">この報告の限界</div>
+    <h2>クラス構成の推定は、ちょうど解けてしまう連立方程式に乗っている</h2>
+  </div>
+  <ul class="plain">
+    <li>未知数 2 つに式 2 本なので、モデルが正しいかどうかの検定にはならない。次の提出で予測 LB を書き、外れるかで反証する</li>
+    <li>CV のクラス別 MRR が hidden test でも成り立つことを前提にしている。NP ホールドアウトは最も近い proxy だが、同じ分布とは限らない</li>
+    <li>ここでの「pool 外」は「COCONUT ∪ train 構造にない」という意味で、Discussion でいう Class 3（完全な新規化合物）とは別物。PubChem には入っている分子が多いはず</li>
+    <li>固定融合の重み（lib + analog + 0.25 frag）は手で決めた値で、検証データで調整していない</li>
+  </ul>
+</section>
+
+<footer>出典：enveda-casmi26/experiments/EXP-0001/、EXP-0002/、registry.csv、strategy/{current,experiments,todo}.md。git コミット 2cdddd7 → 47d6e0a（ブランチ claude1）。</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(function(){
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const tip = document.getElementById('tip');
+function bindTip(node, html){
+  node.addEventListener('pointerenter', () => { tip.innerHTML = html; tip.hidden = false; });
+  node.addEventListener('pointermove', e => { tip.style.left = e.pageX + 'px'; tip.style.top = e.pageY + 'px'; });
+  node.addEventListener('pointerleave', () => { tip.hidden = true; });
+}
+function txt(svg, x, y, s, o = {}) {
+  const t = el('text', { x, y, fill: o.fill || css('--ink-2'), 'font-size': o.size || 12, 'font-family': o.mono ? css('--f-mono') : css('--f-body'), 'text-anchor': o.anchor || 'start', 'dominant-baseline': o.base || 'middle', 'font-weight': o.weight || 400 }, svg);
+  t.textContent = s; return t;
+}
+function svgIn(id, h){ const box = document.getElementById(id); box.innerHTML = ''; const w = box.clientWidth; const s = el('svg', { width: w, height: h, viewBox: `0 0 ${w} ${h}`, role: 'img' }, box); return [s, w]; }
+function hbar(svg, x, y, w, h, fill, round){ const r = round ? Math.min(4, w / 2, h / 2) : 0; const d = `M${x},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x} Z`; return el('path', { d, fill }, svg); }
+function vbar(svg, x, y, w, h, fill){ const r = Math.min(4, w / 2, h / 2); const d = `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`; return el('path', { d, fill }, svg); }
+const f3 = v => v.toFixed(3);
+
+const DECOMP = [
+  ['NP / keep', 0.1944, 0.8016, 0.0040],
+  ['fold0 / keep', 0.0955, 0.9045, 0.0000],
+  ['NP / drop', 0.0042, 0.0278, 0.9680],
+  ['fold0 / drop', 0.0003, 0.0022, 0.9975],
+];
+function decomp(){
+  const box = document.getElementById('c-decomp'); const narrow = box.clientWidth < 520;
+  const rh = 40, lw = narrow ? 92 : 120; const [s, w] = svgIn('c-decomp', DECOMP.length * rh + 22); const pw = w - lw - 8;
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => { const x = lw + v * pw; el('line', { x1: x, x2: x, y1: 0, y2: DECOMP.length * rh, stroke: css('--line') }, s); txt(s, x, DECOMP.length * rh + 12, v.toFixed(2), { anchor: v === 0 ? 'start' : v === 1 ? 'end' : 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  DECOMP.forEach(([n, got, rk, pl], i) => {
+    const y = i * rh + 8, h = rh - 16; let x = lw;
+    txt(s, lw - 10, y + h / 2, n, { anchor: 'end', size: 12.5, fill: css('--ink') });
+    [[got, '--got', '得点'], [rk, '--rk', 'ランカー段の損失'], [pl, '--pl', 'pool 段の損失']].forEach(([v, c, lab], j, arr) => {
+      if (v <= 0) return; const bw = v * pw; const isLast = arr.slice(j + 1).every(a => a[0] <= 0);
+      const seg = hbar(s, x, y, Math.max(bw - (isLast ? 0 : 2), 1), h, css(c), isLast);
+      bindTip(seg, `${n}<br>${lab}：${f3(v)}`); x += bw;
+    });
+    const lx = lw + got * pw + 6;
+    if (got > 0.05) txt(s, lw + 6, y + h / 2, f3(got), { mono: 1, size: 11.5, fill: css('--surface'), weight: 500 });
+    else txt(s, lx, y + h / 2, f3(got), { mono: 1, size: 11.5, fill: css('--ink'), weight: 500 });
+  });
+}
+
+const CHAN = [['ライブラリ', 0.0527, 0.0171, '--muted'], ['MetFrag-lite', 0.2452, 0.6172, '--c1'], ['analog（B）', 0.5347, 0.5980, '--b'], ['固定融合（A）', 0.1944, 0.0955, '--a']];
+function chan(){
+  const H = 230; const [s, w] = svgIn('c-chan', H); const m = { l: 34, r: 6, t: 14, b: 30 }; const pw = w - m.l - m.r, ph = H - m.t - m.b; const max = 0.7;
+  [0, 0.2, 0.4, 0.6].forEach(v => { const y = m.t + ph - v / max * ph; el('line', { x1: m.l, x2: w - m.r, y1: y, y2: y, stroke: css('--line') }, s); txt(s, m.l - 6, y, v.toFixed(1), { anchor: 'end', mono: 1, size: 11, fill: css('--muted') }); });
+  const groups = ['NP / keep', 'fold0 / keep']; const gw = pw / 2; const bw = Math.min(30, (gw - 30) / 4);
+  groups.forEach((g, gi) => {
+    const gx = m.l + gi * gw + (gw - bw * 4 - 6) / 2;
+    CHAN.forEach(([n, a, b, c], j) => { const v = gi === 0 ? a : b; const bh = v / max * ph; const x = gx + j * (bw + 2);
+      const r = vbar(s, x, m.t + ph - bh, bw, Math.max(bh, 1), css(c)); bindTip(r, `${g} · ${n}：${f3(v)}`);
+      if (j >= 2) txt(s, x + bw / 2, m.t + ph - bh - 9, v.toFixed(2), { anchor: 'middle', mono: 1, size: 10.5, fill: css('--ink'), weight: 500 }); });
+    txt(s, m.l + gi * gw + gw / 2, m.t + ph + 16, g, { anchor: 'middle', size: 12, fill: css('--ink') });
+  });
+  document.getElementById('lg-chan').innerHTML = CHAN.map(([n, , , c]) => `<span><i style="background:var(${c})"></i>${n}</span>`).join('');
+}
+
+const RANK = { bins: ['1 位', '2–3', '4–10', '11–25', '圏外'], np: [18, 33, 79, 61, 59], f0: [13, 26, 58, 92, 211] };
+function rank(){
+  const H = 220; const [s, w] = svgIn('c-rank', H); const m = { l: 34, r: 6, t: 14, b: 30 }; const pw = w - m.l - m.r, ph = H - m.t - m.b; const max = 0.6;
+  [0, 0.2, 0.4, 0.6].forEach(v => { const y = m.t + ph - v / max * ph; el('line', { x1: m.l, x2: w - m.r, y1: y, y2: y, stroke: css('--line') }, s); txt(s, m.l - 6, y, (v * 100).toFixed(0) + '%', { anchor: 'end', mono: 1, size: 11, fill: css('--muted') }); });
+  const gw = pw / RANK.bins.length; const bw = Math.min(22, (gw - 12) / 2);
+  RANK.bins.forEach((b, i) => {
+    const gx = m.l + i * gw + (gw - bw * 2 - 2) / 2;
+    [[RANK.np[i], 250, '--a', 'NP / keep'], [RANK.f0[i], 400, '--muted', 'fold0 / keep']].forEach(([n, tot, c, lab], j) => {
+      const v = n / tot, bh = v / max * ph; const r = vbar(s, gx + j * (bw + 2), m.t + ph - bh, bw, bh, css(c)); bindTip(r, `${lab} · ${b}：${n} 分子（${(v * 100).toFixed(1)}%）`);
+    });
+    txt(s, m.l + i * gw + gw / 2, m.t + ph + 16, b, { anchor: 'middle', size: 11.5, fill: css('--ink') });
+  });
+}
+
+function lb(){
+  const H = 190; const [s, w] = svgIn('c-lb', H); const m = { l: 16, r: 16 }; const lo = 0, hi = 0.6; const X = v => m.l + (v - lo) / (hi - lo) * (w - m.l - m.r);
+  const rows = [['A', 0.194, 0.191, '--a'], ['B', 0.535, 0.247, '--b']];
+  const ys = { CV: 40, LB: 120 };
+  Object.entries(ys).forEach(([k, y]) => { el('line', { x1: X(lo), x2: X(hi), y1: y, y2: y, stroke: css('--line'), 'stroke-width': 2 }, s); txt(s, X(lo), y - 18, k === 'CV' ? 'ローカル CV（NP / keep）' : 'Public LB', { size: 12, fill: css('--ink-2'), weight: 600 }); });
+  [0, 0.2, 0.4, 0.6].forEach(v => txt(s, X(v), H - 8, v.toFixed(1), { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }));
+  rows.forEach(([n, cv, l, c]) => {
+    el('line', { x1: X(cv), x2: X(l), y1: ys.CV, y2: ys.LB, stroke: css(c), 'stroke-width': 2, opacity: 0.6 }, s);
+    [[cv, ys.CV, 'CV'], [l, ys.LB, 'LB']].forEach(([v, y, k]) => { const d = el('circle', { cx: X(v), cy: y, r: 7, fill: css(c), stroke: css('--surface'), 'stroke-width': 2 }, s); bindTip(d, `${n} · ${k}：${f3(v)}`);
+      txt(s, X(v), y + 20, `${n} ${f3(v)}`, { anchor: 'middle', mono: 1, size: 11.5, fill: css('--ink') }); });
+  });
+}
+
+const MIX = { p: [0.148, 0.285, 0.567], ci: [[0.087, 0.208], [0.164, 0.408], [0.485, 0.648]], n: ['Class 1', 'Class 2', 'pool 外'], c: ['--c1', '--c2', '--c3'] };
+function mix(){
+  const [s, w] = svgIn('c-mix', 56); let x = 0; const y = 8, h = 30;
+  MIX.p.forEach((v, i) => { const bw = v * w; const last = i === MIX.p.length - 1; const r = hbar(s, x, y, Math.max(bw - (last ? 0 : 2), 1), h, css(MIX.c[i]), last); bindTip(r, `${MIX.n[i]}：${(v * 100).toFixed(1)}%`);
+    txt(s, x + 8, y + h / 2, `${(v * 100).toFixed(0)}%`, { mono: 1, size: 12, fill: i === 2 ? css('--ink') : css('--surface'), weight: 500 }); x += bw; });
+  const [s2, w2] = svgIn('c-mixci', 3 * 30 + 22); const lw = 74; const pw = w2 - lw - 10;
+  [0, 0.25, 0.5, 0.75].forEach(v => { const xx = lw + v / 0.75 * pw; el('line', { x1: xx, x2: xx, y1: 0, y2: 90, stroke: css('--line') }, s2); txt(s2, xx, 102, (v * 100).toFixed(0) + '%', { anchor: v === 0 ? 'start' : v === 0.75 ? 'end' : 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  MIX.p.forEach((v, i) => { const yy = i * 30 + 15; const X = t => lw + t / 0.75 * pw;
+    txt(s2, lw - 10, yy, MIX.n[i], { anchor: 'end', size: 12, fill: css('--ink') });
+    el('line', { x1: X(MIX.ci[i][0]), x2: X(MIX.ci[i][1]), y1: yy, y2: yy, stroke: css(MIX.c[i]), 'stroke-width': 3, 'stroke-linecap': 'round' }, s2);
+    const d = el('circle', { cx: X(v), cy: yy, r: 6, fill: css(MIX.c[i]), stroke: css('--surface'), 'stroke-width': 2 }, s2);
+    bindTip(d, `${MIX.n[i]}：${(v * 100).toFixed(1)}%<br>10–90%：${(MIX.ci[i][0] * 100).toFixed(0)}–${(MIX.ci[i][1] * 100).toFixed(0)}%`); });
+}
+
+const M = { A: [0.9135, 0.1944], B: [0.6375, 0.5347] }; const LBV = { A: 0.191, B: 0.247 };
+function lines(){
+  const H = 260; const [s, w] = svgIn('c-lines', H); const m = { l: 44, r: 12, t: 12, b: 36 }; const pw = w - m.l - m.r, ph = H - m.t - m.b;
+  const X = v => m.l + v / 0.4 * pw, Y = v => m.t + ph - v * ph;
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => { el('line', { x1: m.l, x2: w - m.r, y1: Y(v), y2: Y(v), stroke: css('--line') }, s); txt(s, m.l - 6, Y(v), (v * 100).toFixed(0) + '%', { anchor: 'end', mono: 1, size: 11, fill: css('--muted') }); });
+  [0, 0.1, 0.2, 0.3, 0.4].forEach(v => txt(s, X(v), m.t + ph + 14, (v * 100).toFixed(0) + '%', { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }));
+  txt(s, m.l + pw, m.t + ph + 30, 'Class 1 の割合 →', { anchor: 'end', size: 11, fill: css('--muted') });
+  txt(s, m.l + 4, m.t + 8, '↑ pool 外の割合', { size: 11, fill: css('--muted') });
+  const band = el('rect', { x: X(0.16), y: m.t, width: X(0.17) - X(0.16), height: ph, fill: css('--accent'), opacity: 0.18 }, s);
+  bindTip(band, 'Discussion の推定：Class 1 ≈ 16–17%');
+  ['A', 'B'].forEach(k => { const pts = []; for (let p1 = 0; p1 <= 0.4001; p1 += 0.01) { const p3 = 1 - p1 - (LBV[k] - p1 * M[k][0]) / M[k][1]; if (p3 >= 0 && p3 <= 1) pts.push(`${X(p1)},${Y(p3)}`); }
+    el('polyline', { points: pts.join(' '), fill: 'none', stroke: css(k === 'A' ? '--a' : '--b'), 'stroke-width': 2 }, s); });
+  const d = el('circle', { cx: X(0.148), cy: Y(0.567), r: 7, fill: css('--ink'), stroke: css('--surface'), 'stroke-width': 2 }, s);
+  bindTip(d, '交点：Class 1 14.8% / pool 外 56.7%');
+  txt(s, X(0.148) + 12, Y(0.567) - 12, '推定 (15%, 57%)', { size: 12, fill: css('--ink'), weight: 600 });
+}
+
+function ladder(){
+  const H = 150; const [s, w] = svgIn('c-ladder', H); const m = { l: 14, r: 14 }; const lo = 0.15, hi = 0.5; const X = v => m.l + (v - lo) / (hi - lo) * (w - m.l - m.r); const y = 70;
+  el('line', { x1: X(lo), x2: X(hi), y1: y, y2: y, stroke: css('--line'), 'stroke-width': 2 }, s);
+  [0.2, 0.3, 0.4, 0.5].forEach(v => { el('line', { x1: X(v), x2: X(v), y1: y - 4, y2: y + 4, stroke: css('--muted') }, s); txt(s, X(v), H - 8, v.toFixed(1), { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  const ceil = el('rect', { x: X(0.433), y: y - 12, width: 3, height: 24, fill: css('--bad') }, s); bindTip(ceil, '今の pool の上限 ≈ 0.433（Class 1 + Class 2）');
+  const narrow = w < 560;
+  const pts = [
+    [0.191, 'A 実測 0.191', '--a', 1, false], [0.247, 'B 実測 0.247', '--b', -1, false],
+    [0.288, '切り替えランカー予測 0.288', '--muted', 1, true], [0.433, 'pool 上限 0.43', '--bad', -1, true],
+    [0.467, '公開 kernel 0.467', '--ink-2', 1, false], [0.484, '公開最高 0.484', '--ink-2', -1, false],
+  ];
+  pts.forEach(([v, l, c, side, pred]) => {
+    const dot = el('circle', { cx: X(v), cy: y, r: 6, fill: pred ? css('--surface') : css(c), stroke: css(c), 'stroke-width': 2, 'stroke-dasharray': pred ? '2 2' : 'none' }, s);
+    bindTip(dot, l + (pred ? '（予測）' : ''));
+    const label = narrow ? l.replace('切り替えランカー予測', '予測').replace('公開 kernel', '公開').replace('公開最高', '最高') : l;
+    txt(s, X(v), side > 0 ? y + 24 : y - 22, label, { anchor: v > 0.45 ? (side > 0 ? 'end' : 'start') : 'middle', size: 11.5, fill: css('--ink-2') });
+  });
+}
+
+function all(){ decomp(); chan(); rank(); lb(); mix(); lines(); ladder(); }
+let t; all(); addEventListener('resize', () => { clearTimeout(t); t = setTimeout(all, 120); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+if (document.fonts) document.fonts.ready.then(all);
+})();
+</script>
