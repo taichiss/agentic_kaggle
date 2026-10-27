@@ -17,6 +17,10 @@ dev = [
   "pytest>=8.3",
   "ruff>=0.11",
 ]
+eda = [
+    "pyarrow>=19,<25",
+    "rdkit==2026.3.3",
+]
 
 [project.scripts]
 kaggle-init = "agentic_kaggle.cli:main"

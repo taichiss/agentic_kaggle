@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CASMI / Spectrum explorer</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">C<span>／</span></span><div><strong>CASMI <span>2026</span></strong><small>MOLECULAR EXPLORER</small></div></div>
+    <div class="top-meta"><span class="live-dot"></span><span id="source-label">データを読み込み中</span><span class="top-divider"></span><span>MS/MS EDA</span></div>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">SPECTRUM &amp; STRUCTURE WORKBENCH</p><h1>スペクトルを、構造から読み解く。</h1><p>測定スペクトルを選び、候補構造と類似分子を並べて探索します。</p></div>
+      <div class="dataset-stats"><div><strong id="stat-spectra">—</strong><span>SPECTRA</span></div><div><strong id="stat-molecules">—</strong><span>MOLECULES</span></div><div><strong id="stat-label">—</strong><span>STRUCTURES</span></div></div>
+    </section>
+    <div id="app-error" class="notice error" role="alert" hidden></div>
+    <div id="demo-notice" class="notice" hidden>現在は合成デモデータを表示しています。実データを読み込む方法は README を参照してください。</div>
+    <div id="provenance-notice" class="notice warning" role="status" hidden></div>
+    <div id="limit-notice" class="notice" hidden></div>
+    <div class="workspace">
+      <aside class="panel browser-panel" aria-label="スペクトル一覧">
+        <div class="panel-heading"><div><p class="eyebrow">01 / BROWSE</p><h2>スペクトル一覧</h2></div><span class="count" id="result-count">—</span></div>
+        <label class="search-label" for="search">ID・SMILES・メタデータを検索</label>
+        <div class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="search" placeholder="例: molecule ID" autocomplete="off"></div>
+        <div class="list-head"><span>MOLECULE / SPECTRUM</span><span>PRECURSOR m/z</span></div>
+        <div id="spectrum-list" class="spectrum-list" aria-live="polite"><div class="empty">読み込み中…</div></div>
+        <div class="pagination"><button id="prev" class="text-button" type="button">← 前へ</button><span id="page-info">—</span><button id="next" class="text-button" type="button">次へ →</button></div>
+      </aside>
+      <div class="main-column">
+        <section class="panel spectrum-panel" aria-labelledby="spectrum-title">
+          <div class="panel-heading"><div><p class="eyebrow">02 / OBSERVE</p><h2 id="spectrum-title">MS/MS スペクトル</h2></div><span id="spectrum-id" class="badge">未選択</span></div>
+          <div id="spectrum-metadata" class="metadata"><div><span>PRECURSOR m/z</span><strong>—</strong></div><div><span>ADDUCT</span><strong>—</strong></div><div><span>ION MODE</span><strong>—</strong></div><div><span>COLLISION ENERGY</span><strong>—</strong></div></div>
+          <div class="plot-head"><div><strong>Fragment peaks</strong><span id="peak-count">スペクトルを選択してください</span></div><span class="plot-help">ピークにカーソルを合わせると値を表示</span></div>
+          <div id="chart" class="chart"><div class="empty">左の一覧からスペクトルを選択してください。</div></div>
+          <div id="chart-legend" class="chart-legend"><span><i class="swatch primary"></i>選択スペクトル</span></div>
+          <div id="comparison-metadata" class="comparison-metadata" hidden></div>
+          <p id="chart-note" class="chart-note">強度は各スペクトルの最大ピークを 100% として表示。下向きは比較対象です。</p>
+          <details class="metadata-details"><summary>ピーク値を表で見る</summary><div class="peak-table-wrap"><table class="peak-table"><thead><tr><th scope="col">m/z</th><th scope="col">元の強度</th><th scope="col">相対強度</th></tr></thead><tbody id="peak-table"></tbody></table></div></details>
+          <details class="metadata-details"><summary>すべてのメタデータ</summary><dl id="all-metadata"></dl></details>
+        </section>
+        <section class="panel structure-panel" aria-labelledby="structure-title">
+          <div class="panel-heading"><div><p class="eyebrow">03 / COMPARE</p><h2 id="structure-title">分子構造を比較</h2></div><span class="subtle">Morgan fingerprint / Tanimoto</span></div>
+          <p id="structure-context" class="section-copy">構造を含むデータでは選択分子を表示します。構造がない場合は候補 SMILES を入力してください。</p>
+          <form id="smiles-form" class="smiles-form"><div><label for="smiles">比較の基準となる SMILES</label><input id="smiles" type="text" placeholder="SMILES を入力" spellcheck="false" autocomplete="off"><label for="candidates" class="candidate-label">比較候補 SMILES（任意・1 行につき 1 件、最大 100 件）</label><textarea id="candidates" rows="2" placeholder="データに構造がない場合は、ここに候補を追加できます" spellcheck="false"></textarea></div><button type="submit" class="primary-button">構造を表示・類似分子を探す <span aria-hidden="true">→</span></button></form>
+          <div id="structure-error" class="inline-error" role="alert" hidden></div>
+          <div class="comparison-grid">
+            <article class="molecule-card"><div class="card-label"><span>基準構造</span><span id="query-origin">SMILES</span></div><div id="query-structure" class="molecule-image"><span>SMILES を入力してください</span></div><p id="query-smiles" class="smiles-text">—</p></article>
+            <article class="molecule-card"><div class="card-label"><span>比較構造</span><span id="compare-score">未選択</span></div><div id="compare-structure" class="molecule-image"><span>下の類似分子から選択</span></div><p id="compare-smiles" class="smiles-text">—</p><div id="compare-spectrum-control" class="compare-spectrum-control" hidden><label for="compare-spectrum">比較するスペクトル</label><select id="compare-spectrum"></select><p>装置や測定条件が一致するとは限りません。</p></div></article>
+          </div>
+          <div class="related-heading"><div><h3>類似分子</h3><p>構造の類似度順に上位 12 件を表示。候補を選ぶと構造と、利用できる場合はスペクトルを比較します。</p></div><span id="related-count" class="count">—</span></div>
+          <div id="related-list" class="related-list"><div class="empty">基準構造を入力すると、データ内の類似分子を表示します。</div></div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <footer>CASMI 2026 <span> / </span> EXPLORATORY DATA ANALYSIS <span>·</span> 候補の類似度は構造同定を保証しません</footer>
+  <script src="/app.js" defer></script>
+</body>
+</html>
