@@ -1,0 +1,41 @@
+schema_version = 1
+
+[competition]
+slug = "enveda-casmi26-molecule-id-mass-spectra"
+title = "Enveda CASMI 2026 - Molecule ID From Mass Spectra"
+status = "active"
+competition_url = "https://www.kaggle.com/competitions/enveda-CASMI26-molecule-id-mass-spectra"
+metric = "MRR@25"
+metric_direction = "maximize"
+
+[official]
+checked_at = "2026-10-27"
+overview_url = "https://www.kaggle.com/competitions/enveda-CASMI26-molecule-id-mass-spectra/overview"
+rules_url = "https://www.kaggle.com/competitions/enveda-CASMI26-molecule-id-mass-spectra/rules"
+data_url = "https://www.kaggle.com/competitions/enveda-CASMI26-molecule-id-mass-spectra/data"
+evaluation_url = "https://www.kaggle.com/competitions/enveda-CASMI26-molecule-id-mass-spectra/overview/evaluation"
+
+[submission]
+kind = "code_competition"
+file_name = "submission.csv"
+prediction_format = "ranked SMILES candidates separated by semicolons, up to 25 per molecule"
+id_columns = ["molecule_id"]
+prediction_columns = ["smiles"]
+expected_rows = 0 # unknown; 0 is not an asserted row count
+
+[constraints]
+external_data = "publicly available external data allowed"
+pretrained_models = "publicly available pretrained models allowed"
+internet = "disabled during submitted notebook execution"
+notebook_runtime = "CPU <= 9 hours; GPU <= 9 hours"
+submission_limit = "unknown"
+deadline_utc = "2026-12-14T23:59:00Z"
+
+[evaluation]
+matching = "RDKit 2026.03.3 tautomer canonicalization and first 14 characters of InChIKey"
+
+[data]
+local_root = "data/input"
+train = "unknown"
+test = "unknown"
+sample_submission = "unknown"
