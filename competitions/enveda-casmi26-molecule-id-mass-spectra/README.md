@@ -16,6 +16,7 @@
 - `strategy/`: 現在方針、TODO、実験台帳
 - `configs/`, `src/`, `tests/`, `evals/`, `notebooks/`: 設定、コード、検証、探索
 - `data/`, `artifacts/`, `submissions/`: ローカルデータと生成物。Git 管理外
+- [DiscussionのOKF索引](knowledge/20261027-initial/index.md)と[取得・更新手順](docs/discussion/okf-sync.md)
 
 ## 最初の作業
 
