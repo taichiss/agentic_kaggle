@@ -16,3 +16,15 @@
 - **解釈:** （なぜその結果になったと考えるか）
 - **指標感度との整合:** （Week 0 Metric Sandbox の感度に照らしてこの変化は妥当か）
 - **次に試すこと:** （この実験から派生する次アクション）
+
+### EXP-0001: fold-safe baseline 再現 + 誤差分解
+- **日付:** 2026-10-27
+- **git HEAD:** `b4f8f2e` + 未コミット差分 (本実験のコミットで確定)
+- **config:** `enveda-casmi26/experiments/EXP-0001/<条件>/summary.json` の `config`、詳細は [EXP-0001/README.md](../experiments/EXP-0001/README.md)
+- **CV score:** np/keep=0.1944, fold0/keep=0.0955 (np/drop=0.0042, fold0/drop=0.0003)
+- **LB score:** 未提出
+- **仮説:** haideptry V17 のうちリークなしで組める ch1–3 だけで、どの段が MRR を落としているかを分解できる
+- **結果:** keep 条件の pool カバー率は 99.6–100%、損失の 0.80–0.90 がランカー段。単一チャネルでは analog 0.535 (np) / frag 0.617 (fold0) なのに、固定重み融合は 0.194 / 0.096
+- **解釈:** identity-disjoint CV では正解の reference スペクトルは必ず除外されるので、ライブラリ一致 (94–99% の分子で発生、類似度 median 約 0.6) は常に train 側の別異性体を指す。固定重みの融合ではこれが正解を押しのける (融合 top-1 の 66–76% がライブラリ top-1 と一致)。V17 の 0.30–0.34 は FPNet と学習済みランカー込みの数字で、本実験は再現値ではない
+- **指標感度との整合:** rank 2–10 に 112 (np) / 84 (fold0) 分子が滞留。metric_sensitivity.md §4 の「rank 1–3 を直す変更が最優先」と整合し、次はランカー
+- **次に試すこと:** nested 構成で fold-train 側から学習 query を作り、HistGBM pointwise と LightGBM LambdaRank を同じ特徴量で比較 (roadmap #1)。ライブラリ一致は lvmax 等の相対特徴量で学習させる

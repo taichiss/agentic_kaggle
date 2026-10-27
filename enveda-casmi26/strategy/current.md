@@ -123,6 +123,13 @@
 - 生の `inchikey14` 比較でローカルスコアリング（canonical 不整合）
 - 他人の学習コード非公開重みを Final 提出に含む（Winner 失格リスク）
 
+## Week 1 誤差分解の結論 (EXP-0001, 2026-10-27)
+
+- **確認済みの事実 (ローカル CV):** fold-safe に組んだ V17 ch1–3 では、pool カバー率 99.6–100% (pool=keep)、MRR 損失の 80–90% がランカー段
+- **確認済みの事実:** CV では正解の reference スペクトルが必ず除外されるため、ライブラリ一致は常に別異性体を指す。固定重みで融合すると analog 単独 (0.535) より悪い 0.194 (np) になる
+- **含意:** ランカーは「ライブラリ一致を信じるかどうか」を学習で決める必要がある。roadmap #1 (LambdaRank) の前提として、まず nested 構成の学習 query を作る
+- **未確定:** Class 3 の比率。`coconut-casmi26-candidates` は train 構造を除いた COCONUT なので、pool=drop の数字は Class 3 の推定に使えない
+
 ## 直近アクション (Week 0 チェックリスト進行中)
 1. 指標因数分解実装 `src/<pkg>/metrics/breakdown.py`
 2. Metric Sandbox 実測 → `enveda-casmi26/metric_sensitivity.md`

@@ -1,0 +1,221 @@
+"""fold-safe baseline を検証 split で回し、誤差分解まで出す (Week 1 Phase D)。
+
+split:
+    fold0 — identity-disjoint fold 0 から timsTOF スペクトルを持つ構造を N 個抽出
+    np    — enveda-np-examples の全構造 (hidden test に最も近い分布)
+
+どちらもホールドアウト構造の identity group に属する全スペクトルを
+ライブラリ / analog 代表から除く (cv_manifest.json 準拠)。候補 pool に構造を残すかは
+--pool-heldout で選ぶ (keep = 既知構造で reference なし / drop = DB 未収録)。
+
+使い方:
+    uv run python scripts/casmi26_baseline_cv.py --split np --pool-heldout keep \
+        --out enveda-casmi26/experiments/EXP-0001/np_keep
+    uv run python scripts/casmi26_baseline_cv.py --split fold0 --n 400 --pool-heldout keep \
+        --out enveda-casmi26/experiments/EXP-0001/fold0_keep
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import pickle
+import time
+from dataclasses import asdict
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pyarrow.parquet as pq
+
+from casmi26.analysis import StageSpec, assign_classes, decompose, to_markdown
+from casmi26.baseline.chem import ADDUCTS, neutral_mass
+from casmi26.baseline.pipeline import (
+    BaselineConfig,
+    CandidatePool,
+    Query,
+    SpectralIndex,
+    run_baseline,
+)
+from casmi26.baseline.spectra import clean_library
+
+TRAIN = Path("data/input/enveda-CASMI26-molecule-id-mass-spectra/train.parquet")
+FOLDS = Path("data/input/external/casmi26/casmi26-identity-disjoint-validation-folds")
+COCO = Path("data/input/external/casmi26/coconut-casmi26-candidates")
+CACHE = Path("data/working/casmi26/library_clean.npz")
+SEED = 20260930
+MAX_SPECTRA = 9  # test の 1 分子あたり最大スペクトル数
+
+T0 = time.time()
+
+
+def log(msg: str) -> None:
+    print(f"[{time.time() - T0:7.1f}s] {msg}", flush=True)
+
+
+def read_rows(rows: np.ndarray) -> dict[int, tuple[np.ndarray, np.ndarray]]:
+    """train.parquet の指定行の生スペクトル。"""
+    want = np.sort(rows)
+    pf = pq.ParquetFile(TRAIN)
+    out: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+    base = 0
+    for g in range(pf.num_row_groups):
+        n = pf.metadata.row_group(g).num_rows
+        sel = want[(want >= base) & (want < base + n)]
+        if len(sel):
+            t = pf.read_row_group(g, columns=["ms2_mzs", "ms2_normalized_intensities"])
+            t = t.take(sel - base)
+            mzs = t.column("ms2_mzs").to_pylist()
+            its = t.column("ms2_normalized_intensities").to_pylist()
+            for r, m, i in zip(sel, mzs, its, strict=True):
+                out[int(r)] = (np.asarray(m, np.float32), np.asarray(i, np.float32))
+        base += n
+    return out
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--split", choices=["fold0", "np"], required=True)
+    ap.add_argument("--n", type=int, default=400, help="fold0 の抽出分子数")
+    ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--workers", type=int, default=11)
+    ap.add_argument(
+        "--pool-heldout",
+        choices=["keep", "drop"],
+        default="keep",
+        help="keep: ホールドアウト構造を候補 pool に残す (既知構造・reference なし) / "
+        "drop: pool からも除く (DB 未収録)",
+    )
+    args = ap.parse_args()
+    cfg = BaselineConfig(workers=args.workers)
+
+    meta = pq.read_table(
+        TRAIN,
+        columns=["ingest_lib", "instrument_type", "adduct", "ionization_mode", "precursor_mz"],
+    ).to_pandas()
+    sf = pd.read_parquet(FOLDS / "spectra_folds.parquet")
+    st = pd.read_parquet(FOLDS / "structures.parquet")
+    assert len(meta) == len(sf) and (sf["row"].to_numpy() == np.arange(len(sf))).all()
+    key_of_ik = dict(zip(st["inchikey14"], st["scorer_key"], strict=True))
+    row_keys = sf["inchikey14"].map(key_of_ik).to_numpy(dtype=object)
+    meta["key"] = row_keys
+    meta["group"] = sf["identity_group"].to_numpy()
+    log(f"loaded metadata: {len(meta):,} spectra / {len(st):,} structures")
+
+    usable = meta["adduct"].isin(list(ADDUCTS))
+    if args.split == "np":
+        q_mask = (meta["ingest_lib"] == "enveda-np-examples") & usable
+        held_groups = set(meta.loc[meta["ingest_lib"] == "enveda-np-examples", "group"])
+        q_rows = meta[q_mask]
+    else:
+        held_groups = set(st.loc[st["fold_identity"] == 0, "identity_group"])
+        cand = meta[(sf["fold_identity"] == 0) & (meta["instrument_type"] == "timsTOF") & usable]
+        keys = np.sort(cand["key"].unique())
+        rng = np.random.default_rng(SEED)
+        pick = set(rng.choice(keys, size=min(args.n, len(keys)), replace=False))
+        q_rows = cand[cand["key"].isin(pick)]
+    rng = np.random.default_rng(SEED)
+    q_rows = (
+        q_rows.assign(_r=rng.random(len(q_rows)))
+        .sort_values(["key", "_r"])
+        .groupby("key")
+        .head(MAX_SPECTRA)
+    )
+    log(f"split={args.split}: {q_rows['key'].nunique()} molecules / {len(q_rows)} spectra")
+
+    raw = read_rows(q_rows.index.to_numpy())
+    queries = []
+    for key, sub in q_rows.groupby("key", sort=True):
+        nm = neutral_mass(sub["precursor_mz"].to_numpy(np.float64), sub["adduct"].to_numpy())
+        mode = float(np.mean([1.0 if m == "positive" else -1.0 for m in sub["ionization_mode"]]))
+        queries.append(
+            Query(
+                molecule_id=f"v_{key}",
+                truth_key=str(key),
+                spectra=[raw[int(r)] for r in sub.index],
+                neutral_masses=nm,
+                ion_mode=mode,
+            )
+        )
+
+    lib = clean_library(TRAIN, CACHE, cfg.clean)
+    allowed = ~meta["group"].isin(held_groups).to_numpy()
+    index = SpectralIndex(lib, allowed, row_keys)
+    log(f"library: {len(index.rows):,} spectra / analog reps: {len(index.rep_rows):,}")
+
+    cm = pickle.load(open(COCO / "coco_meta.pkl", "rb"))
+    co_mass = np.load(COCO / "coco_mass.npy")
+    # coconut-casmi26-candidates は train 構造を除いた COCONUT なので、ホールドアウト構造を
+    # pool に残すかどうかは train 側の構造表で決める (TECHNICAL_NOTES Validation Protocol 2)
+    st_pool = st if args.pool_heldout == "keep" else st[~st["identity_group"].isin(held_groups)]
+    st_ok = st_pool.drop_duplicates("scorer_key")
+    pool = CandidatePool(
+        mass=np.concatenate([co_mass, st_ok["mono_mass"].to_numpy()]),
+        smiles=np.concatenate([np.asarray(cm["smiles"], object), st_ok["smiles"].to_numpy(object)]),
+        known_key=np.concatenate(
+            [np.full(len(co_mass), None, object), st_ok["scorer_key"].to_numpy(object)]
+        ),
+        source=np.array(["coconut"] * len(co_mass) + ["train"] * len(st_ok), object),
+    )
+    log(f"pool: {len(co_mass):,} COCONUT + {len(st_ok):,} train structures")
+    key_to_smiles = dict(zip(st["scorer_key"], st["smiles"], strict=False))
+
+    res = run_baseline(queries, index, pool, key_to_smiles, cfg, log=log)
+    log("baseline done")
+
+    truth = {q.molecule_id: q.truth_key for q in queries}
+    classes = assign_classes(
+        truth,
+        reference_keys=index.keys,
+        database_keys=res.database_keys | set(cm["keys"]) | set(st_ok["scorer_key"]),
+    )
+    stages = [StageSpec("pool", None), StageSpec("ranker", 1)]
+    dec = decompose(truth, res.stages, stages=stages, classes=classes)
+    channel_mrr = {
+        name: decompose(truth, res.stages, stages=[StageSpec(name, 1)]).mrr
+        for name in ("channel_lib", "channel_analog", "channel_frag")
+    }
+
+    out: Path = args.out
+    out.mkdir(parents=True, exist_ok=True)
+    for name, df in res.stages.items():
+        df.to_parquet(out / f"stage_{name}.parquet", index=False)
+    pd.DataFrame({"molecule_id": list(truth), "truth_key": list(truth.values())}).to_parquet(
+        out / "truth.parquet", index=False
+    )
+    res.diag.to_parquet(out / "diag.parquet", index=False)
+    dec.per_molecule.to_parquet(out / "per_molecule.parquet", index=False)
+    md = to_markdown(
+        dec,
+        title=f"CASMI26 誤差分解 — fold-safe baseline / {args.split} / pool={args.pool_heldout}",
+    )
+    md += "\n## 5. 単一チャネルだけで並べたときの MRR@25\n\n"
+    md += "\n".join(f"- {k}: {v:.4f}" for k, v in channel_mrr.items()) + "\n"
+    n_cand = res.diag["n_candidates"]
+    md += (
+        f"\n## 6. 候補数\n\n- median {n_cand.median():.0f} / mean {n_cand.mean():.1f}"
+        f" / 0 件 {int((n_cand == 0).sum())}\n"
+    )
+    (out / "report.md").write_text(md, encoding="utf-8")
+    summary = {
+        "split": args.split,
+        "pool_heldout": args.pool_heldout,
+        "molecules": dec.count,
+        "spectra": int(len(q_rows)),
+        "mrr": dec.mrr,
+        "top1": float((dec.per_molecule["final_rank"] == 1).mean()),
+        "pool_coverage": dec.ceilings.get("pool"),
+        "class_counts": dec.per_molecule["class"].value_counts().to_dict(),
+        "loss_share_by_stage": dec.stage_table.groupby("bucket")["loss_share"].sum().to_dict(),
+        "channel_mrr": channel_mrr,
+        "config": asdict(cfg),
+        "seed": SEED,
+        "elapsed_sec": time.time() - T0,
+    }
+    (out / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False))
+    log(f"MRR@25={dec.mrr:.4f} coverage={dec.ceilings.get('pool'):.3f} → {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

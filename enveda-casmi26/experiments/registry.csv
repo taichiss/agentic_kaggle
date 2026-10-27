@@ -1,1 +1,2 @@
 exp_id,date,lb_score,local_score,description,config_available,notes
+EXP-0001,2026-10-27,,0.1944,"fold-safe baseline (V17 ch1-3, 固定重み融合) + 誤差分解",true,"np/keep=0.1944 fold0/keep=0.0955 (drop は 0.004/0.0003)。損失の 80-90% がランカー段。lib チャネルが CV では常に別異性体を指し融合を壊す (analog 単独 0.535/0.598)。指標感度: rank2-10 に 84-112 分子が滞留 → rank1 化が最優先 (sensitivity §4 と整合)"

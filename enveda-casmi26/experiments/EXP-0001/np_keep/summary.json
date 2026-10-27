@@ -1,0 +1,42 @@
+{
+  "split": "np",
+  "pool_heldout": "keep",
+  "molecules": 250,
+  "spectra": 1128,
+  "mrr": 0.19436235085011908,
+  "top1": 0.072,
+  "pool_coverage": 0.996,
+  "class_counts": {
+    "class2": 250
+  },
+  "loss_share_by_stage": {
+    "pool": 0.004,
+    "ranker": 0.801637649149881,
+    "top1": 0.0
+  },
+  "channel_mrr": {
+    "channel_lib": 0.05273022512851561,
+    "channel_analog": 0.5346873484969137,
+    "channel_frag": 0.245222839067724
+  },
+  "config": {
+    "ppm_win": 8.5,
+    "ppm_fallback": 30.0,
+    "analog_win": 200.0,
+    "n_analog": 100,
+    "sim_power": 4.0,
+    "w_lib": 1.0,
+    "w_analog": 1.0,
+    "w_frag": 0.25,
+    "workers": 11,
+    "clean": {
+      "floor": 0.002,
+      "topk": 256,
+      "power": 1.0,
+      "ent_weight": true,
+      "mz_tol": 0.01
+    }
+  },
+  "seed": 20260930,
+  "elapsed_sec": 396.6777777671814
+}

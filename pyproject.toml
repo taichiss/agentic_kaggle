@@ -1,7 +1,11 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "birdclef-2026-workspace"
+name = "celltrack-workspace"
 version = "0.1.0"
-description = "Kaggle BirdCLEF workspace with Codex quality harness."
+description = "Kaggle Biohub Cell Tracking During Development workspace."
 requires-python = ">=3.11"
 dependencies = [
   "kaggle>=1.7.4.5",
@@ -10,11 +14,17 @@ dependencies = [
   "pyarrow>=22.0.0",
   "scikit-learn>=1.7.2",
   "scipy>=1.16.3",
-  "soundfile>=0.13.1",
-  "tensorflow>=2.20.0",
-  # Phase 0.5: train_audio MLP head
+  # zarr I/O for 3D+Time imaging data
+  "zarr>=3.0.0",
+  "networkx>=3.4.0",
   "joblib>=1.5.0",
   "tqdm>=4.66.0",
+  "ipykernel>=7.2.0",
+  "nbconvert>=7.17.1",
+  "matplotlib>=3.10.9",
+  "zstandard>=0.25.0",
+  "rdkit>=2024.3.0",
+  "numba>=0.68.0",
 ]
 
 [dependency-groups]
@@ -22,7 +32,17 @@ dev = [
   "mypy>=1.18.2",
   "pre-commit>=4.3.0",
   "ruff>=0.13.0",
+  "pytest>=8.0.0",
 ]
+
+[project.optional-dependencies]
+# Visualization for local EDA (not needed in Kaggle kernels)
+viz = [
+  "napari",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 100

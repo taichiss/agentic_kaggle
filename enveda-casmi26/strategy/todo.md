@@ -30,10 +30,14 @@
   - GT 分子に対して「候補 pool に入っているか / FPNet 回帰で top-N に入っているか / Simulator (ICEBERG/GLACIER) overlay で top-25 に入っているか / ranker で top-1 を取れているか」の 4 段分類
   - Class 1/2/3 ラベル付きで集計
   - 段の損失 = 最初に落ちた段に (1 - 1/rank) を全額計上。合計は 1 - MRR に一致
-- [ ] 誤差分解を実データで回す: ベースラインの段出力 (molecule_id, candidate_key, rank の long parquet) を identity fold 0 と enveda-np-examples で書き出し、CLI に通す
-- [ ] 最弱ベースライン提出: `haideptry/enveda-casmi-2026-fast-spectral-cosine-baseline` を再現 → identity-disjoint fold 0 で local MRR 測定 → Kaggle に 1 本 submit (CCO ダミーより良いことを確認)
-- [ ] 誤差分解でボトルネック特定: 「どの段を改善すれば MRR がどれだけ動くか」を [strategy/current.md](current.md) に書く
-- [ ] Week 1 Exit 条件: ボトルネック順位が特定できていること
+- [x] 誤差分解を実データで回す → EXP-0001 (np / fold0 × pool keep / drop の 4 条件)
+- [x] 最弱ベースラインの fold-safe 再現: V17 の ch1–3 のみ (FPNet・学習済みランカーはリークするため不使用)。np/keep=0.1944, fold0/keep=0.0955
+- [ ] 最弱ベースラインの Kaggle 提出: 未実施 (test 推論用の kernel 化が必要。CCO ダミーより良いことの確認)
+- [x] 誤差分解でボトルネック特定 → ランカー段が損失の 80–90%。[strategy/current.md](current.md) に反映
+- [ ] Week 1 Exit 条件: ボトルネック順位の特定 → keep 条件では達成。Class 3 比率 (drop 条件の現実的な見積もり) は未確定
+- [ ] **学習済みランカー (nested 構成)**: fold-train 側から学習 query を作り、HistGBM pointwise vs LightGBM LambdaRank を同一特徴量で比較 (roadmap #1)
+- [ ] Class 3 比率の見積もり: train 構造を含む COCONUT か PubChemLite pool で drop 条件を作り直す
+- [ ] `src/casmi26/metrics/breakdown.py` の mypy エラー (RDLogger.DisableLog の attr-defined)。指標ハッシュ freeze 対象なので、直すなら metric_hash.txt を同時更新
 
 ## 外部データ取得状況（Phase C 完了部）
 
