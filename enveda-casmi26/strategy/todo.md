@@ -32,7 +32,8 @@
   - 段の損失 = 最初に落ちた段に (1 - 1/rank) を全額計上。合計は 1 - MRR に一致
 - [x] 誤差分解を実データで回す → EXP-0001 (np / fold0 × pool keep / drop の 4 条件)
 - [x] 最弱ベースラインの fold-safe 再現: V17 の ch1–3 のみ (FPNet・学習済みランカーはリークするため不使用)。np/keep=0.1944, fold0/keep=0.0955
-- [ ] 最弱ベースラインの Kaggle 提出: kernel A (固定融合) / B (analog 単独) を `enveda-casmi26/kernels/` に用意しローカル試走済み。push と submit はユーザー確認待ち。予想は EXP-0001/README.md に固定済み
+- [x] 最弱ベースラインの Kaggle 提出: A 固定融合 LB 0.191 / B analog 単独 LB 0.247。CV の方向は一致、幅は CV が約 6 倍過大 (EXP-0001/README.md)
+- [ ] CV と LB の幅のずれの原因切り分け: Class 3 (pool 外) を含む CV と、Class 1 を模した CV (同一構造の別装置スペクトルだけ残す) を作り、B の CV が LB 0.247 に近づくか確認
 - [x] 誤差分解でボトルネック特定 → ランカー段が損失の 80–90%。[strategy/current.md](current.md) に反映
 - [ ] Week 1 Exit 条件: ボトルネック順位の特定 → keep 条件では達成。Class 3 比率 (drop 条件の現実的な見積もり) は未確定
 - [ ] **学習済みランカー (nested 構成)**: fold-train 側から学習 query を作り、HistGBM pointwise vs LightGBM LambdaRank を同一特徴量で比較 (roadmap #1)
