@@ -7,6 +7,9 @@ split:
 どちらもホールドアウト構造の identity group に属する全スペクトルを
 ライブラリ / analog 代表から除く (cv_manifest.json 準拠)。候補 pool に構造を残すかは
 --pool-heldout で選ぶ (keep = 既知構造で reference なし / drop = DB 未収録)。
+--reference other はホールドアウト構造のスペクトルのうち query と同じソース
+(np: enveda-np-examples / fold0: timsTOF) のものだけ除き、他装置・他ライブラリの
+reference を残す (Class 1 の模擬。天然物パネルの "Other reference" 状況に相当)。
 
 使い方:
     uv run python scripts/casmi26_baseline_cv.py --split np --pool-heldout keep \
@@ -86,6 +89,12 @@ def main() -> int:
         help="keep: ホールドアウト構造を候補 pool に残す (既知構造・reference なし) / "
         "drop: pool からも除く (DB 未収録)",
     )
+    ap.add_argument(
+        "--reference",
+        choices=["none", "other"],
+        default="none",
+        help="none: ホールドアウト構造の全スペクトルを除く / other: query と同じソースだけ除く",
+    )
     args = ap.parse_args()
     cfg = BaselineConfig(workers=args.workers)
 
@@ -139,7 +148,15 @@ def main() -> int:
         )
 
     lib = clean_library(TRAIN, CACHE, cfg.clean)
-    allowed = ~meta["group"].isin(held_groups).to_numpy()
+    held = meta["group"].isin(held_groups)
+    if args.reference == "other":
+        same_source = (
+            meta["ingest_lib"] == "enveda-np-examples"
+            if args.split == "np"
+            else meta["instrument_type"] == "timsTOF"
+        )
+        held &= same_source
+    allowed = ~held.to_numpy()
     index = SpectralIndex(lib, allowed, row_keys)
     log(f"library: {len(index.rows):,} spectra / analog reps: {len(index.rep_rows):,}")
 
@@ -187,7 +204,10 @@ def main() -> int:
     dec.per_molecule.to_parquet(out / "per_molecule.parquet", index=False)
     md = to_markdown(
         dec,
-        title=f"CASMI26 誤差分解 — fold-safe baseline / {args.split} / pool={args.pool_heldout}",
+        title=(
+            f"CASMI26 誤差分解 — fold-safe baseline / {args.split}"
+            f" / pool={args.pool_heldout} / ref={args.reference}"
+        ),
     )
     md += "\n## 5. 単一チャネルだけで並べたときの MRR@25\n\n"
     md += "\n".join(f"- {k}: {v:.4f}" for k, v in channel_mrr.items()) + "\n"
@@ -200,6 +220,7 @@ def main() -> int:
     summary = {
         "split": args.split,
         "pool_heldout": args.pool_heldout,
+        "reference": args.reference,
         "molecules": dec.count,
         "spectra": int(len(q_rows)),
         "mrr": dec.mrr,

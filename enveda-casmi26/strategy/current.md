@@ -129,6 +129,8 @@
 - **確認済みの事実:** CV では正解の reference スペクトルが必ず除外されるため、ライブラリ一致は常に別異性体を指す。固定重みで融合すると analog 単独 (0.535) より悪い 0.194 (np) になる
 - **含意:** ランカーは「ライブラリ一致を信じるかどうか」を学習で決める必要がある。roadmap #1 (LambdaRank) の前提として、まず nested 構成の学習 query を作る
 - **確認済みの事実 (LB, 2026-10-27):** A 固定融合 0.191 / B analog 単独 0.247。CV の方向 (B > A) は LB でも成り立つが、差の大きさは CV の約 1/6。CV は改善幅を過大に見積もるので、LB 提出は CV 差が大きい変更に限り、方向の確認にだけ使う
+- **推定 (EXP-0002, CV × LB の逆算):** hidden test は Class 1 ≈ 15% / Class 2 ≈ 28% / pool 外 (COCONUT ∪ train にない) ≈ 57%。Class 1 の推定値は Discussion の独立推定と一致。**今の pool では MRR 上限が約 0.43 なので、優先順位は pool 拡張 > 切り替えランカー > その他**
+- **採用判定の追加:** Class 2 系列 (np/keep) に加え、Class 1 系列 (np/other) も見る。両者を p1 / p2 で重み付けした値を参考指標にする
 - **未確定:** Class 3 の比率。`coconut-casmi26-candidates` は train 構造を除いた COCONUT なので、pool=drop の数字は Class 3 の推定に使えない
 
 ## 直近アクション (Week 0 チェックリスト進行中)
