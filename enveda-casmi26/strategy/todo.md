@@ -38,6 +38,7 @@
 - [ ] **precursor 除去 (0.5) + 断片スコア V3 を既定に** して CV を回し直し、LB 予測を書いて提出
 - [ ] CV の query を test にある adduct に限定 (fold0 は test にない 2 量体を 15% 含む)
 - [ ] 予備窓 (±30 ppm) の発動条件を見直す (+1.6 ppm 補正 / 窓が空のときだけ、をやめる)
+- [x] PubChemLite 追加のマイナス面 → EXP-0004。希釈は −0.002〜−0.024 と小さく、pool 外の 3–4% を救えれば元が取れる (試算)
 - [ ] **候補 pool の拡張 (最優先)**: PubChemLite (`casmi26-pubchemlite-cc0-candidate-fingerprints`) / PubChem tier を pool に追加し、候補数増による Class 1/2 の順位低下も同時に測る
 - [x] 誤差分解でボトルネック特定 → ランカー段が損失の 80–90%。[strategy/current.md](current.md) に反映
 - [ ] Week 1 Exit 条件: ボトルネック順位の特定 → keep 条件では達成。Class 3 比率 (drop 条件の現実的な見積もり) は未確定

@@ -1,0 +1,16 @@
+{
+  "mrr_at_25": 0.8822,
+  "molecules": 250,
+  "outcomes": {
+    "1 位で的中": 203,
+    "2–3 位": 35,
+    "4–25 位": 9,
+    "pool で脱落": 3
+  },
+  "median_pool_size": 12.0,
+  "params": {
+    "ppm": 10.0,
+    "bin": 0.01,
+    "query_lib": "enveda-np-examples"
+  }
+}
