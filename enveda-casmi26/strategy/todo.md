@@ -37,9 +37,9 @@
 - [x] 質量スペクトル診断 → EXP-0003 (precursor・窓・ピーク帰属・基準ピーク・PubChemLite)
 - [ ] **precursor 除去 (0.5) + 断片スコア V3 を既定に** して CV を回し直し、LB 予測を書いて提出
 - [ ] CV の query を test にある adduct に限定 (fold0 は test にない 2 量体を 15% 含む)
-- [x] 予備窓・候補窓の見直し → EXP-0005 (m/z のずれを Da で補正、±max(5 ppm, 2 mDa))
-- [x] PubChemLite 追加のマイナス面 → EXP-0004。希釈は −0.002〜−0.024 と小さく、pool 外の 3–4% を救えれば元が取れる (試算)
-- [x] 候補 pool の拡張 → EXP-0005 (PubChemLite 追加)。正解が pool に入る率 NP drop 3.2%→96.8%
+- [x] 予備窓・候補窓の見直し → EXP-0008 (m/z のずれを Da で補正、±max(5 ppm, 2 mDa))
+- [x] PubChemLite 追加のマイナス面 → EXP-0007。希釈は −0.002〜−0.024 と小さく、pool 外の 3–4% を救えれば元が取れる (試算)
+- [x] 候補 pool の拡張 → EXP-0008 (PubChemLite 追加)。正解が pool に入る率 NP drop 3.2%→96.8%
 - [ ] 改善後の pool で LB 提出 (予測を事前に書いて r を逆算)
 - [ ] ~~候補 pool の拡張~~ (完了): PubChemLite (`casmi26-pubchemlite-cc0-candidate-fingerprints`) / PubChem tier を pool に追加し、候補数増による Class 1/2 の順位低下も同時に測る
 - [x] 誤差分解でボトルネック特定 → ランカー段が損失の 80–90%。[strategy/current.md](current.md) に反映

@@ -101,7 +101,7 @@ def main() -> int:
         choices=["v17", "corrected"],
         default="v17",
         help="v17: ±8.5 ppm / corrected: m/z のずれ (正 +0.70, 負 +0.25 mDa) を補正して"
-        " ±max(5 ppm, 2 mDa) (EXP-0005)",
+        " ±max(5 ppm, 2 mDa) (EXP-0008)",
     )
     ap.add_argument(
         "--extra-pool",

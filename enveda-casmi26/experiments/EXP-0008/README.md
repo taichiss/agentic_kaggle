@@ -1,4 +1,4 @@
-# EXP-0005: 候補 pool の改善 (段 1) と改善前後の差分
+# EXP-0008: 候補 pool の改善 (段 1) と改善前後の差分
 
 - **日付:** 2026-10-28
 - **コード:** `scripts/casmi26_baseline_cv.py --extra-pool pubchemlite --pool-window corrected`、集計は `scripts/casmi26_pool_diff.py` (→ `pool_diff.json`)

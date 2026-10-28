@@ -1,9 +1,9 @@
-"""EXP-0005: 候補 pool の改善前後の差分を集計する (レポート用 JSON)。
+"""EXP-0008: 候補 pool の改善前後の差分を集計する (レポート用 JSON)。
 
 段階:
     v17       — COCONUT ∪ train、±8.5 ppm (EXP-0001 / EXP-0002)
-    pcl       — + PubChemLite (EXP-0003 / EXP-0004)
-    improved  — + PubChemLite、m/z のずれ補正、±max(5 ppm, 2 mDa) (EXP-0005)
+    pcl       — + PubChemLite (EXP-0003 / EXP-0007)
+    improved  — + PubChemLite、m/z のずれ補正、±max(5 ppm, 2 mDa) (EXP-0008)
 
 使い方:
     uv run python scripts/casmi26_pool_diff.py
@@ -22,22 +22,22 @@ RUNS = {
     "np_keep": {
         "v17": E / "EXP-0001/np_keep",
         "pcl": E / "EXP-0003/np_keep_pcl",
-        "improved": E / "EXP-0005/np_keep",
+        "improved": E / "EXP-0008/np_keep",
     },
     "np_drop": {
         "v17": E / "EXP-0001/np_drop",
         "pcl": E / "EXP-0003/np_drop_pcl",
-        "improved": E / "EXP-0005/np_drop",
+        "improved": E / "EXP-0008/np_drop",
     },
     "np_other": {
         "v17": E / "EXP-0002/np_other",
-        "pcl": E / "EXP-0004/np_other_pcl",
-        "improved": E / "EXP-0005/np_other",
+        "pcl": E / "EXP-0007/np_other_pcl",
+        "improved": E / "EXP-0008/np_other",
     },
     "fold0_keep": {
         "v17": E / "EXP-0001/fold0_keep",
-        "pcl": E / "EXP-0004/fold0_keep_pcl",
-        "improved": E / "EXP-0005/fold0_keep",
+        "pcl": E / "EXP-0007/fold0_keep_pcl",
+        "improved": E / "EXP-0008/fold0_keep",
     },
 }
 STAGES = {"A": "ranker", "B": "channel_analog"}
@@ -116,7 +116,7 @@ def main() -> int:
                 )
             )
         res[cond] = c
-    out = E / "EXP-0005" / "pool_diff.json"
+    out = E / "EXP-0008" / "pool_diff.json"
     out.write_text(json.dumps(res, ensure_ascii=False, indent=1))
     for cond, c in res.items():
         print(

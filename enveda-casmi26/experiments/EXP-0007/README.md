@@ -1,4 +1,4 @@
-# EXP-0004: PubChemLite を候補 pool に足すときのマイナス面
+# EXP-0007: PubChemLite を候補 pool に足すときのマイナス面
 
 - **日付:** 2026-10-28
 - **コード:** `scripts/casmi26_baseline_cv.py --extra-pool pubchemlite` (EXP-0003 で追加)
