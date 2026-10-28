@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
-from casmi26.baseline.chem import neutral_mass
+from casmi26.baseline.chem import corrected_mz, neutral_mass
 from casmi26.baseline.pipeline import (
     BaselineConfig,
     BaselineOutput,
@@ -42,10 +42,16 @@ class InputPaths:
     structures: Path  # casmi26-identity-disjoint-validation-folds/structures.parquet
 
 
-def build_queries(test: pd.DataFrame) -> list[Query]:
+def build_queries(test: pd.DataFrame, cfg: BaselineConfig) -> list[Query]:
     queries = []
     for mid, sub in test.groupby("molecule_id", sort=True):
-        nm = neutral_mass(sub["precursor_mz"].to_numpy(np.float64), sub["adduct"].to_numpy())
+        pmz = corrected_mz(
+            sub["precursor_mz"].to_numpy(np.float64),
+            sub["ionization_mode"].to_numpy(),
+            cfg.mz_offset_pos,
+            cfg.mz_offset_neg,
+        )
+        nm = neutral_mass(pmz, sub["adduct"].to_numpy())
         mode = float(np.mean([1.0 if m == "positive" else -1.0 for m in sub["ionization_mode"]]))
         spectra = [
             (np.asarray(m, np.float32), np.asarray(i, np.float32))
@@ -99,7 +105,7 @@ def run_test(
     log(f"pool: {len(co_mass):,} COCONUT + {len(st_ok):,} train structures")
 
     test = pd.read_parquet(paths.test)
-    queries = build_queries(test)
+    queries = build_queries(test, cfg)
     log(f"test: {len(queries)} molecules / {len(test)} spectra")
     key_to_smiles = dict(zip(st["scorer_key"], st["smiles"], strict=False))
     return run_baseline(queries, index, pool, key_to_smiles, cfg, log=log)

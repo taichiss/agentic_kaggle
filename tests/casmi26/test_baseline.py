@@ -122,3 +122,26 @@ def test_to_submission_pads_and_keeps_sample_order():
     m2 = sub.set_index("molecule_id").loc["m2", "smiles"].split(";")
     assert m2[0] == "CN" and m2[1:] == [PAD_SMILES] * (TOPN - 1)
     assert sub.set_index("molecule_id").loc["m3", "smiles"] == ";".join([PAD_SMILES] * TOPN)
+
+
+def test_pool_window_uses_wider_of_ppm_and_da():
+    pool = CandidatePool(
+        mass=np.array([149.0700, 149.0718, 149.0730, 500.0000, 500.0040]),
+        smiles=np.array(["C"] * 5, object),
+        known_key=np.array(list("abcde"), object),
+        source=np.array(["train"] * 5, object),
+    )
+    # 149 Da では 5 ppm = 0.75 mDa < 2 mDa なので Da 側が効く
+    assert list(pool.window(149.0710, 5.0)) == []
+    assert list(pool.window(149.0710, 5.0, 2e-3)) == [0, 1, 2]
+    # 500 Da では 5 ppm = 2.5 mDa > 2 mDa
+    assert list(pool.window(500.0020, 5.0, 2e-3)) == [3, 4]
+
+
+def test_corrected_mz_subtracts_offset_by_mode():
+    from casmi26.baseline.chem import corrected_mz
+
+    out = corrected_mz(
+        np.array([300.0, 300.0]), np.array(["positive", "negative"], object), 7e-4, 2.5e-4
+    )
+    assert out == pytest.approx([300.0 - 7e-4, 300.0 - 2.5e-4])

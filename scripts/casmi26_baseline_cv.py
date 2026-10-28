@@ -32,7 +32,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 from casmi26.analysis import StageSpec, assign_classes, decompose, to_markdown
-from casmi26.baseline.chem import ADDUCTS, neutral_mass
+from casmi26.baseline.chem import ADDUCTS, corrected_mz, neutral_mass
 from casmi26.baseline.pipeline import (
     BaselineConfig,
     CandidatePool,
@@ -97,6 +97,13 @@ def main() -> int:
         help="> 0 なら m/z > precursor - W のピークを類似度計算から除く (0 = V17 と同じ)",
     )
     ap.add_argument(
+        "--pool-window",
+        choices=["v17", "corrected"],
+        default="v17",
+        help="v17: ±8.5 ppm / corrected: m/z のずれ (正 +0.70, 負 +0.25 mDa) を補正して"
+        " ±max(5 ppm, 2 mDa) (EXP-0005)",
+    )
+    ap.add_argument(
         "--extra-pool",
         choices=["none", "pubchemlite"],
         default="none",
@@ -109,8 +116,15 @@ def main() -> int:
         help="none: ホールドアウト構造の全スペクトルを除く / other: query と同じソースだけ除く",
     )
     args = ap.parse_args()
+    win = (
+        dict(pool_ppm=5.0, pool_min_da=2e-3, mz_offset_pos=0.70e-3, mz_offset_neg=0.25e-3)
+        if args.pool_window == "corrected"
+        else {}
+    )
     cfg = BaselineConfig(
-        workers=args.workers, clean=CleanConfig(precursor_window=args.precursor_window)
+        workers=args.workers,
+        clean=CleanConfig(precursor_window=args.precursor_window),
+        **win,  # type: ignore[arg-type]
     )
     cache = CACHE
     if args.precursor_window > 0:
@@ -153,7 +167,13 @@ def main() -> int:
     raw = read_rows(q_rows.index.to_numpy())
     queries = []
     for key, sub in q_rows.groupby("key", sort=True):
-        nm = neutral_mass(sub["precursor_mz"].to_numpy(np.float64), sub["adduct"].to_numpy())
+        pmz = corrected_mz(
+            sub["precursor_mz"].to_numpy(np.float64),
+            sub["ionization_mode"].to_numpy(),
+            cfg.mz_offset_pos,
+            cfg.mz_offset_neg,
+        )
+        nm = neutral_mass(pmz, sub["adduct"].to_numpy())
         mode = float(np.mean([1.0 if m == "positive" else -1.0 for m in sub["ionization_mode"]]))
         queries.append(
             Query(
@@ -238,6 +258,8 @@ def main() -> int:
         out / "truth.parquet", index=False
     )
     res.diag.to_parquet(out / "diag.parquet", index=False)
+    if res.features is not None:
+        res.features.to_parquet(out / "features.parquet", index=False)
     dec.per_molecule.to_parquet(out / "per_molecule.parquet", index=False)
     md = to_markdown(
         dec,
@@ -260,6 +282,7 @@ def main() -> int:
         "reference": args.reference,
         "precursor_window": args.precursor_window,
         "extra_pool": args.extra_pool,
+        "pool_window": args.pool_window,
         "molecules": dec.count,
         "spectra": int(len(q_rows)),
         "mrr": dec.mrr,

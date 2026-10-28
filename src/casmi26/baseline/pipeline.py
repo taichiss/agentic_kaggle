@@ -27,8 +27,14 @@ from casmi26.metrics.breakdown import canonical_inchikey14
 
 @dataclass(frozen=True)
 class BaselineConfig:
-    ppm_win: float = 8.5
+    ppm_win: float = 8.5  # ライブラリ検索 (Channel 1) の窓。候補窓も pool_ppm 未指定ならこれ
     ppm_fallback: float = 30.0
+    # 候補窓: 半幅 = max(target × pool_ppm, pool_min_da)。None / 0 は V17 と同じ
+    pool_ppm: float | None = None
+    pool_min_da: float = 0.0
+    # precursor m/z の系統ずれ (Da)。中性質量を出す前に引く。0 は V17 と同じ
+    mz_offset_pos: float = 0.0
+    mz_offset_neg: float = 0.0
     analog_win: float = 200.0
     n_analog: int = 100
     sim_power: float = 4.0
@@ -121,9 +127,10 @@ class CandidatePool:
         self.known_key = known_key[o]
         self.source = source[o]
 
-    def window(self, target: float, ppm: float) -> np.ndarray:
-        lo = np.searchsorted(self.mass, target * (1 - ppm / 1e6), "left")
-        hi = np.searchsorted(self.mass, target * (1 + ppm / 1e6), "right")
+    def window(self, target: float, ppm: float, min_da: float = 0.0) -> np.ndarray:
+        half = max(target * ppm / 1e6, min_da)
+        lo = np.searchsorted(self.mass, target - half, "left")
+        hi = np.searchsorted(self.mass, target + half, "right")
         return np.arange(lo, hi)
 
 
@@ -140,6 +147,8 @@ class BaselineOutput:
     stages: dict[str, pd.DataFrame]
     diag: pd.DataFrame
     database_keys: set[str]
+    # 候補ごとの生スコア (学習済みランカー用)。順位は同点を pool 順で割るので特徴量に使わない
+    features: pd.DataFrame | None = None
 
 
 def run_baseline(
@@ -178,7 +187,8 @@ def run_baseline(
         if np.isfinite(target):
             lib_hits = index.lib_hits(specs, target, cfg)
             analogs = index.analogs(specs, target, cfg)
-            cand = pool.window(target, cfg.ppm_win)
+            pool_ppm = cfg.pool_ppm if cfg.pool_ppm is not None else cfg.ppm_win
+            cand = pool.window(target, pool_ppm, cfg.pool_min_da)
             if len(cand) == 0:
                 cand = pool.window(target, cfg.ppm_fallback)
         per_q.append((target, lib_hits, analogs, cand))
@@ -213,6 +223,7 @@ def run_baseline(
         n: [] for n in ("pool", "ranker", "channel_lib", "channel_analog", "channel_frag")
     }
     diag = []
+    feat_rows: list[pd.DataFrame] = []
     for q, (target, lib_hits, analogs, cand) in zip(queries, per_q, strict=True):
         seen: set[str] = set()
         idx, ckeys = [], []
@@ -265,6 +276,20 @@ def run_baseline(
         )
 
         score = cfg.w_lib * lv + cfg.w_analog * ap + cfg.w_frag * fr
+        feat_rows.append(
+            pd.DataFrame(
+                {
+                    "molecule_id": q.molecule_id,
+                    "candidate_key": ckeys,
+                    "smiles": [str(pool.smiles[j]) for j in idx],
+                    "source": [str(pool.source[j]) for j in idx],
+                    "mass_ppm": [(float(pool.mass[j]) / target - 1) * 1e6 for j in idx],
+                    "lib": lv,
+                    "analog": ap,
+                    "frag": fr,
+                }
+            )
+        )
         for name, sc in (
             ("pool", np.zeros(n)),
             ("ranker", score),
@@ -292,4 +317,5 @@ def run_baseline(
             diag, columns=["molecule_id", "target_mass", "n_candidates", "best_lib", "best_analog"]
         ),
         database_keys=db_keys,
+        features=pd.concat(feat_rows, ignore_index=True) if feat_rows else None,
     )

@@ -1,0 +1,263 @@
+<title>CASMI26 候補 pool 改善</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Week 1 / EXP-0003 報告と同じ縦長レポート。冒頭で問いに答え、条件の切り替えで同じ図を見比べる。 */
+:root {
+  --bg: #f3f6f7; --surface: #ffffff; --ink: #11181c; --ink-2: #47535a; --muted: #6f7b82; --line: #dbe2e5;
+  --accent: #0d6876; --accent-soft: #e1eff1;
+  --v17: #a9b3b8; --pcl: #86b6ef; --imp: #1c5cab;
+  --r1: #1c5cab; --r2: #3987e5; --r3: #86b6ef; --r4: #cde2fb; --r5: #e6e1d8; --out: #c0362f;
+  --good: #0f7b3d; --warn: #a86400; --good-bg: #e3f3e8; --warn-bg: #fbf0dc;
+  --f-display: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --f-body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1316; --surface: #151c20; --ink: #e8eef0; --ink-2: #aab6bc; --muted: #7f8c92; --line: #26323a;
+  --accent: #56b8c4; --accent-soft: #15333a;
+  --v17: #56646b; --pcl: #5598e7; --imp: #9ec5f4;
+  --r1: #9ec5f4; --r2: #5598e7; --r3: #256abf; --r4: #184f95; --r5: #3a3f42; --out: #ef7a72;
+  --good: #4cc27c; --warn: #e3a33b; --good-bg: #13301f; --warn-bg: #352a12; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1316; --surface: #151c20; --ink: #e8eef0; --ink-2: #aab6bc; --muted: #7f8c92; --line: #26323a;
+  --accent: #56b8c4; --accent-soft: #15333a;
+  --v17: #56646b; --pcl: #5598e7; --imp: #9ec5f4;
+  --r1: #9ec5f4; --r2: #5598e7; --r3: #256abf; --r4: #184f95; --r5: #3a3f42; --out: #ef7a72;
+  --good: #4cc27c; --warn: #e3a33b; --good-bg: #13301f; --warn-bg: #352a12; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 52px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: clamp(28px, 4.6vw, 40px); font-weight: 900; line-height: 1.25; }
+h2 { font-size: 22px; font-weight: 700; line-height: 1.4; }
+h3 { font-size: 16px; font-weight: 700; }
+p { margin: 0; max-width: 72ch; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--ink-2); }
+header.hero { padding-top: 40px; display: grid; gap: 18px; }
+.answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.answer { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 8px; }
+.answer .q { font-size: 13px; color: var(--muted); }
+.answer .a { font-family: var(--f-display); font-size: 20px; font-weight: 700; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.answer p { font-size: 14px; color: var(--ink-2); }
+.big { font-family: var(--f-mono); font-size: 28px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.pill { font-family: var(--f-mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; letter-spacing: 0.04em; line-height: 1.6; display: inline-block; font-weight: 400; }
+.pill.good { background: var(--good-bg); color: var(--good); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+section { display: grid; gap: 18px; }
+.sec-head { display: grid; gap: 6px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card .take { color: var(--ink-2); font-size: 14px; }
+.src { font-size: 12px; color: var(--muted); font-family: var(--f-mono); word-break: break-all; }
+.chart { width: 100%; position: relative; }
+.chart svg { display: block; overflow: visible; }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 600px; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.up { color: var(--good); } td.down { color: var(--warn); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12.5px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid var(--line); }
+.controls { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { font: inherit; font-size: 13px; padding: 6px 12px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ctl-label { font-size: 12px; color: var(--muted); }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); z-index: 5; line-height: 1.5; }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; font-size: 14px; color: var(--ink-2); max-width: 82ch; }
+ol.plain b { color: var(--ink); }
+footer { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Enveda CASMI 2026 · EXP-0005 · 段 1 候補 pool の改善 · 2026-10-28</div>
+  <h1>正解は候補 pool に入るようになった。1 位に上げるのは次のランカーの仕事</h1>
+  <p class="lede">候補 pool に PubChemLite を足し、Enveda timsTOF の m/z のずれを補正して、窓を ±max(5 ppm, 2 mDa) にした。ランカーは変えていないので、ここに出る順位の変化は pool の変更だけによるもの。</p>
+  <div class="answers">
+    <div class="answer"><span class="q">正解は pool（候補）に入るようになったか</span>
+      <span class="a"><span class="pill good">入った</span><span class="big">3.2% → 96.8%</span></span>
+      <p>NP で正解を既存 pool から除いた条件。250 分子中 234 分子が新たに候補に入った。正解を残した条件でも、取りこぼしていた 1 分子を拾えて 100% になった。</p></div>
+    <div class="answer"><span class="q">正解が 1 位になる分子は増えたか</span>
+      <span class="a"><span class="pill warn">増えていない</span><span class="big">18 → 16</span></span>
+      <p>NP（正解を残した条件）の A 固定融合での 1 位の数。B analog 単独も 99 → 94。ランカーを変えていないので、候補が増えた分だけわずかに押し下げられた。</p></div>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">何を変えたか</div><h2>構造 DB を足し、窓の中心と幅を実測に合わせた</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>改善前（V17）</th><th>改善後</th><th>根拠</th></tr></thead>
+    <tbody>
+      <tr><td>構造 DB</td><td>COCONUT（prvsiyan 版）∪ train</td><td>＋ PubChemLite（38.6 万構造、CC0）</td><td>NP の正解の 97.6% を含む（EXP-0003）</td></tr>
+      <tr><td>precursor m/z のずれ</td><td>補正なし</td><td>正イオン −0.70 mDa、負イオン −0.25 mDa</td><td>Enveda timsTOF に固有の実測ずれ。他ライブラリはほぼ 0</td></tr>
+      <tr><td>候補窓</td><td class="num">±8.5 ppm</td><td class="num">±max(5 ppm, 2 mDa)</td><td>誤差は Da 単位でほぼ一定。低質量側で ppm 窓が狭すぎた</td></tr>
+    </tbody></table></div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">差分 1 · 正解が pool に入る割合</div><h2>pool 外だった天然物のほぼ全部が候補に入った</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>正解が候補窓に入る割合</h3><div class="chart" id="c-cov"></div>
+      <div class="legend"><span><i style="background:var(--v17)"></i>V17</span><span><i style="background:var(--pcl)"></i>+ PubChemLite</span><span><i style="background:var(--imp)"></i>改善後</span></div>
+      <p class="take">PubChemLite だけでは 96.0% で、正解を残した条件ではむしろ 1 分子落としていた（予備窓が働かなくなったため）。窓の補正と組み合わせて、どの条件でも V17 以上になった。</p></div>
+    <div class="card"><h3>候補数（中央値）</h3><div class="chart" id="c-ncand"></div>
+      <div class="legend"><span><i style="background:var(--v17)"></i>V17</span><span><i style="background:var(--pcl)"></i>+ PubChemLite</span><span><i style="background:var(--imp)"></i>改善後</span></div>
+      <p class="take">PubChemLite で増えた候補を、ずれ補正と窓の調整で減らした。fold0 は V17 より少ない 85 件になった。</p></div>
+  </div>
+  <div class="card"><h3>まだ pool に入らない 8 分子（NP、正解を除いた条件）</h3>
+    <p class="take">質量の誤差は全員 ±2.1 ppm 以内で、窓の問題ではない。COCONUT 版にも PubChemLite にも構造が載っていない分子で、トリテルペン配糖体、アシルグリセロール配糖体、リン脂質、リグナン、リモノイドなど。救うには COCONUT の完全版や PubChem 本体のような、より大きな DB が要る。</p></div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">差分 2 · 正解の順位の内訳</div><h2>候補には入ったが、上位 25 本の中で散らばっている</h2>
+    <p class="lede">各分子の正解が何位にいるかを、条件とランカーを切り替えて比べる。濃い青ほど上位。赤は正解が候補窓に入っていない分子。</p></div>
+  <div class="controls">
+    <span class="ctl-label">条件</span><div class="seg" id="sel-cond" role="group" aria-label="条件"></div>
+    <span class="ctl-label">ランカー</span><div class="seg" id="sel-rk" role="group" aria-label="ランカー"></div>
+  </div>
+  <div class="card"><h3 id="t-bins">正解の順位の内訳</h3><div class="chart" id="c-bins"></div>
+    <div class="legend" id="lg-bins"></div>
+    <p class="take" id="take-bins"></p></div>
+  <div class="grid2">
+    <div class="card"><h3>改善前 → 改善後の順位の移り変わり</h3><div class="chart" id="c-trans"></div>
+      <p class="take">行が V17、列が改善後での正解の順位。対角線より右上は順位が下がった分子、左下は上がった分子。</p></div>
+    <div class="card"><h3>分子ごとの増減</h3><div class="chart" id="c-move"></div>
+      <div class="legend"><span><i style="background:var(--good)"></i>上がった</span><span><i style="background:var(--warn)"></i>下がった</span><span><i style="background:var(--v17)"></i>変わらない</span></div>
+      <p class="take" id="take-move"></p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">差分 3 · MRR@25</div><h2>pool 外の分子で大きく伸び、他の条件はほぼ横ばい</h2></div>
+  <div class="tbl"><table id="t-mrr"></table></div>
+  <p class="take" style="font-size:14px;color:var(--ink-2)">Class 1 は reference スペクトルあり、Class 2 はなし、pool 外は正解が既存 pool にない分子（NP で正解を除いた条件）。EXP-0002 で推定した hidden test の構成は、Class 1 が 15%、Class 2 が 28%、pool 外が 57%。</p>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">LB への見込み</div><h2>hidden test の pool 外の分子が PubChemLite にどれだけあるか次第</h2></div>
+  <div class="card"><h3>見込み ΔLB と、pool 外の分子のうち PubChemLite にある割合 r</h3><div class="chart" id="c-lb"></div>
+    <div class="legend"><span><i style="background:var(--r2)"></i>A 固定融合：+0.001 + 0.105·r</span><span><i style="background:var(--warn)"></i>B analog 単独：−0.005 + 0.282·r</span></div>
+    <p class="take">EXP-0002 のクラス構成に、今回の条件別の差分を当てはめた試算で、まだ確かめていない。B は r が約 2% を超えればプラスになる。提出すれば、LB の変化から r を逆算できる。</p></div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">次に試すこと</div><h2>pool の次は、候補に入った正解を 1 位に上げる</h2></div>
+  <ol class="plain">
+    <li><b>改善後の pool で LB に提出する。</b>予測（上の直線）を事前に書き、結果から r を逆算する</li>
+    <li><b>段 4 ランカーに進む。</b>EXP-0003 の precursor 除去と断片スコア V3 を入れ、候補の出どころ（COCONUT / train / PubChemLite）も特徴量にする</li>
+    <li><b>残る 8 分子のために、より大きな DB を検討する。</b>COCONUT の完全版、PubChem 本体（ライセンスと計算時間を確認してから）</li>
+  </ol>
+</section>
+
+<footer>出典：enveda-casmi26/experiments/EXP-0005/pool_diff.json（scripts/casmi26_pool_diff.py が EXP-0001〜0005 の各条件から集計）、EXP-0005/README.md。</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const DATA = {"np_keep":{"versions":{"v17":{"n":250,"coverage":0.996,"n_cand_median":53.0,"n_cand_p90":196.39999999999998,"mrr_A":0.19436235085011908,"mrr_B":0.5346873484969137,"bins_A":{"1":18,"2-3":33,"4-10":79,"11-25":61,"26+":58,"pool外":1},"bins_B":{"1":99,"2-3":57,"4-10":51,"11-25":16,"26+":26,"pool外":1}},"pcl":{"n":250,"coverage":0.992,"n_cand_median":87.5,"n_cand_p90":212.69999999999996,"mrr_A":0.18331383923535222,"mrr_B":0.511171985669167,"bins_A":{"1":16,"2-3":33,"4-10":69,"11-25":67,"26+":63,"pool外":2},"bins_B":{"1":91,"2-3":63,"4-10":43,"11-25":18,"26+":33,"pool外":2}},"improved":{"n":250,"coverage":1.0,"n_cand_median":75.0,"n_cand_p90":198.1,"mrr_A":0.1944391919012622,"mrr_B":0.5208894349441409,"bins_A":{"1":16,"2-3":40,"4-10":66,"11-25":76,"26+":52,"pool外":0},"bins_B":{"1":94,"2-3":62,"4-10":43,"11-25":23,"26+":28,"pool外":0}}},"pool_change":{"gained":1,"lost":0,"kept":249,"never":0},"rank_change_A":{"better":53,"worse":30,"same":167},"pairs_A":[[1,1],[14,15],[6,6],[2,2],[1,1],[10,10],[21,24],[9,26],[8,9],[14,11],[26,26],[2,2],[2,2],[7,7],[2,2],[16,16],[11,11],[26,26],[14,14],[9,3],[15,14],[3,2],[5,4],[26,26],[5,5],[26,26],[1,2],[6,6],[26,26],[17,15],[14,16],[5,5],[23,23],[10,10],[10,16],[20,22],[21,15],[17,13],[7,7],[8,8],[2,2],[26,26],[10,10],[1,1],[26,26],[26,26],[11,22],[6,6],[26,26],[22,22],[11,14],[26,26],[10,6],[21,21],[26,26],[3,3],[2,2],[14,15],[8,7],[1,1],[8,8],[1,1],[6,3],[5,3],[3,3],[7,7],[14,14],[1,1],[26,21],[8,8],[11,12],[1,1],[26,23],[1,1],[26,26],[26,26],[11,11],[25,25],[7,6],[12,11],[10,11],[12,11],[26,26],[7,7],[8,8],[21,9],[4,4],[26,26],[6,4],[19,19],[26,26],[26,26],[26,26],[6,6],[25,25],[4,2],[7,14],[26,26],[26,26],[14,14],[0,16],[12,12],[5,4],[14,14],[26,26],[9,26],[1,1],[2,2],[26,26],[4,4],[26,26],[3,3],[26,19],[23,22],[4,4],[26,26],[2,2],[1,1],[19,13],[9,9],[1,1],[9,9],[4,2],[26,26],[1,1],[5,5],[3,3],[26,26],[26,26],[6,5],[10,15],[26,26],[7,7],[26,22],[22,21],[21,21],[11,11],[7,5],[1,1],[10,10],[2,2],[10,13],[1,1],[26,26],[3,3],[9,9],[10,7],[16,11],[2,2],[7,12],[4,5],[12,10],[6,6],[26,26],[26,26],[18,16],[26,26],[3,3],[6,4],[11,11],[11,11],[26,26],[8,8],[6,6],[26,26],[26,26],[2,2],[13,13],[2,2],[10,13],[26,15],[26,26],[26,15],[19,19],[12,12],[15,12],[3,3],[26,26],[26,26],[26,26],[1,1],[14,14],[2,2],[26,22],[26,26],[3,3],[4,3],[8,7],[6,13],[2,2],[2,2],[2,2],[17,17],[2,2],[8,9],[1,1],[20,20],[5,5],[14,22],[6,6],[16,10],[21,20],[3,26],[26,26],[3,3],[26,17],[2,2],[26,26],[5,5],[26,26],[20,8],[26,26],[4,4],[6,6],[14,12],[11,10],[5,5],[9,9],[18,18],[5,5],[3,3],[4,3],[26,26],[9,9],[7,7],[5,5],[26,26],[19,21],[3,3],[7,7],[16,16],[19,19],[6,6],[26,26],[8,8],[24,22],[4,4],[26,23],[5,5],[3,11],[26,26],[3,3],[8,9],[19,17],[16,19],[1,11],[26,26],[25,24],[4,3],[4,6]],"rank_change_B":{"better":21,"worse":35,"same":194},"pairs_B":[[1,1],[5,5],[1,1],[1,2],[1,1],[1,1],[18,14],[1,2],[4,4],[15,20],[1,1],[2,2],[1,1],[7,7],[1,1],[1,1],[2,2],[11,11],[8,8],[6,2],[1,1],[1,1],[5,5],[2,26],[2,2],[26,21],[1,2],[1,1],[26,26],[4,4],[1,2],[3,3],[21,21],[3,3],[10,17],[1,1],[10,10],[1,1],[6,6],[6,6],[2,2],[1,1],[2,2],[1,1],[26,26],[1,1],[5,10],[2,2],[26,26],[2,2],[23,26],[4,4],[6,3],[1,1],[26,26],[1,1],[9,9],[1,1],[5,5],[1,1],[1,1],[1,1],[2,2],[26,7],[3,3],[11,12],[14,14],[1,1],[1,1],[3,3],[5,5],[1,1],[2,2],[1,1],[26,26],[9,16],[3,3],[3,3],[1,1],[1,1],[9,9],[8,8],[24,25],[3,3],[1,1],[1,2],[2,2],[7,7],[5,3],[11,11],[1,1],[26,26],[26,26],[2,1],[26,26],[1,1],[9,26],[22,24],[1,1],[7,7],[0,1],[12,12],[4,4],[1,1],[26,26],[5,26],[1,1],[1,1],[5,4],[1,1],[3,3],[1,2],[3,3],[1,1],[1,1],[1,1],[1,1],[1,1],[26,26],[1,1],[1,1],[3,3],[4,2],[8,8],[1,1],[1,1],[1,1],[10,10],[26,26],[4,4],[9,24],[26,26],[2,2],[1,1],[3,3],[1,1],[5,5],[1,1],[1,1],[1,1],[2,2],[1,4],[1,1],[2,2],[1,1],[2,2],[10,10],[1,1],[1,1],[2,2],[3,6],[6,6],[2,2],[26,26],[4,4],[10,12],[2,2],[2,3],[3,3],[1,1],[4,10],[7,7],[1,1],[1,1],[1,1],[1,1],[2,1],[26,26],[3,3],[26,26],[15,12],[26,26],[2,2],[3,3],[5,5],[25,24],[1,1],[26,26],[3,5],[1,1],[1,1],[1,1],[1,1],[2,1],[2,2],[1,1],[3,2],[3,2],[4,26],[1,1],[2,2],[1,1],[26,26],[1,1],[1,2],[1,1],[8,10],[2,2],[1,3],[4,4],[2,3],[8,8],[1,1],[10,13],[1,1],[26,26],[1,1],[26,26],[1,1],[1,1],[5,6],[12,18],[1,1],[6,6],[2,2],[2,1],[3,3],[12,12],[1,1],[3,3],[1,1],[1,1],[2,2],[6,6],[6,6],[2,2],[2,2],[2,1],[1,1],[1,1],[2,2],[3,3],[1,1],[26,26],[1,1],[1,1],[1,1],[1,1],[4,4],[1,1],[26,26],[2,2],[13,17],[1,2],[26,26],[1,22],[26,15],[8,7],[3,2],[1,1]]},"np_drop":{"versions":{"v17":{"n":250,"coverage":0.032,"n_cand_median":52.0,"n_cand_p90":195.39999999999998,"mrr_A":0.004221637426900585,"mrr_B":0.008871111111111113,"bins_A":{"1":0,"2-3":1,"4-10":5,"11-25":1,"26+":1,"pool外":242},"bins_B":{"1":1,"2-3":1,"4-10":4,"11-25":1,"26+":1,"pool外":242}},"pcl":{"n":250,"coverage":0.96,"n_cand_median":87.5,"n_cand_p90":212.69999999999996,"mrr_A":0.17528050590201888,"mrr_B":0.4880940635912449,"bins_A":{"1":16,"2-3":30,"4-10":66,"11-25":66,"26+":62,"pool外":10},"bins_B":{"1":86,"2-3":62,"4-10":41,"11-25":19,"26+":32,"pool外":10}},"improved":{"n":250,"coverage":0.968,"n_cand_median":75.0,"n_cand_p90":198.1,"mrr_A":0.18595924202657546,"mrr_B":0.49780545226015815,"bins_A":{"1":16,"2-3":37,"4-10":62,"11-25":76,"26+":51,"pool外":8},"bins_B":{"1":89,"2-3":61,"4-10":40,"11-25":25,"26+":27,"pool外":8}}},"pool_change":{"gained":234,"lost":0,"kept":8,"never":8},"rank_change_A":{"better":188,"worse":1,"same":61},"pairs_A":[[0,1],[0,15],[0,6],[0,2],[0,1],[0,10],[0,24],[0,26],[0,9],[0,11],[0,26],[0,2],[0,2],[0,7],[0,2],[0,16],[0,11],[0,26],[0,14],[9,3],[0,14],[0,2],[0,4],[0,26],[0,0],[0,26],[0,2],[0,6],[0,26],[0,15],[0,16],[0,5],[0,23],[0,10],[0,16],[0,22],[0,15],[0,13],[0,7],[0,8],[0,2],[0,26],[0,10],[0,1],[0,26],[0,26],[0,22],[0,6],[0,26],[0,22],[0,14],[0,26],[0,6],[0,21],[0,26],[0,3],[0,2],[0,15],[8,7],[0,1],[0,8],[0,1],[0,3],[0,3],[0,3],[0,7],[0,14],[0,1],[0,21],[0,8],[0,12],[0,0],[0,23],[0,1],[0,26],[0,26],[0,11],[0,25],[0,6],[0,11],[10,11],[0,11],[0,26],[0,7],[0,8],[0,9],[0,4],[0,26],[6,4],[0,19],[0,26],[0,26],[0,26],[6,6],[0,25],[0,2],[0,14],[0,26],[0,26],[0,14],[0,16],[0,12],[0,4],[0,14],[0,26],[0,26],[0,1],[0,2],[0,26],[0,4],[0,26],[0,3],[0,19],[0,22],[0,4],[0,26],[0,2],[0,1],[19,13],[0,9],[0,1],[0,9],[0,2],[0,26],[0,1],[0,8],[3,3],[0,26],[0,26],[0,5],[0,15],[0,26],[0,7],[0,22],[0,21],[0,21],[0,11],[0,5],[0,1],[0,10],[0,1],[0,13],[0,1],[0,26],[0,3],[0,9],[0,0],[0,11],[0,0],[0,12],[0,5],[0,0],[0,6],[0,26],[26,26],[0,16],[0,26],[0,3],[0,4],[0,11],[0,11],[0,26],[0,8],[0,6],[0,26],[0,26],[0,2],[0,13],[0,2],[0,13],[0,15],[0,26],[0,15],[0,19],[0,12],[0,12],[0,0],[0,26],[0,26],[0,26],[0,1],[0,19],[0,2],[0,22],[0,26],[0,3],[0,3],[0,7],[0,13],[0,2],[0,2],[0,2],[0,17],[0,2],[0,9],[0,1],[0,20],[0,5],[0,22],[0,6],[0,10],[0,20],[0,26],[0,26],[0,3],[0,17],[0,2],[0,26],[0,5],[0,26],[0,8],[0,26],[0,4],[0,6],[0,12],[0,10],[0,5],[0,9],[0,18],[0,5],[0,3],[0,3],[0,26],[0,9],[0,7],[0,5],[0,26],[0,21],[0,3],[0,7],[0,16],[0,19],[0,6],[0,0],[0,8],[0,22],[0,0],[0,23],[0,5],[0,11],[0,26],[0,3],[0,9],[0,17],[0,19],[0,11],[0,26],[0,24],[0,3],[0,6]],"rank_change_B":{"better":212,"worse":0,"same":38},"pairs_B":[[0,1],[0,5],[0,1],[0,2],[0,1],[0,1],[0,14],[0,2],[0,4],[0,20],[0,1],[0,2],[0,1],[0,7],[0,1],[0,1],[0,2],[0,11],[0,8],[6,2],[0,1],[0,1],[0,5],[0,26],[0,0],[0,21],[0,2],[0,1],[0,26],[0,5],[0,2],[0,3],[0,21],[0,3],[0,17],[0,1],[0,10],[0,1],[0,6],[0,6],[0,2],[0,1],[0,2],[0,1],[0,26],[0,1],[0,10],[0,2],[0,26],[0,2],[0,26],[0,4],[0,3],[0,1],[0,26],[0,1],[0,9],[0,1],[5,5],[0,1],[0,1],[0,1],[0,2],[0,7],[0,3],[0,12],[0,14],[0,1],[0,1],[0,3],[0,5],[0,0],[0,2],[0,1],[0,26],[0,16],[0,3],[0,3],[0,1],[0,1],[9,9],[0,8],[0,25],[0,3],[0,1],[0,2],[0,2],[0,7],[5,3],[0,11],[0,1],[0,26],[0,26],[2,1],[0,26],[0,1],[0,26],[0,24],[0,1],[0,7],[0,1],[0,12],[0,4],[0,1],[0,26],[0,26],[0,1],[0,1],[0,4],[0,1],[0,3],[0,2],[0,3],[0,1],[0,1],[0,1],[0,1],[0,1],[26,26],[0,1],[0,1],[0,3],[0,2],[0,8],[0,1],[0,1],[1,1],[0,11],[0,26],[0,4],[0,24],[0,26],[0,2],[0,1],[0,3],[0,1],[0,5],[0,1],[0,1],[0,1],[0,1],[0,4],[0,1],[0,2],[0,1],[0,2],[0,0],[0,1],[0,0],[0,2],[0,6],[0,0],[0,2],[0,26],[25,4],[0,14],[0,2],[0,3],[0,3],[0,1],[0,10],[0,7],[0,1],[0,1],[0,1],[0,1],[0,1],[0,26],[0,3],[0,26],[0,12],[0,26],[0,2],[0,3],[0,5],[0,24],[0,0],[0,26],[0,5],[0,1],[0,1],[0,15],[0,1],[0,1],[0,2],[0,1],[0,2],[0,2],[0,26],[0,1],[0,2],[0,1],[0,26],[0,1],[0,2],[0,1],[0,10],[0,2],[0,3],[0,4],[0,3],[0,8],[0,1],[0,13],[0,1],[0,26],[0,1],[0,26],[0,1],[0,1],[0,6],[0,18],[0,1],[0,6],[0,2],[0,1],[0,3],[0,12],[0,2],[0,3],[0,2],[0,1],[0,2],[0,6],[0,6],[0,1],[0,2],[0,1],[0,1],[0,1],[0,2],[0,3],[0,1],[0,0],[0,1],[0,1],[0,0],[0,1],[0,4],[0,1],[0,26],[0,2],[0,17],[0,2],[0,26],[0,22],[0,15],[0,7],[0,2],[0,1]]},"np_other":{"versions":{"v17":{"n":250,"coverage":0.996,"n_cand_median":53.0,"n_cand_p90":196.39999999999998,"mrr_A":0.913535294117647,"mrr_B":0.6374936977032628,"bins_A":{"1":214,"2-3":28,"4-10":6,"11-25":1,"26+":0,"pool外":1},"bins_B":{"1":131,"2-3":47,"4-10":38,"11-25":14,"26+":19,"pool外":1}},"pcl":{"n":250,"coverage":0.992,"n_cand_median":87.5,"n_cand_p90":212.69999999999996,"mrr_A":0.9092019607843138,"mrr_B":0.6243485167404349,"bins_A":{"1":213,"2-3":27,"4-10":7,"11-25":1,"26+":0,"pool外":2},"bins_B":{"1":127,"2-3":50,"4-10":30,"11-25":15,"26+":26,"pool外":2}},"improved":{"n":250,"coverage":1.0,"n_cand_median":75.0,"n_cand_p90":198.1,"mrr_A":0.9172019607843138,"mrr_B":0.632211833134186,"bins_A":{"1":215,"2-3":27,"4-10":7,"11-25":1,"26+":0,"pool外":0},"bins_B":{"1":129,"2-3":51,"4-10":30,"11-25":18,"26+":22,"pool外":0}}},"pool_change":{"gained":1,"lost":0,"kept":249,"never":0},"rank_change_A":{"better":1,"worse":1,"same":248},"pairs_A":[[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[6,6],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[1,1],[4,4],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[3,3],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[2,2],[1,1],[1,1],[5,5],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[3,3],[0,1],[1,1],[2,2],[3,4],[8,8],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[2,2],[2,2],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[4,4],[2,2],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[3,3],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[2,2],[1,1],[1,1],[6,6],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[1,1],[17,17],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[2,2],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[3,3],[1,1],[1,1]],"rank_change_B":{"better":15,"worse":25,"same":210},"pairs_B":[[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[18,14],[1,2],[4,4],[15,20],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[2,2],[11,11],[1,1],[6,2],[1,1],[1,1],[5,5],[1,1],[2,2],[1,1],[1,2],[1,1],[26,26],[4,4],[1,2],[3,3],[21,21],[3,3],[10,17],[1,1],[10,10],[1,1],[6,6],[6,6],[2,2],[1,1],[2,2],[1,1],[26,26],[1,1],[1,1],[2,2],[26,26],[2,2],[23,26],[1,1],[5,1],[1,1],[1,1],[1,1],[1,1],[1,1],[5,5],[1,1],[1,1],[1,1],[2,2],[26,7],[3,3],[11,12],[14,14],[1,1],[1,1],[3,3],[5,5],[1,1],[1,1],[1,1],[26,26],[1,1],[3,3],[3,3],[1,1],[1,1],[9,9],[8,8],[24,25],[1,1],[1,1],[1,1],[2,2],[7,7],[5,3],[11,11],[1,1],[26,26],[26,26],[2,1],[26,26],[1,1],[9,26],[22,24],[1,1],[7,7],[0,1],[6,6],[4,4],[1,1],[13,13],[5,26],[1,1],[1,1],[2,2],[1,1],[1,1],[1,2],[1,3],[1,1],[1,1],[1,1],[1,1],[1,1],[26,26],[1,1],[1,1],[3,3],[4,2],[1,1],[1,1],[1,1],[1,1],[10,10],[26,26],[4,4],[9,24],[26,26],[2,2],[1,1],[3,3],[1,1],[5,5],[1,1],[1,1],[1,1],[1,1],[1,4],[1,1],[2,2],[1,1],[2,2],[1,1],[1,1],[1,1],[2,2],[3,6],[6,6],[2,2],[24,24],[4,4],[10,12],[2,2],[2,3],[3,3],[1,1],[4,10],[7,7],[1,1],[1,1],[1,1],[1,1],[2,1],[26,26],[3,3],[26,26],[1,1],[26,26],[2,2],[3,3],[5,5],[25,24],[1,1],[26,26],[1,1],[1,1],[1,1],[1,1],[1,1],[2,1],[2,2],[1,1],[3,2],[1,1],[4,26],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[8,10],[2,2],[1,3],[4,4],[1,1],[8,8],[1,1],[10,13],[1,1],[26,26],[1,1],[26,26],[1,1],[1,1],[1,1],[1,1],[1,1],[6,6],[2,2],[2,1],[3,3],[12,12],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[6,6],[2,2],[2,2],[1,1],[1,1],[1,1],[2,2],[3,3],[1,1],[26,26],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[1,1],[1,2],[26,26],[1,22],[2,1],[2,2],[3,2],[1,1]]},"fold0_keep":{"versions":{"v17":{"n":400,"coverage":1.0,"n_cand_median":88.0,"n_cand_p90":247.30000000000007,"mrr_A":0.09548116106366375,"mrr_B":0.5980388620844689,"bins_A":{"1":13,"2-3":26,"4-10":58,"11-25":92,"26+":211,"pool外":0},"bins_B":{"1":188,"2-3":94,"4-10":41,"11-25":25,"26+":52,"pool外":0}},"pcl":{"n":400,"coverage":1.0,"n_cand_median":113.5,"n_cand_p90":279.0,"mrr_A":0.09397516515739611,"mrr_B":0.5918609209826121,"bins_A":{"1":12,"2-3":28,"4-10":56,"11-25":93,"26+":211,"pool外":0},"bins_B":{"1":186,"2-3":94,"4-10":40,"11-25":20,"26+":60,"pool外":0}},"improved":{"n":400,"coverage":1.0,"n_cand_median":85.0,"n_cand_p90":238.5000000000001,"mrr_A":0.10677910796699075,"mrr_B":0.6035410231485099,"bins_A":{"1":12,"2-3":35,"4-10":63,"11-25":99,"26+":191,"pool外":0},"bins_B":{"1":190,"2-3":96,"4-10":39,"11-25":25,"26+":50,"pool外":0}}},"pool_change":{"gained":0,"lost":0,"kept":400,"never":0},"rank_change_A":{"better":89,"worse":7,"same":304},"pairs_A":[[1,1],[26,16],[26,26],[6,6],[5,7],[20,14],[26,26],[26,26],[11,9],[26,26],[15,13],[15,15],[26,26],[9,7],[23,20],[1,1],[26,26],[10,10],[26,4],[15,13],[23,23],[9,3],[26,26],[26,26],[26,26],[26,26],[26,26],[26,26],[12,12],[26,26],[26,26],[12,11],[26,26],[16,15],[26,26],[26,25],[5,5],[1,1],[26,26],[26,26],[6,3],[3,3],[26,26],[7,7],[26,26],[9,8],[3,3],[1,1],[2,2],[3,3],[12,12],[26,22],[26,26],[26,26],[26,26],[26,26],[26,26],[9,9],[26,26],[26,26],[26,26],[26,26],[7,7],[9,9],[26,26],[1,3],[21,21],[3,3],[26,26],[26,26],[11,13],[1,1],[26,26],[8,7],[26,26],[24,24],[26,26],[2,2],[26,25],[26,26],[5,5],[22,13],[26,25],[26,26],[3,3],[2,2],[26,26],[18,17],[26,7],[22,15],[17,17],[26,26],[26,26],[26,26],[26,26],[17,17],[26,26],[24,23],[16,6],[12,10],[6,6],[16,14],[24,23],[19,13],[26,26],[14,3],[26,26],[26,26],[26,26],[16,18],[26,26],[9,2],[1,1],[6,6],[15,13],[26,26],[7,7],[26,26],[26,26],[5,5],[21,21],[7,7],[11,12],[26,26],[26,26],[15,20],[26,26],[26,20],[5,5],[26,26],[26,26],[26,26],[4,4],[26,26],[13,13],[26,26],[6,6],[26,26],[7,7],[26,26],[5,4],[26,26],[11,11],[3,2],[1,1],[26,13],[18,12],[26,26],[13,13],[26,26],[26,26],[2,2],[14,13],[26,26],[26,26],[26,26],[8,8],[23,25],[16,16],[26,26],[26,26],[23,23],[17,17],[6,6],[13,13],[14,12],[26,26],[26,26],[26,26],[26,26],[26,26],[6,6],[26,26],[5,3],[26,26],[26,26],[26,26],[26,19],[26,26],[3,3],[26,26],[14,4],[26,26],[26,26],[5,5],[4,4],[26,26],[22,20],[10,10],[26,26],[26,26],[2,2],[26,26],[26,26],[26,26],[26,9],[16,4],[26,26],[16,12],[26,26],[26,26],[15,11],[3,3],[26,26],[26,26],[26,26],[1,1],[26,26],[26,26],[17,11],[18,18],[26,26],[1,1],[26,26],[15,12],[20,20],[26,26],[2,2],[26,26],[16,15],[26,26],[13,13],[26,21],[26,26],[26,19],[6,4],[10,9],[21,14],[26,26],[26,26],[8,8],[26,26],[26,26],[23,22],[13,10],[1,1],[26,26],[26,26],[1,1],[5,5],[8,6],[16,14],[26,26],[3,3],[26,26],[11,11],[26,26],[26,26],[26,26],[26,26],[26,26],[24,12],[26,26],[26,26],[14,12],[26,26],[16,16],[26,26],[3,3],[11,3],[8,8],[2,2],[26,26],[26,26],[26,26],[26,26],[26,26],[23,21],[2,2],[26,26],[26,26],[26,26],[26,26],[3,3],[3,3],[26,26],[26,26],[5,5],[6,5],[26,26],[26,26],[26,26],[26,26],[9,9],[13,13],[10,10],[13,12],[2,2],[26,26],[26,26],[26,26],[12,11],[26,18],[26,26],[14,14],[26,26],[12,9],[26,11],[5,5],[20,12],[6,2],[26,26],[26,23],[26,26],[26,26],[26,26],[26,26],[9,5],[26,19],[22,22],[8,6],[16,16],[26,26],[26,26],[17,12],[26,26],[26,26],[26,26],[26,16],[19,19],[21,11],[4,4],[26,26],[26,26],[26,26],[6,6],[26,26],[26,26],[26,26],[16,16],[26,26],[1,1],[26,26],[26,26],[26,26],[3,3],[26,25],[3,3],[26,26],[26,26],[26,17],[26,26],[3,3],[26,26],[10,10],[5,5],[26,26],[26,26],[26,26],[26,26],[8,8],[26,26],[6,6],[10,9],[15,15],[2,2],[26,26],[24,24],[26,26],[25,16],[26,26],[5,5],[13,12],[26,26],[26,26],[26,26],[26,26],[4,4],[17,13],[26,26],[20,18],[14,10],[26,26],[26,26],[6,2],[26,26],[26,26],[26,26],[21,21],[26,26],[16,16],[26,26],[16,16],[9,9],[3,3],[26,26],[26,26],[6,6],[26,26],[15,15],[26,26],[12,12],[17,14],[26,26],[19,19],[26,26],[21,15],[17,17],[26,26],[22,17]],"rank_change_B":{"better":26,"worse":28,"same":346},"pairs_B":[[1,1],[26,8],[3,3],[1,1],[1,1],[1,1],[19,21],[25,26],[1,1],[1,1],[1,1],[1,1],[5,5],[1,1],[1,1],[1,1],[5,4],[4,4],[1,1],[3,3],[1,1],[6,2],[1,1],[26,26],[1,1],[6,7],[26,26],[26,25],[1,1],[2,2],[26,26],[19,26],[12,12],[1,1],[1,1],[3,3],[1,1],[1,1],[26,26],[2,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[26,26],[1,1],[2,2],[3,3],[2,2],[26,19],[1,1],[2,2],[1,1],[25,26],[4,4],[1,1],[3,3],[26,26],[1,4],[21,25],[1,1],[26,26],[2,2],[1,1],[1,1],[4,4],[1,1],[2,2],[1,1],[6,6],[1,1],[1,1],[3,3],[1,1],[1,1],[1,1],[9,10],[1,1],[1,1],[26,26],[1,1],[2,1],[1,1],[1,1],[2,2],[26,26],[1,1],[26,26],[10,10],[3,3],[4,5],[1,1],[1,1],[2,2],[1,1],[1,1],[1,1],[26,26],[1,1],[17,17],[26,26],[1,1],[26,26],[1,1],[1,1],[1,1],[1,1],[16,18],[26,26],[1,1],[26,26],[26,26],[3,3],[1,1],[1,1],[2,2],[8,10],[26,26],[7,15],[1,1],[1,1],[1,1],[1,1],[4,3],[26,26],[1,1],[1,1],[26,26],[7,7],[1,1],[1,1],[2,2],[26,26],[2,2],[2,2],[1,1],[1,1],[2,2],[1,1],[1,1],[24,23],[1,1],[8,6],[6,6],[1,1],[2,2],[2,2],[1,1],[26,26],[1,1],[1,1],[18,23],[13,13],[1,1],[3,3],[2,2],[4,4],[1,1],[14,16],[2,2],[1,1],[26,26],[3,3],[7,7],[2,2],[26,26],[1,1],[12,11],[3,3],[2,2],[23,9],[25,26],[2,2],[2,2],[21,4],[1,1],[9,9],[1,1],[1,1],[26,26],[25,5],[1,1],[2,2],[26,26],[1,1],[2,2],[2,2],[1,1],[1,1],[26,2],[1,1],[1,1],[26,26],[1,1],[1,1],[1,2],[1,1],[1,1],[26,26],[1,1],[9,10],[2,2],[1,1],[3,3],[1,1],[1,1],[1,1],[2,2],[4,4],[25,25],[2,3],[1,1],[16,26],[3,3],[2,2],[1,1],[12,12],[2,1],[1,1],[19,17],[2,2],[1,1],[26,26],[1,1],[26,26],[4,4],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[26,26],[2,2],[2,2],[3,3],[26,26],[1,1],[1,1],[1,1],[26,26],[1,1],[26,26],[3,3],[1,1],[2,2],[1,1],[1,1],[1,1],[1,1],[2,2],[2,2],[19,20],[3,3],[26,26],[8,3],[1,1],[1,1],[2,2],[2,2],[6,6],[26,26],[26,26],[1,1],[1,1],[1,1],[2,2],[1,1],[2,2],[18,13],[3,4],[1,1],[1,1],[7,8],[2,2],[2,2],[3,3],[1,1],[1,1],[7,7],[26,26],[2,2],[14,14],[2,2],[1,1],[26,26],[2,2],[1,1],[1,1],[1,1],[1,1],[5,5],[26,17],[1,1],[1,1],[1,1],[2,2],[1,1],[1,1],[6,6],[1,1],[1,1],[1,1],[1,1],[1,1],[2,2],[4,4],[1,1],[26,19],[3,3],[2,2],[1,1],[26,26],[1,1],[3,3],[2,2],[1,1],[5,3],[1,1],[3,3],[2,1],[1,1],[7,7],[3,3],[12,13],[2,2],[1,1],[1,1],[26,26],[26,26],[2,2],[1,1],[1,1],[1,1],[1,1],[6,6],[1,1],[3,3],[2,2],[9,9],[1,1],[1,1],[2,2],[1,1],[2,2],[1,1],[3,3],[1,3],[1,1],[1,1],[2,3],[1,1],[1,1],[1,1],[10,12],[2,2],[2,2],[1,1],[3,3],[26,26],[4,4],[3,1],[4,4],[1,1],[1,1],[6,9],[26,26],[2,2],[1,1],[1,1],[2,2],[26,26],[1,1],[4,2],[1,1],[1,1],[3,3],[2,2],[1,1],[2,2],[2,2],[1,1],[1,1],[2,2],[6,6],[2,2],[26,19],[1,1],[26,26],[10,11]]}};
+(function(){
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const tip = document.getElementById('tip');
+function bindTip(node, html){
+  node.addEventListener('pointerenter', () => { tip.innerHTML = html; tip.hidden = false; });
+  node.addEventListener('pointermove', e => { tip.style.left = e.pageX + 'px'; tip.style.top = e.pageY + 'px'; });
+  node.addEventListener('pointerleave', () => { tip.hidden = true; });
+}
+function txt(svg, x, y, s, o = {}) { const t = el('text', { x, y, fill: o.fill || css('--ink-2'), 'font-size': o.size || 12, 'font-family': o.mono ? css('--f-mono') : css('--f-body'), 'text-anchor': o.anchor || 'start', 'dominant-baseline': o.base || 'middle', 'font-weight': o.weight || 400 }, svg); t.textContent = s; return t; }
+function svgIn(id, h){ const box = document.getElementById(id); box.innerHTML = ''; const w = box.clientWidth; const s = el('svg', { width: w, height: h, viewBox: `0 0 ${w} ${h}`, role: 'img' }, box); return [s, w]; }
+function hbar(svg, x, y, w, h, fill, round){ const r = round ? Math.min(4, w / 2, h / 2) : 0; const d = `M${x},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x} Z`; return el('path', { d, fill }, svg); }
+const pct = v => (v * 100).toFixed(1) + '%';
+const CONDS = [['np_drop', 'NP pool 外'], ['np_keep', 'NP Class 2'], ['np_other', 'NP Class 1'], ['fold0_keep', 'fold0']];
+const VERS = [['v17', 'V17', '--v17'], ['pcl', '+ PubChemLite', '--pcl'], ['improved', '改善後', '--imp']];
+const BINS = [['1', '1 位', '--r1'], ['2-3', '2–3 位', '--r2'], ['4-10', '4–10 位', '--r3'], ['11-25', '11–25 位', '--r4'], ['26+', '26 位以下', '--r5'], ['pool外', 'pool 外', '--out']];
+let cond = 'np_drop', rk = 'A';
+
+function grouped(id, key, fmt, max, ticks){
+  const narrow = document.getElementById(id).clientWidth < 460; const rh = 58, lw = narrow ? 80 : 96; const [s, w] = svgIn(id, CONDS.length * rh + 20); const pw = w - lw - 56;
+  ticks.forEach(v => { const x = lw + v / max * pw; el('line', { x1: x, x2: x, y1: 0, y2: CONDS.length * rh, stroke: css('--line') }, s); txt(s, x, CONDS.length * rh + 12, fmt(v), { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  CONDS.forEach(([c, lab], i) => { const y0 = i * rh + 6; txt(s, lw - 10, y0 + 22, lab, { anchor: 'end', size: 12, fill: css('--ink') });
+    VERS.forEach(([v, vl, col], j) => { const val = DATA[c].versions[v][key]; const y = y0 + j * 15; const b = hbar(s, lw, y, Math.max(val / max * pw, 1.5), 12, css(col), true); bindTip(b, `${lab} · ${vl}：${fmt(val)}`);
+      if (j === 2 || val / max < 0.15) txt(s, lw + Math.max(val / max * pw, 1.5) + 6, y + 6, fmt(val), { mono: 1, size: 10.5, fill: css('--ink'), weight: j === 2 ? 600 : 400 }); }); });
+}
+
+function seg(id, items, get, set){
+  const box = document.getElementById(id); box.innerHTML = '';
+  items.forEach(([k, lab]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = lab; b.setAttribute('aria-pressed', String(get() === k)); b.addEventListener('click', () => { set(k); renderSel(); }); box.appendChild(b); });
+}
+
+function bins(){
+  const c = DATA[cond]; const rh = 40, lw = 104; const [s, w] = svgIn('c-bins', VERS.length * rh + 22); const pw = w - lw - 8; const n = c.versions.v17.n;
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => { const x = lw + v * pw; el('line', { x1: x, x2: x, y1: 0, y2: VERS.length * rh, stroke: css('--line') }, s); txt(s, x, VERS.length * rh + 12, (v * 100).toFixed(0) + '%', { anchor: v === 0 ? 'start' : v === 1 ? 'end' : 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  VERS.forEach(([v, vl], i) => { const b = c.versions[v]['bins_' + rk]; const y = i * rh + 8, h = rh - 16; let x = lw;
+    txt(s, lw - 10, y + h / 2, vl, { anchor: 'end', size: 12.5, fill: css('--ink'), weight: v === 'improved' ? 600 : 400 });
+    BINS.forEach(([k, lab, col], j) => { const cnt = b[k]; if (!cnt) return; const bw = cnt / n * pw; const last = BINS.slice(j + 1).every(z => !b[z[0]]);
+      const r = hbar(s, x, y, Math.max(bw - (last ? 0 : 2), 0.5), h, css(col), last); bindTip(r, `${vl} · ${lab}：${cnt} 分子（${pct(cnt / n)}）`);
+      if (bw > 26) txt(s, x + 5, y + h / 2, cnt, { mono: 1, size: 10.5, fill: ['--r1', '--r2', '--out'].includes(col) ? css('--surface') : css('--ink') }); x += bw; }); });
+  document.getElementById('lg-bins').innerHTML = BINS.map(([, lab, col]) => `<span><i style="background:var(${col})"></i>${lab}</span>`).join('');
+  const a = c.versions.v17['bins_' + rk], z = c.versions.improved['bins_' + rk]; const top25 = o => o['1'] + o['2-3'] + o['4-10'] + o['11-25'];
+  document.getElementById('t-bins').textContent = `正解の順位の内訳（${CONDS.find(x => x[0] === cond)[1]}、${rk === 'A' ? 'A 固定融合' : 'B analog 単独'}、${n} 分子）`;
+  document.getElementById('take-bins').textContent = `1 位：${a['1']} → ${z['1']} 分子。上位 25 本に正解が入る分子：${top25(a)} → ${top25(z)}。pool 外：${a['pool外']} → ${z['pool外']} 分子。`;
+}
+
+const CODES = ['pool 外', '1', '2–3', '4–10', '11–25', '26+'];
+const binOf = r => r === 0 ? 0 : r === 1 ? 1 : r <= 3 ? 2 : r <= 10 ? 3 : r <= 25 ? 4 : 5;
+function trans(){
+  const pairs = DATA[cond]['pairs_' + rk]; const M = CODES.map(() => CODES.map(() => 0)); pairs.forEach(([a, b]) => { M[binOf(a)][binOf(b)]++; });
+  const box = document.getElementById('c-trans'); const W = box.clientWidth; const lw = 58, top = 30; const cell = Math.min(54, (W - lw - 4) / CODES.length); const [s] = svgIn('c-trans', top + cell * CODES.length + 26);
+  const mx = Math.max(...M.flat());
+  txt(s, lw + cell * CODES.length / 2, 8, '改善後の順位 →', { anchor: 'middle', size: 11, fill: css('--muted') });
+  CODES.forEach((c, j) => txt(s, lw + j * cell + cell / 2, top - 10, c, { anchor: 'middle', size: 10.5, fill: css('--ink-2') }));
+  CODES.forEach((c, i) => { txt(s, lw - 8, top + i * cell + cell / 2, c, { anchor: 'end', size: 10.5, fill: css('--ink-2') });
+    CODES.forEach((_, j) => { const v = M[i][j]; const r = el('rect', { x: lw + j * cell + 1, y: top + i * cell + 1, width: cell - 2, height: cell - 2, rx: 3, fill: v ? css(i === j ? '--v17' : (j === 0 || (i !== 0 && j > i) ? '--warn' : '--good')) : css('--bg'), opacity: v ? 0.25 + 0.75 * Math.sqrt(v / mx) : 1 }, s);
+      bindTip(r, `V17 ${CODES[i]} → 改善後 ${CODES[j]}：${v} 分子`);
+      if (v) txt(s, lw + j * cell + cell / 2, top + i * cell + cell / 2, v, { anchor: 'middle', mono: 1, size: 11, fill: css('--ink'), weight: 500 }); }); });
+  txt(s, 4, top + cell * CODES.length + 14, '↑ V17 の順位', { size: 11, fill: css('--muted') });
+}
+function move(){
+  const ch = DATA[cond]['rank_change_' + rk]; const tot = ch.better + ch.worse + ch.same; const [s, w] = svgIn('c-move', 64);
+  let x = 0; [['better', '上がった', '--good'], ['worse', '下がった', '--warn'], ['same', '変わらない', '--v17']].forEach(([k, lab, col], i, arr) => { const bw = ch[k] / tot * w; if (!ch[k]) return; const last = i === arr.length - 1;
+    const r = hbar(s, x, 10, Math.max(bw - (last ? 0 : 2), 0.5), 30, css(col), last); bindTip(r, `${lab}：${ch[k]} 分子`); if (bw > 30) txt(s, x + 6, 25, ch[k], { mono: 1, size: 11.5, fill: css('--surface'), weight: 500 }); x += bw; });
+  const pc = DATA[cond].pool_change;
+  document.getElementById('take-move').textContent = `正解の 1/rank が上がった分子 ${ch.better}、下がった分子 ${ch.worse}、変わらない分子 ${ch.same}。pool に新しく入った分子 ${pc.gained}、外れた分子 ${pc.lost}。`;
+}
+function mrrTable(){
+  const t = document.getElementById('t-mrr'); let h = '<thead><tr><th>条件</th><th>ランカー</th><th>V17</th><th>+ PubChemLite</th><th>改善後</th><th>V17 → 改善後</th></tr></thead><tbody>';
+  CONDS.forEach(([c, lab]) => ['A', 'B'].forEach(r => { const v = DATA[c].versions; const a = v.v17['mrr_' + r], p = v.pcl['mrr_' + r], z = v.improved['mrr_' + r]; const d = z - a;
+    h += `<tr><td>${r === 'A' ? lab : ''}</td><td>${r === 'A' ? 'A 固定融合' : 'B analog 単独'}</td><td class="num">${a.toFixed(3)}</td><td class="num">${p.toFixed(3)}</td><td class="num"><b>${z.toFixed(3)}</b></td><td class="num ${d > 0.0005 ? 'up' : d < -0.0005 ? 'down' : ''}">${d >= 0 ? '+' : ''}${d.toFixed(3)}</td></tr>`; }));
+  t.innerHTML = h + '</tbody>';
+}
+function lb(){
+  const H = 220; const [s, w] = svgIn('c-lb', H); const m = { l: 52, r: 14, t: 12, b: 34 }; const pw = w - m.l - m.r, ph = H - m.t - m.b; const lo = -0.02, hi = 0.3;
+  const X = r => m.l + r * pw, Y = v => m.t + ph - (v - lo) / (hi - lo) * ph;
+  [0, 0.1, 0.2, 0.3].forEach(v => { el('line', { x1: m.l, x2: m.l + pw, y1: Y(v), y2: Y(v), stroke: v === 0 ? css('--ink-2') : css('--line') }, s); txt(s, m.l - 6, Y(v), (v > 0 ? '+' : '') + v.toFixed(1), { anchor: 'end', mono: 1, size: 11, fill: css('--muted') }); });
+  [0, 0.25, 0.5, 0.75, 1].forEach(r => txt(s, X(r), m.t + ph + 14, (r * 100).toFixed(0) + '%', { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }));
+  txt(s, m.l + pw, m.t + ph + 30, 'r：pool 外の分子のうち PubChemLite にある割合 →', { anchor: 'end', size: 11, fill: css('--muted') });
+  [['A', 0.001, 0.105, '--r2'], ['B', -0.005, 0.282, '--warn']].forEach(([n, a, b, col]) => { el('line', { x1: X(0), y1: Y(a), x2: X(1), y2: Y(a + b), stroke: css(col), 'stroke-width': 2 }, s);
+    const d = el('circle', { cx: X(0.3), cy: Y(a + 0.3 * b), r: 5, fill: css(col), stroke: css('--surface'), 'stroke-width': 2 }, s); bindTip(d, `${n}：r = 30% で ${(a + 0.3 * b >= 0 ? '+' : '')}${(a + 0.3 * b).toFixed(3)}`);
+    txt(s, X(1) - 4, Y(a + b) - 10, `${n} +${(a + b).toFixed(3)}`, { anchor: 'end', mono: 1, size: 11, fill: css('--ink') }); });
+}
+
+function renderSel(){
+  seg('sel-cond', CONDS, () => cond, k => { cond = k; });
+  seg('sel-rk', [['A', 'A 固定融合'], ['B', 'B analog 単独']], () => rk, k => { rk = k; });
+  bins(); trans(); move();
+}
+function all(){ grouped('c-cov', 'coverage', v => (v * 100).toFixed(v === 1 || v === 0 ? 0 : 1) + '%', 1, [0, 0.5, 1]); grouped('c-ncand', 'n_cand_median', v => String(Math.round(v * 10) / 10), 120, [0, 40, 80, 120]); renderSel(); mrrTable(); lb(); }
+let t; all(); addEventListener('resize', () => { clearTimeout(t); t = setTimeout(all, 120); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+if (document.fonts) document.fonts.ready.then(all);
+})();
+</script>

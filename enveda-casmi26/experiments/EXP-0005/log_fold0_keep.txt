@@ -1,0 +1,12 @@
+[    1.8s] loaded metadata: 2,539,608 spectra / 277,566 structures
+[    2.0s] split=fold0: 400 molecules / 2284 spectra
+[   12.3s] library: 1,998,836 spectra / analog reps: 219,249
+[   12.6s] pool: 436,389 COCONUT + 0 none + 274,195 train
+[  115.8s]   spectral search 100/400
+[  221.3s]   spectral search 200/400
+[  330.8s]   spectral search 300/400
+[  443.6s]   spectral search 400/400
+[  443.6s]   canonicalize 11,127 COCONUT candidates
+[  465.7s]   fragment masses for 45,208 candidates
+[  552.4s] baseline done
+[  553.2s] MRR@25=0.1670 coverage=1.000 → enveda-casmi26/experiments/EXP-0005/fold0_keep_pw

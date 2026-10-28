@@ -77,6 +77,14 @@ def neutral_mass(mz: np.ndarray, adduct: np.ndarray) -> np.ndarray:
     return out
 
 
+def corrected_mz(
+    mz: np.ndarray, modes: np.ndarray, offset_pos: float, offset_neg: float
+) -> np.ndarray:
+    """ionization_mode ごとの系統ずれ (Da) を precursor m/z から引く。"""
+    pos = np.asarray(modes, dtype=object) == "positive"
+    return np.asarray(mz, np.float64) - np.where(pos, offset_pos, offset_neg)
+
+
 _MORGAN = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=2048)
 
 
