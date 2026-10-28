@@ -41,7 +41,8 @@
 - [x] PubChemLite 追加のマイナス面 → EXP-0007。希釈は −0.002〜−0.024 と小さく、pool 外の 3–4% を救えれば元が取れる (試算)
 - [x] 候補 pool の拡張 → EXP-0008 (PubChemLite 追加)。正解が pool に入る率 NP drop 3.2%→96.8%
 - [x] 改善後の pool で LB 提出 → A 0.200 / B 0.248 (+0.009 / +0.001)。予測は外れ、r ≈ 0.02〜0.08。hidden test の pool 外の分子は PubChemLite にもほぼない (EXP-0008)
-- [ ] 「pool 外は PubChem 本体にある」か「EXP-0002 のクラス構成モデルがずれている」かを切り分ける (公開 kernel の PubChem 統合前後の LB 差を調べる)
+- [x] 公開 kernel の記録で切り分け → PubChem だけにある候補を外すと Public LB 0.464 → 0.409 (−0.055)。PubChem 本体 (約 1 億構造) が要るが、文献量の prior とショートリストなしでは並べ切れない (EXP-0008 README)
+- [ ] PubChem 本体のローカル索引 (質量順 + 文献量の prior) を作り、CV でカバー率と希釈を測る
 - [ ] ~~候補 pool の拡張~~ (完了): PubChemLite (`casmi26-pubchemlite-cc0-candidate-fingerprints`) / PubChem tier を pool に追加し、候補数増による Class 1/2 の順位低下も同時に測る
 - [x] 誤差分解でボトルネック特定 → ランカー段が損失の 80–90%。[strategy/current.md](current.md) に反映
 - [ ] Week 1 Exit 条件: ボトルネック順位の特定 → keep 条件では達成。Class 3 比率 (drop 条件の現実的な見積もり) は未確定
