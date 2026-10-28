@@ -23,10 +23,22 @@ DATASETS = [
     "prvsiyan/coconut-casmi26-candidates",
     "dmitriigluzdov/casmi26-identity-disjoint-validation-folds",
     "metric/rdkit-2026-3-3-wheel",
+    "franciscoangulo/casmi26-pubchemlite-cc0-candidate-fingerprints",
 ]
+# slug → (提出モード, 候補 pool)。v17 = COCONUT ∪ train ±8.5 ppm、exp0008 = EXP-0008 の改善 pool
 KERNELS = {
-    "casmi26-exp0001-a-fusion": "fusion",
-    "casmi26-exp0001-b-analog": "analog",
+    "casmi26-exp0001-a-fusion": ("fusion", "v17"),
+    "casmi26-exp0001-b-analog": ("analog", "v17"),
+    "casmi26-exp0008-a-fusion": ("fusion", "exp0008"),
+    "casmi26-exp0008-b-analog": ("analog", "exp0008"),
+}
+DEFAULT_KERNELS = ["casmi26-exp0008-a-fusion", "casmi26-exp0008-b-analog"]
+# ノートブック冒頭に書くローカル CV (np / fold0、pool=keep)
+CV_NOTE = {
+    ("fusion", "v17"): "np 0.194 / fold0 0.096",
+    ("analog", "v17"): "np 0.535 / fold0 0.598",
+    ("fusion", "exp0008"): "np 0.194 / fold0 0.107 / np pool 外 0.186",
+    ("analog", "exp0008"): "np 0.521 / fold0 0.604 / np pool 外 0.498",
 }
 EMBED = [
     "casmi26/__init__.py",
@@ -81,7 +93,14 @@ sys.path.insert(0, str(PKG))
 
 RUN = r"""
 import pandas as pd
-from casmi26.baseline.infer import MODES, InputPaths, run_test, to_submission, validate_submission
+from casmi26.baseline.infer import (
+    MODES,
+    POOL_EXP0008,
+    InputPaths,
+    run_test,
+    to_submission,
+    validate_submission,
+)
 from casmi26.baseline.pipeline import BaselineConfig
 
 paths = InputPaths(
@@ -90,9 +109,12 @@ paths = InputPaths(
     sample_submission=find("sample_submission.csv", "enveda"),
     coconut_dir=find("coco_meta.pkl").parent,
     structures=find("structures.parquet", "identity-disjoint-validation-folds"),
+    pubchemlite_dir=find("pubchemlite_meta.pkl").parent if POOL == "exp0008" else None,
 )
 print(paths)
-cfg = BaselineConfig(workers=max(1, (os.cpu_count() or 2)))
+pool_cfg = POOL_EXP0008 if POOL == "exp0008" else {}
+cfg = BaselineConfig(workers=max(1, (os.cpu_count() or 2)), **pool_cfg)
+print("POOL", POOL, pool_cfg)
 log = lambda m: print(f"[{time.time() - T0:7.1f}s] {m}", flush=True)
 out = run_test(paths, cfg, log=log)
 
@@ -124,18 +146,27 @@ def _md(src: str) -> dict:
     return {"cell_type": "markdown", "metadata": {}, "source": src.strip("\n").splitlines(True)}
 
 
-def build(slug: str, mode: str, git_head: str) -> Path:
+def build(slug: str, mode: str, pool: str, git_head: str) -> Path:
     embedded = {rel: (SRC / rel).read_text(encoding="utf-8") for rel in EMBED}
     title = {"fusion": "A: lib + analog + 0.25 frag の固定融合", "analog": "B: analog チャネル単独"}
+    exp = {"v17": "EXP-0001", "exp0008": "EXP-0008"}[pool]
+    pool_desc = {
+        "v17": "COCONUT ∪ train、±8.5 ppm (V17)",
+        "exp0008": "COCONUT ∪ PubChemLite ∪ train、m/z ずれ補正、±max(5 ppm, 2 mDa)",
+    }
     cells = [
         _md(
-            f"# CASMI26 EXP-0001 {title[mode]}\n\n"
+            f"# CASMI26 {exp} {title[mode]}\n\n"
             f"- 生成元: `scripts/casmi26_prepare_kernel.py` (git `{git_head}`)\n"
             "- fold-safe に組み直した公開 baseline (haideptry V17) の Channel 1–3。"
             "FPNet と学習済みランカーは使わない\n"
-            "- ローカル CV: fusion np=0.194 / fold0=0.096、analog np=0.535 / fold0=0.598"
+            f"- 候補 pool: {pool_desc[pool]}\n"
+            f"- ローカル CV: {CV_NOTE[(mode, pool)]}"
         ),
-        _code(f"MODE = {mode!r}\nEMBEDDED = {json.dumps(embedded, ensure_ascii=False)}"),
+        _code(
+            f"MODE = {mode!r}\nPOOL = {pool!r}\n"
+            f"EMBEDDED = {json.dumps(embedded, ensure_ascii=False)}"
+        ),
         _code(SETUP),
         _code(RUN),
     ]
@@ -185,8 +216,11 @@ def main() -> int:
     head = subprocess.run(
         ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
     ).stdout.strip()
-    for slug, mode in KERNELS.items():
-        print(build(slug, mode, head))
+    import sys
+
+    for slug in sys.argv[1:] or DEFAULT_KERNELS:
+        mode, pool = KERNELS[slug]
+        print(build(slug, mode, pool, head))
     return 0
 
 

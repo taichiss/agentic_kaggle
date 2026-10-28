@@ -40,6 +40,11 @@ class InputPaths:
     sample_submission: Path
     coconut_dir: Path  # coco_meta.pkl / coco_mass.npy
     structures: Path  # casmi26-identity-disjoint-validation-folds/structures.parquet
+    pubchemlite_dir: Path | None = None  # pubchemlite_meta.pkl / pubchemlite_mass.npy (EXP-0008)
+
+
+# EXP-0008 の候補 pool 設定: m/z のずれ補正 (Enveda timsTOF) + ±max(5 ppm, 2 mDa)
+POOL_EXP0008 = dict(pool_ppm=5.0, pool_min_da=2e-3, mz_offset_pos=0.70e-3, mz_offset_neg=0.25e-3)
 
 
 def build_queries(test: pd.DataFrame, cfg: BaselineConfig) -> list[Query]:
@@ -94,15 +99,29 @@ def run_test(
         cm = pickle.load(f)
     co_mass = np.load(paths.coconut_dir / "coco_mass.npy")
     st_ok = st.drop_duplicates("scorer_key")
+    ex_mass, ex_smiles = np.zeros(0), np.zeros(0, object)
+    if paths.pubchemlite_dir is not None:
+        with open(paths.pubchemlite_dir / "pubchemlite_meta.pkl", "rb") as f:
+            pm = pickle.load(f)
+        ex_mass = np.load(paths.pubchemlite_dir / "pubchemlite_mass.npy")
+        ex_smiles = np.asarray(pm["smiles"], object)
     pool = CandidatePool(
-        mass=np.concatenate([co_mass, st_ok["mono_mass"].to_numpy()]),
-        smiles=np.concatenate([np.asarray(cm["smiles"], object), st_ok["smiles"].to_numpy(object)]),
-        known_key=np.concatenate(
-            [np.full(len(co_mass), None, object), st_ok["scorer_key"].to_numpy(object)]
+        mass=np.concatenate([co_mass, ex_mass, st_ok["mono_mass"].to_numpy()]),
+        smiles=np.concatenate(
+            [np.asarray(cm["smiles"], object), ex_smiles, st_ok["smiles"].to_numpy(object)]
         ),
-        source=np.array(["coconut"] * len(co_mass) + ["train"] * len(st_ok), object),
+        known_key=np.concatenate(
+            [
+                np.full(len(co_mass) + len(ex_mass), None, object),
+                st_ok["scorer_key"].to_numpy(object),
+            ]
+        ),
+        source=np.array(
+            ["coconut"] * len(co_mass) + ["pubchemlite"] * len(ex_mass) + ["train"] * len(st_ok),
+            object,
+        ),
     )
-    log(f"pool: {len(co_mass):,} COCONUT + {len(st_ok):,} train structures")
+    log(f"pool: {len(co_mass):,} COCONUT + {len(ex_mass):,} PubChemLite + {len(st_ok):,} train")
 
     test = pd.read_parquet(paths.test)
     queries = build_queries(test, cfg)
