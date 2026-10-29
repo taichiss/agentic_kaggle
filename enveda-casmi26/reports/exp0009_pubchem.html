@@ -1,0 +1,250 @@
+<title>CASMI26 PubChem 統合</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: これまでの CASMI26 報告と同じ縦長レポート。冒頭で 2 つの問いに答え、CV → LB → 解釈 → 次の手の順。 */
+:root {
+  --bg: #f3f6f7; --surface: #ffffff; --ink: #11181c; --ink-2: #47535a; --muted: #6f7b82; --line: #dbe2e5;
+  --accent: #0d6876; --accent-soft: #e1eff1;
+  --np: #2a78d6; --f0: #eb6834; --c1: #6250d6;
+  --base: #a9b3b8; --s1: #1baf7a; --s2: #eda100;
+  --good: #0f7b3d; --warn: #a86400; --bad: #c0362f; --good-bg: #e3f3e8; --warn-bg: #fbf0dc; --bad-bg: #fbe6e4;
+  --f-display: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --f-body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1316; --surface: #151c20; --ink: #e8eef0; --ink-2: #aab6bc; --muted: #7f8c92; --line: #26323a;
+  --accent: #56b8c4; --accent-soft: #15333a; --np: #3987e5; --f0: #d95926; --c1: #9085e9;
+  --base: #56646b; --s1: #199e70; --s2: #c98500;
+  --good: #4cc27c; --warn: #e3a33b; --bad: #ef7a72; --good-bg: #13301f; --warn-bg: #352a12; --bad-bg: #3a1a18; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1316; --surface: #151c20; --ink: #e8eef0; --ink-2: #aab6bc; --muted: #7f8c92; --line: #26323a;
+  --accent: #56b8c4; --accent-soft: #15333a; --np: #3987e5; --f0: #d95926; --c1: #9085e9;
+  --base: #56646b; --s1: #199e70; --s2: #c98500;
+  --good: #4cc27c; --warn: #e3a33b; --bad: #ef7a72; --good-bg: #13301f; --warn-bg: #352a12; --bad-bg: #3a1a18; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 52px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: clamp(28px, 4.6vw, 40px); font-weight: 900; line-height: 1.25; }
+h2 { font-size: 22px; font-weight: 700; line-height: 1.4; }
+h3 { font-size: 16px; font-weight: 700; }
+p { margin: 0; max-width: 72ch; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--ink-2); }
+header.hero { padding-top: 40px; display: grid; gap: 18px; }
+.answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.answer { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 8px; align-content: start; }
+.answer .q { font-size: 13px; color: var(--muted); }
+.answer .a { font-family: var(--f-display); font-size: 20px; font-weight: 700; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.answer p { font-size: 14px; color: var(--ink-2); }
+.big { font-family: var(--f-mono); font-size: 26px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.pill { font-family: var(--f-mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; letter-spacing: 0.04em; line-height: 1.6; display: inline-block; font-weight: 400; }
+.pill.good { background: var(--good-bg); color: var(--good); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.bad { background: var(--bad-bg); color: var(--bad); }
+section { display: grid; gap: 18px; }
+.sec-head { display: grid; gap: 6px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card .take { color: var(--ink-2); font-size: 14px; }
+.src { font-size: 12px; color: var(--muted); font-family: var(--f-mono); word-break: break-all; }
+.chart { width: 100%; position: relative; }
+.chart svg { display: block; overflow: visible; }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 600px; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.hi { font-weight: 600; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; border-left: 2px solid var(--line); }
+.steps li { position: relative; padding: 0 0 16px 22px; display: grid; gap: 3px; }
+.steps li::before { content: ""; position: absolute; left: -7px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+.steps li:last-child { padding-bottom: 0; }
+.steps .t { font-weight: 600; }
+.steps .d { font-size: 14px; color: var(--ink-2); max-width: 78ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12.5px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); z-index: 5; line-height: 1.5; }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; font-size: 14px; color: var(--ink-2); max-width: 82ch; }
+ol.plain b { color: var(--ink); }
+footer { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Enveda CASMI 2026 · EXP-0009 · PubChem 本体の統合 · 2026-10-29</div>
+  <h1>PubChem は手元の PC で扱えた。CV では大きく伸びたが、LB では下がった</h1>
+  <p class="lede">PubChem 本体（約 1.1 億構造）の索引を作り、窓ごとに文献量の多い候補を足して、文献量の prior で並べた。NP ホールドアウトの CV では +0.21 伸びたが、LB はこれまでの最良より −0.020 下がった。hidden test の分子は、NP ホールドアウトよりずっと文献が少ない。</p>
+  <div class="answers">
+    <div class="answer"><span class="q">自分の PC で PubChem を扱えるか</span>
+      <span class="a"><span class="pill good">扱える</span><span class="big">7 分 / 10 GB</span></span>
+      <p>12 コア・メモリ 15 GB・空きディスク 909 GB の PC で、5.2 GB をダウンロードし、1 億 1,040 万構造の索引を 7 分（ピークメモリ 10 GB、ディスク 11 GB）で作れた。Kaggle 用の軽量版は 4.0 GB で、提出 kernel も 18〜39 分で完走した。</p></div>
+    <div class="answer"><span class="q">PubChem を足すと LB は上がったか</span>
+      <span class="a"><span class="pill bad">下がった</span><span class="big">0.248 → 0.228</span></span>
+      <p>これまでの最良（EXP-0008 の B、analog 単独）から、S1（analog + 断片 + 文献量 prior）で −0.020。事前の判定基準（+0.03）に届かず、この路線は採用しない。</p></div>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">やったこと</div><h2>索引を作り、効果を確かめながら提出まで進めた</h2></div>
+  <ol class="steps">
+    <li><span class="t">PubChem FTP の Extras を 4 ファイル取得（5.2 GB）</span><span class="d">CID-Mass（分子式と質量）、CID-SMILES、CID-SID（登録数）、CID-PMID（文献数）。</span></li>
+    <li><span class="t">質量順の索引を作成</span><span class="d">荷電種と複数成分を除いた 100–1500 Da の中性構造 1 億 1,040 万件。SMILES はディスク上に置き、窓の分だけ読む。文献量の prior は公開 kernel と同じ 0.25 ×（ln(1 + 登録数) + ln(1 + 文献数)）。</span></li>
+    <li><span class="t">効果確認 1：正解は窓の中で文献量の何位か</span><span class="d">パイプラインを回す前の安価な確認。NP は 66% が 1 位、fold0 は中央値 2,674 位。</span></li>
+    <li><span class="t">効果確認 2：CV（窓ごとに文献量の上位 100 件を追加）</span><span class="d">4 条件 × 6 通りの並べ方。重みは決め打ちで、検証データでは調整していない。</span></li>
+    <li><span class="t">Kaggle 用の軽量版索引（4,420 万件、4.0 GB）を非公開 Dataset として作成</span><span class="d">窓の上位 100 件の文献量の並びは、1,050 窓中 1,047 窓で完全版と一致。CV の数字も完全版とほぼ同じ。</span></li>
+    <li><span class="t">予測を固定してから 2 本を提出</span><span class="d">S1（本命）と S2（文献量だけ、診断用）。</span></li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">効果確認 1</div><h2>天然物は文献量だけで 66% が 1 位。合成化合物は文献がほとんどない</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>正解が PubChem の窓で文献量の上位 N 件に入る割合</h3><div class="chart" id="c-cov"></div>
+      <div class="legend"><span><i style="background:var(--np)"></i>NP（天然物、250 分子）</span><span><i style="background:var(--f0)"></i>fold0（合成の drug-like、400 分子）</span></div>
+      <p class="take">窓の中の PubChem 構造は中央値 4,160 件（NP）/ 8,434 件（fold0）。正解はどちらも 98% 以上が PubChem に載っているが、fold0 は文献が少なく上位に来ない。</p>
+      <div class="src">EXP-0009/pubchem_coverage.json</div></div>
+    <div class="card"><h3>手元 PC での処理</h3>
+      <div class="tbl" style="border:0"><table style="min-width:0">
+        <thead><tr><th>処理</th><th>時間</th><th>メモリ / ディスク</th></tr></thead>
+        <tbody>
+          <tr><td>ダウンロード（4 ファイル）</td><td class="num">約 5 分</td><td class="num">5.2 GB</td></tr>
+          <tr><td>完全版の索引</td><td class="num">7 分 22 秒</td><td class="num">10 GB / 11 GB</td></tr>
+          <tr><td>軽量版の索引</td><td class="num">約 4 分</td><td class="num">13 GB 前後 / 4.0 GB</td></tr>
+          <tr><td>CV 1 条件（候補 +2.4 万）</td><td class="num">8〜11 分</td><td class="num">—</td></tr>
+          <tr><td>Kaggle 上の提出 kernel</td><td class="num">18〜39 分</td><td class="num">—</td></tr>
+        </tbody></table></div>
+      <p class="take">最も重いのは軽量版の作成時のメモリ（13 GB、PC の 15 GB に対してぎりぎり）。全件をそのまま候補にすると、窓あたり数千件になり計算が間に合わないので、文献量で上位 100 件に絞った。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">効果確認 2 · CV</div><h2>NP では文献量の prior が大きく効いたが、合成化合物では効かない</h2>
+    <p class="lede">EXP-0008 の pool に、窓ごとに文献量の上位 100 件の PubChem 候補を足した。同じ候補を並べ方だけ変えて比べる。</p></div>
+  <div class="card"><h3>並べ方ごとの MRR@25（CV）</h3><div class="chart" id="c-cv"></div>
+    <div class="legend"><span><i style="background:var(--np)"></i>NP Class 2（reference なし）</span><span><i style="background:var(--c1)"></i>NP Class 1（reference あり）</span><span><i style="background:var(--f0)"></i>fold0（drug-like）</span></div>
+    <p class="take">文献量だけ（S2）は NP で 0.778 と最高だが、fold0 では 0.003。S1（analog + 断片 + prior）は 3 条件とも安定して高く、本命に選んだ。PubChem を足すだけ（prior なし）では、希釈で B が 0.521 → 0.478 に下がる。</p>
+    <div class="src">EXP-0009/*_pc100_slim、scripts/casmi26_rank_variants.py</div></div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">LB</div><h2>CV と LB で向きが逆になった</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>事前の予測と実際の LB</h3><div class="chart" id="c-pred"></div>
+      <div class="legend"><span><i style="background:var(--accent-soft);border:1px solid var(--accent)"></i>予測の幅</span><span><i style="background:var(--ink)"></i>実際の LB</span></div>
+      <p class="take">どれも提出前に README に固定した予測。4 本とも予測の下限付近か、それより下だった。EXP-0008 のあと、pool 外の寄与を 0 とするようにクラス構成の計算を直すと EXP-0008 の 2 本は事後的に再現できたが（0.191 / 0.242）、その計算で立てた EXP-0009 の予測も上振れした。</p></div>
+    <div class="card"><h3>これまでの提出の LB</h3><div class="chart" id="c-hist"></div>
+      <p class="take">最良は今も EXP-0008 の B（0.248）。PubChemLite の追加（EXP-0008）はほぼ横ばい、PubChem 本体と文献量 prior（EXP-0009）は下がった。</p></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>提出</th><th>NP Class 2（CV）</th><th>fold0（CV）</th><th>予測</th><th>LB</th><th>判定</th></tr></thead>
+    <tbody>
+      <tr><td>EXP-0008 B：analog 単独（比較の基準）</td><td class="num">0.521</td><td class="num">0.604</td><td class="num">0.33〜0.50</td><td class="num hi">0.248</td><td>予測は外れ（現在の最良）</td></tr>
+      <tr><td>EXP-0009 S1：analog + 断片 + prior</td><td class="num">0.734</td><td class="num">0.626</td><td class="num">0.25〜0.43</td><td class="num hi">0.228</td><td><span class="pill bad">不採用</span> 基準比 −0.020</td></tr>
+      <tr><td>EXP-0009 S2：prior だけ（診断）</td><td class="num">0.778</td><td class="num">0.003</td><td class="num">0.05〜0.45</td><td class="num hi">0.116</td><td><span class="pill warn">prior は補助に</span> 文献量は NP の 0.34 倍</td></tr>
+    </tbody></table></div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">解釈</div><h2>hidden test の分子は文献が少なく、文献量の prior が誤答を押し上げた</h2></div>
+  <ol class="plain">
+    <li><b>NP ホールドアウトは、文献量を使う変更の評価に向かない。</b>よく研究された天然物ばかりで、文献量だけで 66% が 1 位になる。天然物パネルの README にも「文献量の prior に有利」と注意書きがある</li>
+    <li><b>hidden test の文献の多さは、NP ホールドアウトの 3 分の 1 程度。</b>文献量だけの S2 は 0.116 で、NP ホールドアウトから期待される 0.337 の 0.34 倍だった。文献の多い別の異性体が上位に来て、正解が押し下げられる（fold0 と同じ現象）</li>
+    <li><b>公開 kernel が PubChem から得点できているのは、FPNet で構造を見分けているから。</b>窓あたり数千件の PubChem 候補から正解を選ぶには、構造に敏感な証拠（指紋予測）が要る。今の analog と断片だけでは、PubChem の候補を足しても誤答が増えるだけになる</li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">次に試すこと</div><h2>PubChem の索引は手元に残し、構造を見分ける特徴量を先に作る</h2></div>
+  <ol class="plain">
+    <li><b>提出の基準は EXP-0008 の B（0.248）のまま。</b>EXP-0009 の索引と kernel は、そのまま再利用できる</li>
+    <li><b>評価セットを作り直す。</b>文献量を使う変更は、NP ホールドアウトだけで判定しない。文献の少ない分子（fold0 型）を混ぜるか、S2 の LB（0.116）に合う割合で NP と fold0 を混ぜた評価を使う</li>
+    <li><b>構造に敏感な特徴量を作る。</b>fold-safe FPNet や MIST のような指紋予測ができれば、PubChem の候補も見分けられるようになる。そのときに PubChem の索引を使い直す</li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">限界と注意</div><h2>予測モデルと CV の両方に、まだずれがある</h2></div>
+  <ul class="plain">
+    <li>予測に使ったクラス構成（EXP-0002）は未知数 2 つに式 2 本の推定で、文献量のように分子の性質で効き方が変わる変更には合わなかった</li>
+    <li>軽量版の索引では、1,050 窓中 3 窓で境目付近の候補が完全版と違う。結果への影響は無視できると判断した</li>
+    <li>窓あたりの PubChem 候補は文献量の上位 100 件に固定した。件数を変えた比較はしていない</li>
+    <li>分子ごとの順位の CSV（正解の InChIKey を含む）を一度 git にコミットしてしまい、今は追跡から外してある。履歴（コミット 001aaa6）には残っている</li>
+  </ul>
+</section>
+
+<footer>出典：enveda-casmi26/experiments/EXP-0009/（README.md、pubchem_coverage.json、各条件の summary.json）、EXP-0008/README.md、registry.csv。</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(function(){
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const tip = document.getElementById('tip');
+function bindTip(node, html){ node.addEventListener('pointerenter', () => { tip.innerHTML = html; tip.hidden = false; }); node.addEventListener('pointermove', e => { tip.style.left = e.pageX + 'px'; tip.style.top = e.pageY + 'px'; }); node.addEventListener('pointerleave', () => { tip.hidden = true; }); }
+function txt(svg, x, y, s, o = {}) { const t = el('text', { x, y, fill: o.fill || css('--ink-2'), 'font-size': o.size || 12, 'font-family': o.mono ? css('--f-mono') : css('--f-body'), 'text-anchor': o.anchor || 'start', 'dominant-baseline': o.base || 'middle', 'font-weight': o.weight || 400 }, svg); t.textContent = s; return t; }
+function svgIn(id, h){ const box = document.getElementById(id); box.innerHTML = ''; const w = box.clientWidth; const s = el('svg', { width: w, height: h, viewBox: `0 0 ${w} ${h}`, role: 'img' }, box); return [s, w]; }
+function vbar(svg, x, y, w, h, fill){ const r = Math.min(4, w / 2, Math.max(h, 0) / 2); const d = `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`; return el('path', { d, fill }, svg); }
+function hbar(svg, x, y, w, h, fill){ const r = Math.min(4, w / 2, h / 2); const d = `M${x},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x} Z`; return el('path', { d, fill }, svg); }
+
+const COV = { n: [1, 10, 30, 100, 300, 1000, 3000], np: [0.656, 0.956, 0.988, 0.996, 0.996, 0.996, 0.996], f0: [0.002, 0.005, 0.0075, 0.025, 0.05, 0.23, 0.51] };
+function cov(){
+  const H = 240; const [s, w] = svgIn('c-cov', H); const m = { l: 44, r: 14, t: 12, b: 36 }; const pw = w - m.l - m.r, ph = H - m.t - m.b;
+  const X = n => m.l + Math.log10(n) / Math.log10(3000) * pw, Y = v => m.t + ph - v * ph;
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => { el('line', { x1: m.l, x2: m.l + pw, y1: Y(v), y2: Y(v), stroke: css('--line') }, s); txt(s, m.l - 6, Y(v), (v * 100) + '%', { anchor: 'end', mono: 1, size: 11, fill: css('--muted') }); });
+  COV.n.forEach(n => txt(s, X(n), m.t + ph + 14, n, { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }));
+  txt(s, m.l + pw, m.t + ph + 30, '上位 N 件（対数）→', { anchor: 'end', size: 11, fill: css('--muted') });
+  el('line', { x1: X(100), x2: X(100), y1: m.t, y2: m.t + ph, stroke: css('--ink-2'), 'stroke-dasharray': '3 3' }, s);
+  txt(s, X(100) + 4, m.t + ph * 0.55, '採用した N = 100', { size: 11, fill: css('--ink-2') });
+  [['np', '--np', 'NP'], ['f0', '--f0', 'fold0']].forEach(([k, c, lab]) => {
+    el('polyline', { points: COV.n.map((n, i) => `${X(n)},${Y(COV[k][i])}`).join(' '), fill: 'none', stroke: css(c), 'stroke-width': 2 }, s);
+    COV.n.forEach((n, i) => { const d = el('circle', { cx: X(n), cy: Y(COV[k][i]), r: 4, fill: css(c), stroke: css('--surface'), 'stroke-width': 2 }, s); bindTip(d, `${lab} · 上位 ${n} 件：${(COV[k][i] * 100).toFixed(1)}%`); }); });
+}
+
+const CV = [['A 固定融合', 0.167, 0.917, 0.104], ['B analog', 0.478, 0.603, 0.561], ['A + prior', 0.351, 0.941, 0.096], ['B + prior', 0.724, 0.791, 0.554], ['S1 B+断片+prior', 0.734, 0.797, 0.626], ['S2 prior だけ', 0.778, 0.778, 0.003]];
+function cv(){
+  const H = 270; const [s, w] = svgIn('c-cv', H); const m = { l: 36, r: 6, t: 16, b: 44 }; const pw = w - m.l - m.r, ph = H - m.t - m.b;
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => { const y = m.t + ph - v * ph; el('line', { x1: m.l, x2: m.l + pw, y1: y, y2: y, stroke: css('--line') }, s); txt(s, m.l - 6, y, v.toFixed(2), { anchor: 'end', mono: 1, size: 11, fill: css('--muted') }); });
+  const gw = pw / CV.length, bw = Math.min(18, (gw - 10) / 3);
+  CV.forEach(([lab, a, b, c], i) => { const gx = m.l + i * gw + (gw - bw * 3 - 4) / 2; if (i >= 4) el('rect', { x: m.l + i * gw + 1, y: m.t, width: gw - 2, height: ph, fill: css('--accent'), opacity: 0.07 }, s);
+    [[a, '--np', 'NP Class 2'], [b, '--c1', 'NP Class 1'], [c, '--f0', 'fold0']].forEach(([v, col, n], j) => { const bh = v * ph; const r = vbar(s, gx + j * (bw + 2), m.t + ph - bh, bw, Math.max(bh, 1), css(col)); bindTip(r, `${lab} · ${n}：${v.toFixed(3)}`); });
+    const words = lab.split(' '); txt(s, m.l + i * gw + gw / 2, m.t + ph + 14, words[0], { anchor: 'middle', size: 11.5, fill: css('--ink'), weight: i >= 4 ? 600 : 400 });
+    if (w > 520) txt(s, m.l + i * gw + gw / 2, m.t + ph + 30, words.slice(1).join(' '), { anchor: 'middle', size: 10.5, fill: css('--muted') }); });
+}
+
+const PRED = [['EXP-0008 A', 0.22, 0.29, 0.200], ['EXP-0008 B', 0.33, 0.50, 0.248], ['EXP-0009 S1', 0.25, 0.43, 0.228], ['EXP-0009 S2', 0.05, 0.45, 0.116]];
+function pred(){
+  const rh = 46, lw = 100; const [s, w] = svgIn('c-pred', PRED.length * rh + 24); const pw = w - lw - 16; const X = v => lw + v / 0.5 * pw;
+  [0, 0.1, 0.2, 0.3, 0.4, 0.5].forEach(v => { el('line', { x1: X(v), x2: X(v), y1: 0, y2: PRED.length * rh, stroke: css('--line') }, s); txt(s, X(v), PRED.length * rh + 12, v.toFixed(1), { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  PRED.forEach(([n, lo, hi, act], i) => { const y = i * rh + rh / 2; txt(s, lw - 10, y, n, { anchor: 'end', size: 12, fill: css('--ink') });
+    if (hi > lo) { const b = el('rect', { x: X(lo), y: y - 9, width: X(hi) - X(lo), height: 18, rx: 4, fill: css('--accent-soft'), stroke: css('--accent') }, s); bindTip(b, `${n}：予測 ${lo.toFixed(2)}〜${hi.toFixed(2)}`); }
+    else { const d = el('rect', { x: X(lo) - 1.5, y: y - 10, width: 3, height: 20, fill: css('--accent') }, s); bindTip(d, `${n}：予測（点）${lo.toFixed(3)}`); }
+    const a = el('circle', { cx: X(act), cy: y, r: 6, fill: css('--ink'), stroke: css('--surface'), 'stroke-width': 2 }, s); bindTip(a, `${n}：実際の LB ${act.toFixed(3)}`);
+    txt(s, X(act), y + 17, act.toFixed(3), { anchor: 'middle', mono: 1, size: 10.5, fill: css('--ink') }); });
+}
+
+const HIST = [['EXP-0001 A', 0.191, '--base'], ['EXP-0001 B', 0.247, '--base'], ['EXP-0008 A', 0.200, '--base'], ['EXP-0008 B', 0.248, '--np'], ['EXP-0009 S1', 0.228, '--s1'], ['EXP-0009 S2', 0.116, '--s2']];
+function hist(){
+  const rh = 32, lw = 100; const [s, w] = svgIn('c-hist', HIST.length * rh + 22); const pw = w - lw - 50; const max = 0.3;
+  [0, 0.1, 0.2, 0.3].forEach(v => { const x = lw + v / max * pw; el('line', { x1: x, x2: x, y1: 0, y2: HIST.length * rh, stroke: css('--line') }, s); txt(s, x, HIST.length * rh + 12, v.toFixed(1), { anchor: 'middle', mono: 1, size: 11, fill: css('--muted') }); });
+  const bx = lw + 0.248 / max * pw; el('line', { x1: bx, x2: bx, y1: 0, y2: HIST.length * rh, stroke: css('--np'), 'stroke-dasharray': '3 3' }, s);
+  HIST.forEach(([n, v, c], i) => { const y = i * rh + 6, h = rh - 12; txt(s, lw - 10, y + h / 2, n, { anchor: 'end', size: 12, fill: css('--ink') });
+    const b = hbar(s, lw, y, v / max * pw, h, css(c)); bindTip(b, `${n}：LB ${v.toFixed(3)}`); txt(s, lw + v / max * pw + 6, y + h / 2, v.toFixed(3), { mono: 1, size: 11, fill: css('--ink'), weight: n === 'EXP-0008 B' ? 600 : 400 }); });
+}
+
+function all(){ cov(); cv(); pred(); hist(); }
+let t; all(); addEventListener('resize', () => { clearTimeout(t); t = setTimeout(all, 120); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
+new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+if (document.fonts) document.fonts.ready.then(all);
+})();
+</script>
