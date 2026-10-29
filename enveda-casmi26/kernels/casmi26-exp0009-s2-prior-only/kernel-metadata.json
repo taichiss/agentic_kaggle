@@ -1,0 +1,23 @@
+{
+  "id": "yuitomurano/casmi26-exp0009-s2-prior-only",
+  "title": "casmi26-exp0009-s2-prior-only",
+  "code_file": "notebook.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "dataset_sources": [
+    "prvsiyan/coconut-casmi26-candidates",
+    "dmitriigluzdov/casmi26-identity-disjoint-validation-folds",
+    "metric/rdkit-2026-3-3-wheel",
+    "franciscoangulo/casmi26-pubchemlite-cc0-candidate-fingerprints",
+    "yuitomurano/casmi26-pubchem-slim"
+  ],
+  "competition_sources": [
+    "enveda-CASMI26-molecule-id-mass-spectra"
+  ],
+  "kernel_sources": [],
+  "model_sources": []
+}

@@ -26,6 +26,7 @@ import pickle
 import time
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -40,11 +41,13 @@ from casmi26.baseline.pipeline import (
     SpectralIndex,
     run_baseline,
 )
+from casmi26.baseline.pubchem import PubChemIndex, collect_candidates
 from casmi26.baseline.spectra import CleanConfig, clean_library
 
 TRAIN = Path("data/input/enveda-CASMI26-molecule-id-mass-spectra/train.parquet")
 FOLDS = Path("data/input/external/casmi26/casmi26-identity-disjoint-validation-folds")
 COCO = Path("data/input/external/casmi26/coconut-casmi26-candidates")
+PUBCHEM = Path("data/working/casmi26/pubchem_index")
 PCL = Path("data/input/external/casmi26/casmi26-pubchemlite-cc0-candidate-fingerprints")
 CACHE = Path("data/working/casmi26/library_clean.npz")
 SEED = 20260930
@@ -110,13 +113,22 @@ def main() -> int:
         help="候補 pool に追加する構造 DB",
     )
     ap.add_argument(
+        "--pubchem-top",
+        type=int,
+        default=0,
+        help="> 0 なら PubChem 本体の索引から、窓ごとに文献量の上位 N 件を pool に足す (EXP-0009)",
+    )
+    ap.add_argument(
+        "--pubchem-index", type=Path, default=PUBCHEM, help="PubChem 索引 (完全版 / 軽量版)"
+    )
+    ap.add_argument(
         "--reference",
         choices=["none", "other"],
         default="none",
         help="none: ホールドアウト構造の全スペクトルを除く / other: query と同じソースだけ除く",
     )
     args = ap.parse_args()
-    win = (
+    win: dict[str, Any] = (
         dict(pool_ppm=5.0, pool_min_da=2e-3, mz_offset_pos=0.70e-3, mz_offset_neg=0.25e-3)
         if args.pool_window == "corrected"
         else {}
@@ -124,7 +136,7 @@ def main() -> int:
     cfg = BaselineConfig(
         workers=args.workers,
         clean=CleanConfig(precursor_window=args.precursor_window),
-        **win,  # type: ignore[arg-type]
+        **win,
     )
     cache = CACHE
     if args.precursor_window > 0:
@@ -212,20 +224,49 @@ def main() -> int:
         ex_mass = np.load(PCL / "pubchemlite_mass.npy")
         ex_smiles = np.asarray(pm["smiles"], object)
         ex_keys = np.asarray(pm["keys"], object)
+    pc_mass, pc_smiles, pc_prior = np.zeros(0), np.zeros(0, object), np.zeros(0, np.float32)
+    if args.pubchem_top > 0:
+        pc = PubChemIndex(args.pubchem_index)
+        pc_smiles, pc_mass, pc_prior, sizes = collect_candidates(
+            pc,
+            [q.neutral_masses for q in queries],
+            pool_ppm=cfg.pool_ppm if cfg.pool_ppm is not None else cfg.ppm_win,
+            pool_min_da=cfg.pool_min_da,
+            top=args.pubchem_top,
+        )
+        log(
+            f"PubChem: {len(pc):,} structures, window median {np.median(sizes):.0f}"
+            f" → top {args.pubchem_top} per query = {len(pc_mass):,} candidates"
+        )
+    n_base = len(co_mass) + len(ex_mass) + len(st_ok)
     pool = CandidatePool(
-        mass=np.concatenate([co_mass, ex_mass, st_ok["mono_mass"].to_numpy()]),
+        mass=np.concatenate([co_mass, ex_mass, st_ok["mono_mass"].to_numpy(), pc_mass]),
         smiles=np.concatenate(
-            [np.asarray(cm["smiles"], object), ex_smiles, st_ok["smiles"].to_numpy(object)]
+            [
+                np.asarray(cm["smiles"], object),
+                ex_smiles,
+                st_ok["smiles"].to_numpy(object),
+                pc_smiles,
+            ]
         ),
         known_key=np.concatenate(
             [
                 np.full(len(co_mass) + len(ex_mass), None, object),
                 st_ok["scorer_key"].to_numpy(object),
+                np.full(len(pc_mass), None, object),
             ]
         ),
         source=np.array(
-            ["coconut"] * len(co_mass) + [args.extra_pool] * len(ex_mass) + ["train"] * len(st_ok),
+            ["coconut"] * len(co_mass)
+            + [args.extra_pool] * len(ex_mass)
+            + ["train"] * len(st_ok)
+            + ["pubchem"] * len(pc_mass),
             object,
+        ),
+        prior=(
+            np.concatenate([np.full(n_base, np.nan, np.float32), pc_prior])
+            if args.pubchem_top > 0
+            else None
         ),
     )
     log(
@@ -247,7 +288,16 @@ def main() -> int:
     dec = decompose(truth, res.stages, stages=stages, classes=classes)
     channel_mrr = {
         name: decompose(truth, res.stages, stages=[StageSpec(name, 1)]).mrr
-        for name in ("channel_lib", "channel_analog", "channel_frag")
+        for name in (
+            "channel_lib",
+            "channel_analog",
+            "channel_frag",
+            "ranker_prior",
+            "analog_prior",
+            "analog_frag_prior",
+            "prior_only",
+        )
+        if name in res.stages
     }
 
     out: Path = args.out
@@ -283,6 +333,8 @@ def main() -> int:
         "precursor_window": args.precursor_window,
         "extra_pool": args.extra_pool,
         "pool_window": args.pool_window,
+        "pubchem_top": args.pubchem_top,
+        "pubchem_index": str(args.pubchem_index),
         "molecules": dec.count,
         "spectra": int(len(q_rows)),
         "mrr": dec.mrr,

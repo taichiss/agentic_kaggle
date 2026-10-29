@@ -24,13 +24,20 @@ from casmi26.baseline.pipeline import (
     SpectralIndex,
     run_baseline,
 )
+from casmi26.baseline.pubchem import PubChemIndex, collect_candidates
 from casmi26.baseline.spectra import clean_library
 
 TOPN = 25
 PAD_SMILES = "CCO"
 
 # 提出モード → 使う段出力
-MODES = {"fusion": "ranker", "analog": "channel_analog"}
+MODES = {
+    "fusion": "ranker",
+    "analog": "channel_analog",
+    # EXP-0009: PubChem 候補 + 文献量 prior を使う段 (pubchem_dir 指定時のみ)
+    "analog_frag_prior": "analog_frag_prior",
+    "prior_only": "prior_only",
+}
 
 
 @dataclass(frozen=True)
@@ -41,6 +48,7 @@ class InputPaths:
     coconut_dir: Path  # coco_meta.pkl / coco_mass.npy
     structures: Path  # casmi26-identity-disjoint-validation-folds/structures.parquet
     pubchemlite_dir: Path | None = None  # pubchemlite_meta.pkl / pubchemlite_mass.npy (EXP-0008)
+    pubchem_dir: Path | None = None  # casmi26.baseline.pubchem の索引 (EXP-0009、軽量版で可)
 
 
 # EXP-0008 の候補 pool 設定: m/z のずれ補正 (Enveda timsTOF) + ±max(5 ppm, 2 mDa)
@@ -80,6 +88,7 @@ def run_test(
     cfg: BaselineConfig,
     *,
     cache_path: Path | None = None,
+    pubchem_top: int = 100,
     log: Callable[[str], None] = print,
 ) -> BaselineOutput:
     st = pd.read_parquet(
@@ -105,26 +114,52 @@ def run_test(
             pm = pickle.load(f)
         ex_mass = np.load(paths.pubchemlite_dir / "pubchemlite_mass.npy")
         ex_smiles = np.asarray(pm["smiles"], object)
+    test = pd.read_parquet(paths.test)
+    queries = build_queries(test, cfg)
+    pc_smiles, pc_mass = np.zeros(0, object), np.zeros(0)
+    pc_prior = np.zeros(0, np.float32)
+    if paths.pubchem_dir is not None:
+        pc_smiles, pc_mass, pc_prior, sizes = collect_candidates(
+            PubChemIndex(paths.pubchem_dir),
+            [q.neutral_masses for q in queries],
+            pool_ppm=cfg.pool_ppm if cfg.pool_ppm is not None else cfg.ppm_win,
+            pool_min_da=cfg.pool_min_da,
+            top=pubchem_top,
+        )
+        log(f"PubChem: window median {np.median(sizes):.0f} → {len(pc_mass):,} candidates")
+    n_base = len(co_mass) + len(ex_mass) + len(st_ok)
     pool = CandidatePool(
-        mass=np.concatenate([co_mass, ex_mass, st_ok["mono_mass"].to_numpy()]),
+        mass=np.concatenate([co_mass, ex_mass, st_ok["mono_mass"].to_numpy(), pc_mass]),
         smiles=np.concatenate(
-            [np.asarray(cm["smiles"], object), ex_smiles, st_ok["smiles"].to_numpy(object)]
+            [
+                np.asarray(cm["smiles"], object),
+                ex_smiles,
+                st_ok["smiles"].to_numpy(object),
+                pc_smiles,
+            ]
         ),
         known_key=np.concatenate(
             [
                 np.full(len(co_mass) + len(ex_mass), None, object),
                 st_ok["scorer_key"].to_numpy(object),
+                np.full(len(pc_mass), None, object),
             ]
         ),
         source=np.array(
-            ["coconut"] * len(co_mass) + ["pubchemlite"] * len(ex_mass) + ["train"] * len(st_ok),
+            ["coconut"] * len(co_mass)
+            + ["pubchemlite"] * len(ex_mass)
+            + ["train"] * len(st_ok)
+            + ["pubchem"] * len(pc_mass),
             object,
+        ),
+        prior=(
+            np.concatenate([np.full(n_base, np.nan, np.float32), pc_prior])
+            if paths.pubchem_dir is not None
+            else None
         ),
     )
     log(f"pool: {len(co_mass):,} COCONUT + {len(ex_mass):,} PubChemLite + {len(st_ok):,} train")
 
-    test = pd.read_parquet(paths.test)
-    queries = build_queries(test, cfg)
     log(f"test: {len(queries)} molecules / {len(test)} spectra")
     key_to_smiles = dict(zip(st["scorer_key"], st["smiles"], strict=False))
     return run_baseline(queries, index, pool, key_to_smiles, cfg, log=log)

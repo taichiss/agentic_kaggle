@@ -1,0 +1,32 @@
+{
+  "np": {
+    "molecules": 250,
+    "window_median": 4159.5,
+    "window_p90": 12204.199999999997,
+    "in_pubchem_window": 0.996,
+    "coverage_top_n": {
+      "10": 0.956,
+      "30": 0.988,
+      "100": 0.996,
+      "300": 0.996,
+      "1000": 0.996,
+      "3000": 0.996
+    },
+    "rank_median_when_found": 1.0
+  },
+  "fold0": {
+    "molecules": 400,
+    "window_median": 8434.0,
+    "window_p90": 18860.2,
+    "in_pubchem_window": 0.98,
+    "coverage_top_n": {
+      "10": 0.005,
+      "30": 0.0075,
+      "100": 0.025,
+      "300": 0.05,
+      "1000": 0.23,
+      "3000": 0.51
+    },
+    "rank_median_when_found": 2673.5
+  }
+}

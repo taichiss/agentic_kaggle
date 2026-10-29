@@ -24,6 +24,7 @@ DATASETS = [
     "dmitriigluzdov/casmi26-identity-disjoint-validation-folds",
     "metric/rdkit-2026-3-3-wheel",
     "franciscoangulo/casmi26-pubchemlite-cc0-candidate-fingerprints",
+    "yuitomurano/casmi26-pubchem-slim",
 ]
 # slug → (提出モード, 候補 pool)。v17 = COCONUT ∪ train ±8.5 ppm、exp0008 = EXP-0008 の改善 pool
 KERNELS = {
@@ -31,14 +32,18 @@ KERNELS = {
     "casmi26-exp0001-b-analog": ("analog", "v17"),
     "casmi26-exp0008-a-fusion": ("fusion", "exp0008"),
     "casmi26-exp0008-b-analog": ("analog", "exp0008"),
+    "casmi26-exp0009-s1-analog-frag-prior": ("analog_frag_prior", "exp0009"),
+    "casmi26-exp0009-s2-prior-only": ("prior_only", "exp0009"),
 }
-DEFAULT_KERNELS = ["casmi26-exp0008-a-fusion", "casmi26-exp0008-b-analog"]
+DEFAULT_KERNELS = ["casmi26-exp0009-s1-analog-frag-prior", "casmi26-exp0009-s2-prior-only"]
 # ノートブック冒頭に書くローカル CV (np / fold0、pool=keep)
 CV_NOTE = {
     ("fusion", "v17"): "np 0.194 / fold0 0.096",
     ("analog", "v17"): "np 0.535 / fold0 0.598",
     ("fusion", "exp0008"): "np 0.194 / fold0 0.107 / np pool 外 0.186",
     ("analog", "exp0008"): "np 0.521 / fold0 0.604 / np pool 外 0.498",
+    ("analog_frag_prior", "exp0009"): "np Class 2 0.734 / np Class 1 0.797 / fold0 0.626",
+    ("prior_only", "exp0009"): "np Class 2 0.778 / np Class 1 0.778 / fold0 0.003",
 }
 EMBED = [
     "casmi26/__init__.py",
@@ -49,6 +54,7 @@ EMBED = [
     "casmi26/baseline/fragments.py",
     "casmi26/baseline/spectra.py",
     "casmi26/baseline/pipeline.py",
+    "casmi26/baseline/pubchem.py",
     "casmi26/baseline/infer.py",
 ]
 SRC = Path("src")
@@ -109,18 +115,20 @@ paths = InputPaths(
     sample_submission=find("sample_submission.csv", "enveda"),
     coconut_dir=find("coco_meta.pkl").parent,
     structures=find("structures.parquet", "identity-disjoint-validation-folds"),
-    pubchemlite_dir=find("pubchemlite_meta.pkl").parent if POOL == "exp0008" else None,
+    pubchemlite_dir=find("pubchemlite_meta.pkl").parent if POOL != "v17" else None,
+    pubchem_dir=find("smiles_pos_off.npy").parent if POOL == "exp0009" else None,
 )
 print(paths)
-pool_cfg = POOL_EXP0008 if POOL == "exp0008" else {}
+pool_cfg = POOL_EXP0008 if POOL != "v17" else {}
 cfg = BaselineConfig(workers=max(1, (os.cpu_count() or 2)), **pool_cfg)
 print("POOL", POOL, pool_cfg)
 log = lambda m: print(f"[{time.time() - T0:7.1f}s] {m}", flush=True)
-out = run_test(paths, cfg, log=log)
+out = run_test(paths, cfg, pubchem_top=100, log=log)
 
 sample = pd.read_csv(paths.sample_submission)
 for mode, stage in MODES.items():
-    out.stages[stage].to_parquet(WORK / f"stage_{stage}.parquet", index=False)
+    if stage in out.stages:
+        out.stages[stage].to_parquet(WORK / f"stage_{stage}.parquet", index=False)
 sub = to_submission(out.stages[MODES[MODE]], sample)
 validate_submission(sub, sample)
 sub.to_csv(WORK / "submission.csv", index=False)
@@ -148,11 +156,17 @@ def _md(src: str) -> dict:
 
 def build(slug: str, mode: str, pool: str, git_head: str) -> Path:
     embedded = {rel: (SRC / rel).read_text(encoding="utf-8") for rel in EMBED}
-    title = {"fusion": "A: lib + analog + 0.25 frag の固定融合", "analog": "B: analog チャネル単独"}
-    exp = {"v17": "EXP-0001", "exp0008": "EXP-0008"}[pool]
+    title = {
+        "fusion": "A: lib + analog + 0.25 frag の固定融合",
+        "analog": "B: analog チャネル単独",
+        "analog_frag_prior": "S1: z(analog) + 0.5 z(frag) + 文献量 prior",
+        "prior_only": "S2: 文献量 prior だけ (診断用)",
+    }
+    exp = {"v17": "EXP-0001", "exp0008": "EXP-0008", "exp0009": "EXP-0009"}[pool]
     pool_desc = {
         "v17": "COCONUT ∪ train、±8.5 ppm (V17)",
         "exp0008": "COCONUT ∪ PubChemLite ∪ train、m/z ずれ補正、±max(5 ppm, 2 mDa)",
+        "exp0009": "EXP-0008 の pool + PubChem 本体から窓ごとに文献量の上位 100 件",
     }
     cells = [
         _md(

@@ -1,0 +1,54 @@
+{
+  "split": "fold0",
+  "pool_heldout": "keep",
+  "reference": "none",
+  "precursor_window": 0.0,
+  "extra_pool": "pubchemlite",
+  "pool_window": "corrected",
+  "pubchem_top": 100,
+  "pubchem_index": "data/working/casmi26/pubchem_slim",
+  "molecules": 400,
+  "spectra": 2284,
+  "mrr": 0.10398499908141767,
+  "top1": 0.03,
+  "pool_coverage": 1.0,
+  "class_counts": {
+    "class2": 400
+  },
+  "loss_share_by_stage": {
+    "ranker": 0.8960150009185823,
+    "top1": 0.0
+  },
+  "channel_mrr": {
+    "channel_lib": 0.001671822218589953,
+    "channel_analog": 0.5611095377940772,
+    "channel_frag": 0.5444828836346831,
+    "ranker_prior": 0.09554019669710122,
+    "analog_prior": 0.5539910388550667
+  },
+  "config": {
+    "ppm_win": 8.5,
+    "ppm_fallback": 30.0,
+    "pool_ppm": 5.0,
+    "pool_min_da": 0.002,
+    "mz_offset_pos": 0.0007,
+    "mz_offset_neg": 0.00025,
+    "analog_win": 200.0,
+    "n_analog": 100,
+    "sim_power": 4.0,
+    "w_lib": 1.0,
+    "w_analog": 1.0,
+    "w_frag": 0.25,
+    "workers": 11,
+    "clean": {
+      "floor": 0.002,
+      "topk": 256,
+      "power": 1.0,
+      "ent_weight": true,
+      "mz_tol": 0.01,
+      "precursor_window": 0.0
+    }
+  },
+  "seed": 20260930,
+  "elapsed_sec": 638.5754904747009
+}

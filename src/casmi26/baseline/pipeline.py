@@ -119,19 +119,32 @@ class CandidatePool:
     """
 
     def __init__(
-        self, mass: np.ndarray, smiles: np.ndarray, known_key: np.ndarray, source: np.ndarray
+        self,
+        mass: np.ndarray,
+        smiles: np.ndarray,
+        known_key: np.ndarray,
+        source: np.ndarray,
+        prior: np.ndarray | None = None,
     ) -> None:
         o = np.argsort(mass, kind="mergesort")
         self.mass = mass[o]
         self.smiles = smiles[o]
         self.known_key = known_key[o]
         self.source = source[o]
+        # 文献量の prior (PubChem 由来の候補だけ有限値、他は nan)。EXP-0009
+        self.prior = prior[o] if prior is not None else None
 
     def window(self, target: float, ppm: float, min_da: float = 0.0) -> np.ndarray:
         half = max(target * ppm / 1e6, min_da)
         lo = np.searchsorted(self.mass, target - half, "left")
         hi = np.searchsorted(self.mass, target + half, "right")
         return np.arange(lo, hi)
+
+
+def _z(x: np.ndarray) -> np.ndarray:
+    """query 内で標準化 (分散 0 なら 0)。"""
+    sd = float(x.std())
+    return (x - x.mean()) / sd if sd > 1e-9 else np.zeros_like(x)
 
 
 def _pmap(fn: Callable, items: list, workers: int, chunksize: int) -> list:
@@ -219,9 +232,10 @@ def run_baseline(
         return fp_cache[smi]
 
     # Phase 5: 特徴量と融合
-    rows: dict[str, list[tuple[str, str, int, str]]] = {
-        n: [] for n in ("pool", "ranker", "channel_lib", "channel_analog", "channel_frag")
-    }
+    stage_names = ["pool", "ranker", "channel_lib", "channel_analog", "channel_frag"]
+    if pool.prior is not None:
+        stage_names += ["ranker_prior", "analog_prior", "analog_frag_prior", "prior_only"]
+    rows: dict[str, list[tuple[str, str, int, str]]] = {n: [] for n in stage_names}
     diag = []
     feat_rows: list[pd.DataFrame] = []
     for q, (target, lib_hits, analogs, cand) in zip(queries, per_q, strict=True):
@@ -276,6 +290,17 @@ def run_baseline(
         )
 
         score = cfg.w_lib * lv + cfg.w_analog * ap + cfg.w_frag * fr
+        # 文献量の prior: 同じ構造キーの PubChem 候補の値。窓の上位 N 件に無い構造は、
+        # 上位 N 件の最小値 (= それ以下) とみなす
+        pr = np.zeros(n, np.float32)
+        if pool.prior is not None:
+            best: dict[str, float] = {}
+            for j in cand:
+                k, v = cand_key.get(int(j)), float(pool.prior[int(j)])
+                if k is not None and np.isfinite(v):
+                    best[k] = max(best.get(k, -np.inf), v)
+            floor = min(best.values()) if best else 0.0
+            pr = np.array([best.get(k, floor) for k in ckeys], np.float32)
         feat_rows.append(
             pd.DataFrame(
                 {
@@ -287,16 +312,25 @@ def run_baseline(
                     "lib": lv,
                     "analog": ap,
                     "frag": fr,
+                    "prior": pr,
                 }
             )
         )
-        for name, sc in (
+        ranked = [
             ("pool", np.zeros(n)),
             ("ranker", score),
             ("channel_lib", lv),
             ("channel_analog", ap),
             ("channel_frag", fr),
-        ):
+        ]
+        if pool.prior is not None:
+            ranked += [
+                ("ranker_prior", _z(score) + pr),
+                ("analog_prior", _z(ap) + pr),
+                ("analog_frag_prior", _z(ap) + 0.5 * _z(fr) + pr),
+                ("prior_only", pr),
+            ]
+        for name, sc in ranked:
             order = np.argsort(-sc, kind="stable")
             rows[name].extend(
                 (q.molecule_id, ckeys[o], r, str(pool.smiles[idx[o]]))
