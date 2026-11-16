@@ -1,0 +1,658 @@
+{
+  "version": 1,
+  "competition": "Enveda CASMI 2026",
+  "metric": "MRR@25",
+  "notes": [
+    "LB台帳の同一提出IDの timeout/PENDING と COMPLETE は同一提出として集約。",
+    "複数のローカル検証はデータ・条件が異なるため値を直接比較できない。",
+    "評価なしと不明は null。LB表示は小数3桁。"
+  ],
+  "common_panel": {
+    "name": "選択的既知構造パネル",
+    "molecules": 80,
+    "spectra": 145,
+    "limitation": "公式 train にない Zenodo 由来の80構造・145スペクトルで、同構造の別測定が参照にある選択的な既知構造検索。外部事前学習データとの重複未監査。positive precursor と fragment を共に -0.000548 Da 補正する模擬上の仮定。"
+  },
+  "hypotheses": [
+    {
+      "experiment_id": "EXP-0010-public-0477-control",
+      "title": "0.477基準",
+      "local_mrr": 0.3532440476190476,
+      "local_delta": 0.0,
+      "submission_ref": "57827264",
+      "source": "strategy/experiments.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-20261104-H1-ENSEMBLE",
+      "title": "仮説1: 独立モデル合議",
+      "local_mrr": 0.346139,
+      "local_delta": -0.007105,
+      "ci_95": [
+        -0.019646,
+        0.003431
+      ],
+      "improved": 8,
+      "worsened": 13,
+      "submission_ref": "57981501",
+      "source": "src/public_notebooks/hypothesis1-independent-ensemble.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-0012-hyp2-adduct-balanced",
+      "title": "仮説2: 付加イオン均等化",
+      "local_mrr": 0.350783,
+      "local_delta": -0.002461,
+      "ci_95": [
+        -0.006925,
+        0.000128
+      ],
+      "improved": 1,
+      "worsened": 3,
+      "submission_ref": "57980849",
+      "source": "src/metadata_prediction/adduct-balanced-experiment.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-0014-candidate-rescue",
+      "title": "仮説3: 候補救済",
+      "local_mrr": 0.361244,
+      "local_delta": 0.008,
+      "improved": 16,
+      "worsened": 0,
+      "submission_ref": "57981551",
+      "limitation": "評価パネルは追加参照内に同じ構造があるよう選定。25位へ候補を追加する設計。",
+      "source": "src/candidate_rescue/README.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-0015-reference-fragment-alignment",
+      "title": "仮説4: 参照 fragment 補正",
+      "local_mrr": 0.353566,
+      "local_delta": 0.000322,
+      "ci_95": [
+        -0.001553,
+        0.002902
+      ],
+      "improved": 1,
+      "worsened": 3,
+      "submission_ref": "57981024",
+      "source": "src/public_notebooks/enveda-fragment-alignment-experiment.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-0010-metadata-isomer",
+      "title": "RT・CCS・溶媒による異性体順位補正",
+      "local_cv_ref": {
+        "experiment_id": "EXP-0010-metadata-isomer",
+        "split_id": "selective-known-structures-v1",
+        "metric": "MRR@25"
+      },
+      "ci_95": [
+        -0.00625,
+        0.01875
+      ],
+      "improved": 1,
+      "worsened": 1,
+      "submission_ref": "57827322",
+      "limitation": "80分子共通パネルで追加評価。基準より改善1分子・悪化1分子、95%区間は0を含む。LBと変化方向は逆。",
+      "source": "src/metadata_prediction/public-isomer-experiment.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-0016-solvent-only",
+      "title": "溶媒2分類・1位維持",
+      "local_cv_ref": {
+        "experiment_id": "EXP-0016-solvent-only",
+        "split_id": "selective-known-structures-v1",
+        "metric": "MRR@25"
+      },
+      "ci_95": [
+        0.0,
+        0.0
+      ],
+      "improved": 0,
+      "worsened": 0,
+      "submission_ref": "58019482",
+      "limitation": "80分子の正解順位は変わらず。閾値は別の250分子・ektarr候補で選択。溶媒の測定値ではなく2分類の予測確率を使用。",
+      "source": "src/metadata_prediction/solvent-only-0477.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-0017-fragment-formula",
+      "title": "CHNO組成式フィルタ・1位維持",
+      "local_cv_ref": {
+        "experiment_id": "EXP-0017-fragment-formula",
+        "split_id": "selective-known-structures-v1",
+        "metric": "MRR@25"
+      },
+      "ci_95": [
+        -0.0008090277777777783,
+        0.008894345238095234
+      ],
+      "improved": 5,
+      "worsened": 4,
+      "submission_ref": "58029361",
+      "limitation": "80分子で5改善・4悪化。選択的既知構造検索で、80分子とNP250分子を見た後に設定を選択。0.477全工程の再実行ではない。",
+      "source": "src/fragment_formula/README.md",
+      "split_id": "selective-known-structures-v1"
+    }
+  ],
+  "initial_metadata_experiments": [
+    {
+      "experiment_id": "EXP-0007-baseline",
+      "label": "基準",
+      "submission_ref": "57705400",
+      "split_id": "all-sources-molecule-9to1-v1"
+    },
+    {
+      "experiment_id": "EXP-0007-rt",
+      "label": "RT",
+      "submission_ref": "57705643",
+      "split_id": "all-sources-molecule-9to1-v1"
+    },
+    {
+      "experiment_id": "EXP-0007-ccs",
+      "label": "CCS",
+      "submission_ref": "57705725",
+      "split_id": "all-sources-molecule-9to1-v1"
+    },
+    {
+      "experiment_id": "EXP-0007-solvent",
+      "label": "溶媒",
+      "submission_ref": "57705753",
+      "split_id": "all-sources-molecule-9to1-v1"
+    },
+    {
+      "experiment_id": "EXP-0007-all",
+      "label": "RT + CCS + 溶媒",
+      "submission_ref": "57705731",
+      "split_id": "all-sources-molecule-9to1-v1"
+    }
+  ],
+  "history": [
+    {
+      "id": "EXP-0001",
+      "title": "RT・CCS 回帰",
+      "result": "行分割 LightGBM: RT MAE 0.3649分、CCS MAE 6.1765 Å²",
+      "limitation": "同一構造の学習・検証重複あり。未知施設への外挿未検証。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0002",
+      "title": "溶媒名の探索的分類",
+      "result": "MassBank 2分類 LightGBM: accuracy 95.17%、balanced accuracy 92.60%",
+      "limitation": "溶媒組成・グラジエントの推定ではない。未知 contributor で大幅低下。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0003",
+      "title": "同系列装置への限定",
+      "result": "RT MAE 0.34894 vs 0.35555分、CCS MAE 6.17646 vs 6.17728 Å²（限定 vs 混合）",
+      "limitation": "共通 Enveda 行分割での比較。CCSの差は不確か。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0004",
+      "title": "CCS クラスタ別モデル",
+      "result": "CCS MAE 6.242／6.112／6.292 Å²（標準／容量増／クラスタ別）",
+      "limitation": "分子非重複、4クラスタ法は改善せず。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0005",
+      "title": "二量体傾向によるCCS補正",
+      "result": "基準 CCS MAE 6.242 Å²、予測単量体×2: 59.269、×1.379: 25.175",
+      "limitation": "固定補正は全体で悪化。非観測は二量体を形成しない証拠ではない。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0006",
+      "title": "CCS異常帯と生測定の追跡",
+      "result": "事後的に定義した領域 1,630行・545正規化分子、全絶対誤差の17.24%",
+      "limitation": "事後的選択。原因・二量体由来の割合を証明するものではない。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0007",
+      "title": "メタデータ追加",
+      "result": "Public LB: 基準0.155、RT0.155、CCS0.155、溶媒0.156、併用0.155",
+      "limitation": "ektarr検索ベースライン。溶媒は2分類代理値。LBは小数3桁。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0008",
+      "title": "天然物 source holdout",
+      "result": "250分子 MRR 基準0.945026、RT0.946998、その他各0.945026",
+      "limitation": "別ソース同一構造を参照に含む。250分子holdoutと25分子部分評価は重複。LB版とモデル重みが異なる近似比較。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0009",
+      "title": "全11ソース検証",
+      "result": "27,617分子・33,548群で分子均等 MRR 基準0.0918796、RT0.0916855、CCS0.0917852、溶媒0.0918760、併用0.0917172",
+      "limitation": "別ソース同一構造を参照に許す。基準の正解候補収録群に限る MRR は0.935533。LB版と重み・検索参照が異なる近似比較。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0010",
+      "title": "公開0.477モデルとメタデータ補正",
+      "result": "Public LB 基準0.477、variant0.473",
+      "limitation": "各1提出。variantは推定メタデータによる同分子式順位補正。CV 0.091879575→0.091512082 は別の検索モデルの評価で0.477モデルのCVではない。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0011",
+      "title": "Zenodo追加構造",
+      "result": "Public LB 対照0.155、追加0.155",
+      "limitation": "ektarr検索ベースライン。14,334追加スペクトルのうち7,083のみ使用。構造とスペクトルの追加を同時に評価。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0012 / H2",
+      "title": "付加イオン均等化",
+      "result": "共通パネル 0.353244→0.350783。追加の26,575分子別診断 0.473319→0.470308",
+      "limitation": "後者は別の分子非重複再学習 scorer の固定正解候補診断で、0.477全工程のCVではない。",
+      "source": "src/metadata_prediction/adduct-balanced-experiment.md"
+    },
+    {
+      "id": "EXP-0014 / H3",
+      "title": "候補救済",
+      "result": "共通パネル 0.353244→0.361244、候補収録54/80→70/80",
+      "limitation": "追加参照に同じ構造があることを条件にパネルを選定。",
+      "source": "src/candidate_rescue/README.md"
+    },
+    {
+      "id": "EXP-0015 / H4",
+      "title": "参照 fragment 補正",
+      "result": "共通パネル 0.353244→0.353566",
+      "limitation": "Enveda-180 positive参照のみ補正。信頼区間はゼロを含む。",
+      "source": "src/public_notebooks/enveda-fragment-alignment-experiment.md"
+    },
+    {
+      "id": "EXP-20261104-H1",
+      "title": "独立モデル順位合議",
+      "result": "共通パネル 0.353244→0.346139",
+      "limitation": "1位と候補集合を維持。信頼区間はゼロを含む。",
+      "source": "src/public_notebooks/hypothesis1-independent-ensemble.md"
+    },
+    {
+      "id": "EXP-0016-solvent-only",
+      "title": "0.477基準に溶媒2分類を追加",
+      "result": "共通パネル MRR 0.353244 → 0.353244。8分子・11組の候補順変更、正解順位は80分子すべて不変。Public LB 対照0.477、溶媒単独0.476。",
+      "limitation": "1位を維持し、別の250分子 ektarr holdout で確率差閾値を選択。共通パネルは選択的な既知構造検索。測定溶媒そのものの予測ではない。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0017-fragment-formula",
+      "title": "独立CHNO組成式による異性体順位付け",
+      "result": "共通80分子 MRR 0.353244→0.356379。NP250分子（保護あり）0.945026→0.944931。別の全ソース27,591分子 0.09108014→0.09109778。Public LB 0.477（提出58029361、COMPLETE）。",
+      "limitation": "0.477全工程の再実行ではない。80分子とNPを見て設定選択。全ソースは固定設定、別ektarr既知構造検索で未知の事前学習重複が残る。候補なし24,750群を含む。",
+      "source": "src/fragment_formula/README.md"
+    },
+    {
+      "id": "EXP-0018-main-fpnet",
+      "title": "主エンジンFPNetを新規学習",
+      "result": "自然物固定候補ホールドアウトのFPNet単独MRR@25 0.518738。Public LB 0.429（提出58059062、COMPLETE、0.477対照比 -0.048）。",
+      "limitation": "公開FPNetの厳密学習レシピは未提供。主エンジンの重みだけを差し替えた1提出で、単独ホールドアウト値と親パイプラインのhidden scoreは別。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0019-jestr-two-tower",
+      "title": "JESTR型二塔モデルを新規学習",
+      "result": "同式25候補・1,000分子の単独 MRR@25 0.625885。Public LB 0.476（最終v2提出58063536、COMPLETE、0.477対照比 -0.001）。",
+      "limitation": "分子塔はMorgan fingerprintの適応版。人工候補パネルの診断値であり、0.477親ノートブックやKaggle hidden scoreとは別。可視400行中12行の候補順が変化、1位変更0。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0020-mist-formula",
+      "title": "化学式候補Transformerを新規学習",
+      "result": "同式25候補・1,000分子の単独 MRR@25 0.301177。提出APIと同じ複数スペクトル集約。Public LB 0.478（最終v2提出58064077、COMPLETE、0.477対照比 +0.001）。",
+      "limitation": "ユーザー提供CHNO式の質量を再計算。異式間スコア未較正のためv2は同式内の群内順位融合。人工候補パネルの値でPublic LBではない。可視400行中11行の候補順が変化、1位変更0。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0021-trained-fragment",
+      "title": "構造フラグメント順位モデルを新規学習",
+      "result": "同式25候補・1,000分子の単独 MRR@25 0.431814。適用可能419分子は条件付き0.826066。Public LB はv1探索版58063068と最終v2提出58064043の両方0.476（COMPLETE、0.477対照比 -0.001）。",
+      "limitation": "CHNO、特定adduct、m/z≤250の限定モデル。適用可能群の値と全体値は母数が異なる。v1の同式内順位融合をv2で群内順位に修正。人工候補パネルの値でPublic LBではない。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0022-mist-random8",
+      "title": "MIST：同式ランダム誤候補8件",
+      "result": "同式25候補・1,000分子の単独 MRR@25 0.316447。提出58077692のPublic LBは0.478。",
+      "limitation": "ランダム1件の旧版とは負例数と同式候補不足時の扱いが異なる。4件＋難4件との主比較用対照。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0023-mist-random4-hard4",
+      "title": "MIST：ランダム4件＋難候補4件",
+      "result": "同式25候補・1,000分子の単独 MRR@25 0.318348。ランダム8件との差 +0.001901。提出58078049のPublic LBは0.478。",
+      "limitation": "難候補は学習分子内の同式構造から選択。差は単一seed・人工候補パネルの診断値。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0024-mist-random4-hard8",
+      "title": "MIST：ランダム4件＋難候補8件",
+      "result": "同式25候補・1,000分子の単独 MRR@25 0.318874。提出58078507のPublic LBは0.478。",
+      "limitation": "4件＋難4件より負例総数も8件から12件へ増える探索条件。難候補比率だけの効果は分からない。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0025-mist-12k",
+      "title": "MIST：12,000ステップ途中モデル",
+      "result": "同式25候補・1,000分子の単独 MRR@25 0.391255。提出58077626のPublic LBは0.479。",
+      "limitation": "旧6,000ステップ版と同一学習軌跡の途中評価。ローカル単独値と親Notebook補正後のPublic LBは評価対象が異なる。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0026-mist-18k",
+      "title": "MIST：18,000ステップ途中モデル",
+      "result": "同式25候補・1,000分子の単独 MRR@25 0.422447。提出58077961のPublic LBは0.479。",
+      "limitation": "旧6,000ステップ版と同一学習軌跡の単一seed評価。Public LB 0.479は小数第3位の表示値で、12,000ステップ版との優劣は確定できない。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0027-mist-mona-pretrain-12k",
+      "title": "MIST：MoNA事前学習＋公式12,000ステップ",
+      "result": "共通1,000分子・同式25候補のモデル単独MRR@25 0.503482。提出58112257のPublic LBは0.478。",
+      "limitation": "同一人工候補パネル上の単一seed・ローカル診断。親Notebook融合後のPublic LBと評価対象が異なる。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0028-alex-0481-reproduction",
+      "title": "公開0.481 Notebookの再現",
+      "result": "公開0.481 Notebook v11の元コードを維持した再現提出58114319はCOMPLETE、Public LB 0.481。ローカルCV未実施。",
+      "limitation": "作者の採点済み提出との厳密な版対応とhidden実行条件は未確認。ローカルCVがないため散布図のローカル軸には配置しない。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0029-mist-all-public-pretrain-12k",
+      "title": "MIST：MoNA・MassBank・GNPS事前学習＋公式12,000ステップ",
+      "result": "共通1,000分子・同式25候補のモデル単独 MRR@25 0.501634。MoNAのみの事前学習版0.503482より0.001848低い。2026-11-08 15:26:55 JST完了。",
+      "limitation": "単一seed・人工候補パネル上のローカル診断。Kaggle未提出でPublic LBは未測定。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0030-mist-all-public-finetune-50k",
+      "title": "MIST：3ソース事前学習＋公式50,000ステップ",
+      "result": "固定1,000分子・同式25候補のモデル単独MRR@25 0.567918。提出58121189のPublic LBは0.477で、同じ親Notebookの公式trainのみ12,000ステップ版0.479より表示値で0.002低い。",
+      "limitation": "単一seedの人工候補パネルと親Notebookへの順位融合後のhidden評価は対象が異なる。12,000ステップ後にoptimizerを再初期化した。Public LBは3桁表示・各1提出。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0031-0481-mist-leader",
+      "title": "0.481親モデルに独立組成式MISTを追加",
+      "result": "提出58122853のPublic LBは0.481。ただし提出CSVは0.481親Notebook再現EXP-0028とバイト一致する。ローカル80分子の代理MRRは0.353244→0.354081。",
+      "limitation": "提出用fast commitはplaceholderでMISTオーバーレイを実行していないため、0.481を独立MISTの改善と解釈しない。代理評価は0.481親の出力ではない。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-0032-mist-full-official-12k",
+      "title": "MIST：公式train全件で12,000ステップ",
+      "result": "従来の固定検証27,575分子・241,753スペクトルも学習に加え、公式train全273,833分子・2,430,328スペクトルで新規学習。提出58134273は採点待ち。",
+      "limitation": "従来の1,000分子検証パネルを学習に使ったため、同パネルのローカルMRRは算出しない。0.479版と同じ親Notebook・順位補正で提出したが、Public LBは未確定。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-20261109-independent-control",
+      "title": "共通対照：式入力なし・全体負例8件",
+      "result": "単独MRR@25 0.280856、Top1 13.6%。共通対照。Kaggle未提出。",
+      "limitation": "分子非重複1000分子・同式25候補の人工診断。6000更新・単一seed。親式と精密m/z共通。①は負例不足方針を含む比較。bootstrapに学習seedの変動を含めない。",
+      "source": "docs/formula-independent-ablation-20261109.md"
+    },
+    {
+      "id": "EXP-20261109-independent-idea1",
+      "title": "①のみ：同式異性体の負例に集中",
+      "result": "ローカル単独MRR@25 0.310123。Notebook v1提出受理。Public LB 採点待ち。",
+      "limitation": "ローカルは1000分子・同式25候補の単一seed診断。Public LBは0.477親Notebookへ重み0.25・同式内RRF・1位保持で融合した別評価。LB小数3桁・各1提出。",
+      "source": "docs/formula-independent-ablation-20261109.md"
+    },
+    {
+      "id": "EXP-20261109-independent-idea3",
+      "title": "③のみ：ピークと中性脱離の組成式入力",
+      "result": "ローカル単独MRR@25 0.272807。Notebook v1提出受理。Public LB 採点待ち。",
+      "limitation": "ローカルは1000分子・同式25候補の単一seed診断。Public LBは0.477親Notebookへ重み0.25・同式内RRF・1位保持で融合した別評価。LB小数3桁・各1提出。",
+      "source": "docs/formula-independent-ablation-20261109.md"
+    },
+    {
+      "id": "EXP-0033-original-mist-leader",
+      "title": "元0.479 MISTを0.481親の1位にも適用",
+      "result": "元12k checkpointをそのまま使用。提出済み・採点待ち。",
+      "limitation": "同式内margin0.05で先頭昇格を許可。ローカル可視12分子で1位変更0。fast commitはplaceholder。",
+      "source": "strategy/experiments.md"
+    },
+    {
+      "id": "EXP-20261110-bcf-a",
+      "title": "A：既存0.479対照",
+      "result": "共通1,000分子・同式25候補の単独MRR@25 0.391255。採点可能率100.0%。親順位込み80分子の代理評価とPublic LBは別対象。",
+      "limitation": "既存Public LBは0.479。公式MIST実測CANOPUS trainとの重複は共通パネル4分子。合成学習集合との重複は未確認。C/Fの欠損はMRR全体集計で0。",
+      "source": "docs/mist-bcf-20261110.md"
+    },
+    {
+      "id": "EXP-20261110-bcf-b",
+      "title": "B：4096ビット",
+      "result": "共通1,000分子・同式25候補の単独MRR@25 0.432768。採点可能率100.0%。親順位込み80分子の代理評価とPublic LBは別対象。",
+      "limitation": "Public LB 0.478。公式MIST実測CANOPUS trainとの重複は共通パネル4分子。合成学習集合との重複は未確認。C/Fの欠損はMRR全体集計で0。",
+      "source": "docs/mist-bcf-20261110.md"
+    },
+    {
+      "id": "EXP-20261110-bcf-c",
+      "title": "C：公式MIST canopus-aug",
+      "result": "共通1,000分子・同式25候補の単独MRR@25 0.401203。採点可能率66.4%。親順位込み80分子の代理評価とPublic LBは別対象。",
+      "limitation": "Public LB 0.478。公式MIST実測CANOPUS trainとの重複は共通パネル4分子。合成学習集合との重複は未確認。C/Fの欠損はMRR全体集計で0。",
+      "source": "docs/mist-bcf-20261110.md"
+    },
+    {
+      "id": "EXP-20261110-bcf-f",
+      "title": "F：B/Cスコア50:50融合",
+      "result": "共通1,000分子・同式25候補の単独MRR@25 0.438993。採点可能率66.4%。親順位込み80分子の代理評価とPublic LBは別対象。",
+      "limitation": "Public LB 0.477。公式MIST実測CANOPUS trainとの重複は共通パネル4分子。合成学習集合との重複は未確認。C/Fの欠損はMRR全体集計で0。",
+      "source": "docs/mist-bcf-20261110.md"
+    }
+  ],
+  "score_plot_groups": [
+    {
+      "id": "same-formula-1000-v1",
+      "title": "学習モデルと学習条件：共通1,000分子・同式25候補",
+      "description": "横軸は分子非重複の人工候補パネルでのモデル単独MRR@25、縦軸は0.477親Notebookに順位補正を加えたPublic LB。評価対象と候補集合が異なるため、両軸の数値差や傾きを性能差と解釈しない。B/C/FとMixup M1/M2/M3はAと同じ親順位・候補集合・1位固定で比較。C/Fのモデル単独MRRは採点不可336/1,000分子を0として集計。Mixupの訓練分子・スペクトルは同じだが、初回M1は複数CEを含むペアを許可しピークm/z統合も異なるためM2/M3との厳密比較ではない。条件を揃えたM1は別runとして評価する。MISTのランダム8件と4件＋難4件は総負例数を揃えた比較。4件＋難8件は総数も増える探索条件。Public LBは小数第3位までの表示値。",
+      "points": [
+        {
+          "experiment_id": "EXP-0019-jestr-two-tower",
+          "label": "JESTR型二塔",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58063536"
+        },
+        {
+          "experiment_id": "EXP-0020-mist-formula",
+          "label": "MIST型・6,000ステップ（従来）",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58064077"
+        },
+        {
+          "experiment_id": "EXP-0025-mist-12k",
+          "label": "MIST型・12,000ステップ",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58077626"
+        },
+        {
+          "experiment_id": "EXP-20261116-mixup-m1",
+          "label": "Mixup M1：同一分子の別測定",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58435231"
+        },
+        {
+          "experiment_id": "EXP-20261116-mixup-m2",
+          "label": "Mixup M2：同式の別構造5–15%",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58434412"
+        },
+        {
+          "experiment_id": "EXP-20261116-mixup-m3",
+          "label": "Mixup M3：同式の別構造50:50",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58435174"
+        },
+        {
+          "experiment_id": "EXP-20261110-bcf-b",
+          "label": "B：4096ビット",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58205324"
+        },
+        {
+          "experiment_id": "EXP-20261110-bcf-c",
+          "label": "C：公式MIST固定",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58208249"
+        },
+        {
+          "experiment_id": "EXP-20261110-bcf-f",
+          "label": "F：B/C 50:50融合",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58206790"
+        },
+        {
+          "experiment_id": "EXP-0026-mist-18k",
+          "label": "MIST型・18,000ステップ",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58077961"
+        },
+        {
+          "experiment_id": "EXP-0027-mist-mona-pretrain-12k",
+          "label": "MIST型・MoNA事前学習＋公式12,000ステップ",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58112257"
+        },
+        {
+          "experiment_id": "EXP-0030-mist-all-public-finetune-50k",
+          "label": "MIST・3ソース事前学習＋公式50,000ステップ",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58121189"
+        },
+        {
+          "experiment_id": "EXP-0022-mist-random8",
+          "label": "MIST型・ランダム8件",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58077692"
+        },
+        {
+          "experiment_id": "EXP-0023-mist-random4-hard4",
+          "label": "MIST型・ランダム4件＋難4件",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58078049"
+        },
+        {
+          "experiment_id": "EXP-0024-mist-random4-hard8",
+          "label": "MIST型・ランダム4件＋難8件",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58078507"
+        },
+        {
+          "experiment_id": "EXP-0021-trained-fragment",
+          "label": "学習型フラグメント",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58064043"
+        }
+      ]
+    },
+    {
+      "id": "saved-0477-family-80-proxy",
+      "title": "親順位込み：保存済み80分子の代理パネル",
+      "description": "横軸は同じ保存済み0.477系親順位と候補集合に各条件を適用したMRR@25、縦軸は別集合のPublic LB。80分子は既知構造を選んだ代理パネルで、正解が候補内にあるのは54分子。全条件で同分子式内RRF重み0.25、1位固定。数値は未見分子への精度ではなく、LBとの方向の参考に限る。",
+      "points": [
+        {
+          "experiment_id": "EXP-0025-mist-12k",
+          "label": "A：Mixupなし",
+          "split_id": "saved-0477-family-80-proxy",
+          "submission_ref": "58077626"
+        },
+        {
+          "experiment_id": "EXP-20261110-bcf-b",
+          "label": "B：4096ビット",
+          "split_id": "saved-0477-family-80-proxy",
+          "submission_ref": "58205324"
+        },
+        {
+          "experiment_id": "EXP-20261110-bcf-c",
+          "label": "C：公式MIST固定",
+          "split_id": "saved-0477-family-80-proxy",
+          "submission_ref": "58208249"
+        },
+        {
+          "experiment_id": "EXP-20261110-bcf-f",
+          "label": "F：B/C 50:50融合",
+          "split_id": "saved-0477-family-80-proxy",
+          "submission_ref": "58206790"
+        },
+        {
+          "experiment_id": "EXP-20261116-mixup-m1",
+          "label": "Mixup M1：同一分子の別測定",
+          "split_id": "saved-0477-family-80-proxy",
+          "submission_ref": "58435231"
+        },
+        {
+          "experiment_id": "EXP-20261116-mixup-m2",
+          "label": "Mixup M2：同式の別構造5–15%",
+          "split_id": "saved-0477-family-80-proxy",
+          "submission_ref": "58434412"
+        },
+        {
+          "experiment_id": "EXP-20261116-mixup-m3",
+          "label": "Mixup M3：同式の別構造50:50",
+          "split_id": "saved-0477-family-80-proxy",
+          "submission_ref": "58435174"
+        }
+      ]
+    },
+    {
+      "id": "natural-sources-5425-variable-candidates-posthoc-v1",
+      "title": "天然物4ソース：複数候補5,425件の追加診断",
+      "description": "GNPS・RIKEN・MassBank・Enveda天然物の分子非重複validationから、結果確認後に構築した補助パネル。横軸は同式内で候補数2～25のモデル単独MRR@25、縦軸は別集合のPublic LB。候補数が可変で、テストと同じtimsTOFは24件のみ。25候補1,017件のM1差は95%区間が0を含む。既存の固定25候補や80分子の絶対MRRと比較しない。",
+      "points": [
+        {
+          "experiment_id": "EXP-0025-mist-12k",
+          "label": "A：Mixupなし",
+          "split_id": "natural-sources-5425-variable-candidates-posthoc-v1",
+          "submission_ref": "58077626"
+        },
+        {
+          "experiment_id": "EXP-20261116-mixup-m1",
+          "label": "Mixup M1：同一分子の別測定",
+          "split_id": "natural-sources-5425-variable-candidates-posthoc-v1",
+          "submission_ref": "58435231"
+        },
+        {
+          "experiment_id": "EXP-20261116-mixup-m2",
+          "label": "Mixup M2：同式の別構造5–15%",
+          "split_id": "natural-sources-5425-variable-candidates-posthoc-v1",
+          "submission_ref": "58434412"
+        },
+        {
+          "experiment_id": "EXP-20261116-mixup-m3",
+          "label": "Mixup M3：同式の別構造50:50",
+          "split_id": "natural-sources-5425-variable-candidates-posthoc-v1",
+          "submission_ref": "58435174"
+        }
+      ]
+    },
+    {
+      "id": "np499-fpnet-fixed-candidates-v1",
+      "title": "主エンジンFPNet：自然物499分子ホールドアウト",
+      "description": "横軸はFPNet単独の固定候補MRR@25、縦軸は親Notebookの主エンジン重みを置換したPublic LB。上の1,000分子パネルとは分割・候補集合が異なり、同一軸で比較しない。",
+      "points": [
+        {
+          "experiment_id": "EXP-0018-main-fpnet",
+          "label": "主エンジンFPNet",
+          "split_id": "np499-fpnet-fixed-candidates-v1",
+          "submission_ref": "58059062"
+        }
+      ]
+    }
+  ],
+  "sources": [
+    "strategy/experiments.md",
+    "strategy/cv-results.jsonl",
+    "strategy/lb-submissions.jsonl"
+  ]
+}
