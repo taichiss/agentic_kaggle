@@ -41,7 +41,7 @@ INPUTS = {
     "cache_spectra": DERIVED / "saner-multipositive/cache-parallel/spectra.parquet",
     "precise_mzs": DERIVED / "mist-formula-20261107/precise-mzs.bin",
     "source_metadata": MIXUP / "source-metadata/manifest.json",
-    "frozen_model": DERIVED / "mist-bcf-20261110/B/source/model.py",
+    "frozen_model": ROOT / "src/mist_formula/frozen/a_0479_model.py",
 }
 
 
