@@ -1,0 +1,51 @@
+{
+  "experiment_id": "EXP-20261116-mist-spectrum-mixup",
+  "control_experiment_id": "EXP-0025-mist-12k",
+  "control_public_lb": 0.479,
+  "control_checkpoint_sha256": "a63e61f2d1dc19df98f7acb5a65199e3c3377e56fcb4da1347553ff68db7f6bb",
+  "parent_notebook_sha256": "ef88fe151bf99fac82c8e3ad4b401d20aa0b6626880a7c3a8ed53a9022e0f938",
+  "parent_output_sha256": "39309f6c46d25e9c934dad8871d211ad8afebda07f4441c596714cbe7b6fd9b2",
+  "candidate_set_sha256": "e8de1f1b07ab6d56685805d01878185241a9a06bc1603b9fef13e537fc408542",
+  "inference_source_sha256": "b40d1ab02c8135831f9b17b002a228f133fe7164c8365113744ea5e126a13c50",
+  "train": {
+    "seed": 20261107,
+    "steps": 12000,
+    "batch_size": 128,
+    "learning_rate": 0.0003,
+    "rank_weight": 0.5,
+    "fp_bits": 2048,
+    "fp_radius": 2,
+    "model_width": 128,
+    "model_layers": 2,
+    "model_heads": 4,
+    "spectrum_top_peaks": 96,
+    "chno_ppm": 20,
+    "formula_candidates_per_peak_and_loss": 3,
+    "fixed_panel_sha256": "da870db0c4317b431ea482c416bd7ff4a5c0c8ccec6140e8641349c018bf20db",
+    "split": "A 0.479 molecule-disjoint train/validation"
+  },
+  "pairing": {
+    "same_ingest_lib": true,
+    "same_instrument": true,
+    "same_adduct": true,
+    "same_polarity": true,
+    "precursor_ppm": 20,
+    "collision_energy_tolerance_ev": 10,
+    "both_collision_energy_missing_allowed": true,
+    "merge_peak_ppm": 20,
+    "train_only": true
+  },
+  "conditions": {
+    "M1": "same molecule, separate measured spectrum, mix coefficient uniform 0.25 to 0.75, original FP teacher",
+    "M2": "distinct training molecule, same molecular formula, anchor 0.85 to 0.95, original anchor FP teacher",
+    "M3": "distinct training molecule, same molecular formula, 0.5 to 0.5, soft FP teacher and two weighted positives"
+  },
+  "mix_attempt_probability": 0.25,
+  "submission": {
+    "initial_conditions": ["M1", "M2", "M3"],
+    "additional_adaptive_limit": 2,
+    "parent_rank_fusion_weight": 0.25,
+    "within_formula_only": true,
+    "protect_rank_1": true
+  }
+}
