@@ -17,7 +17,6 @@ EXPERIMENTS = [
     ("M2", "EXP-20261116-mixup-m2"),
     ("M3", "EXP-20261116-mixup-m3"),
     ("Strict M1", "EXP-20261117-mixup-m1-ce-strict"),
-    ("M4", "EXP-20261117-mixup-a75m1"),
     ("Weak M1", "EXP-20261117-mixup-m1-weak-085095"),
 ]
 PANELS = [
@@ -34,7 +33,6 @@ COLORS = {
     "M2": "#d1663f",
     "M3": "#a94e64",
     "Strict M1": "#0c5c94",
-    "M4": "#3974b5",
     "Weak M1": "#7455a3",
 }
 
@@ -79,7 +77,7 @@ def main() -> None:
             "#596879",
         ),
     ]
-    y0, dy = 121, 42
+    y0, dy = 121, 50
     for j, (split, title) in enumerate(PANELS):
         x0 = 26 + j * 377
         blocks.extend(
@@ -140,7 +138,8 @@ def main() -> None:
         row = lb.get(exp)
         score = None if row is None else row.get("public_score")
         if score is None:
-            blocks.append(label(left, y + 4, "pending / not submitted", 11, "#8e9aa8"))
+            status = "not submitted" if row is None else "submitted / scoring pending"
+            blocks.append(label(left, y + 4, status, 11, "#8e9aa8"))
             continue
         score = float(score)
         blocks.extend(
