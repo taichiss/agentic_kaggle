@@ -736,4 +736,6 @@ Mixupの次の比較計画は `docs/mist-spectrum-mixup-plan-20261116.md` を参
 
 M2のKaggle Notebook v1はCOMPLETE。親Notebook `ef88fe15…`、親出力 `39309f6c…`、候補集合 `e8de1f1b…`、checkpoint `791dd657…`、最終CSV `46ab4173…` をリモート監査とローカル実行で照合し、400行・1位変更0・推論エラー0を確認して提出した。提出ID58434412のPublic LBは採点待ち。天然物・timsTOFの補助26分子検証と構造重複監査は `docs/mist-spectrum-mixup-results-20261116.md` を参照。
 
+EXP-20261117-mixup-m1-ce-strictは、初回M1の複数CE混合と近接ピークのm/z統合方法をM2/M3の条件に揃えてゼロから12,000更新した。固定1,000分子・同式25候補の単独MRR@25はA 0.391255、修正版0.395990、親順位込み80分子はA 0.355765、修正版0.353081。どちらの対応95%区間も0を含む。private Notebook v1の親・候補集合・checkpoint・最終CSVを照合し、400行・1位変更0・エラー0を確認後、提出ID **58438798** を受理。Public LBは採点待ち。これで今回の5枠のうち4枠を使用した。残る1枠の分岐は `docs/mist-spectrum-mixup-results-20261116.md` に初回3本のスコア確定前に記録した。
+
 M1とM3のNotebook v1もCOMPLETE。最終CSVはそれぞれ`5c49082b…`と`1c586f54…`で、リモート監査の親出力・候補集合・checkpoint・最終CSVがローカルと一致。いずれも400行・1位変更0・推論エラー0。M1提出58435231、M3提出58435174は採点待ち。M1が一度QUEUEDで固着したため、同じ保存済みソースを再pushしてversion 1で実行した。データ・モデル・推論条件は変更していない。

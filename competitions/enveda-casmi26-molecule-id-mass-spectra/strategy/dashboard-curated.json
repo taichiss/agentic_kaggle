@@ -495,6 +495,12 @@
           "submission_ref": "58435174"
         },
         {
+          "experiment_id": "EXP-20261117-mixup-m1-ce-strict",
+          "label": "Mixup M1：CE条件とピーク統合を統一",
+          "split_id": "same-formula-1000-v1",
+          "submission_ref": "58438798"
+        },
+        {
           "experiment_id": "EXP-20261110-bcf-b",
           "label": "B：4096ビット",
           "split_id": "same-formula-1000-v1",
@@ -602,6 +608,12 @@
           "label": "Mixup M3：同式の別構造50:50",
           "split_id": "saved-0477-family-80-proxy",
           "submission_ref": "58435174"
+        },
+        {
+          "experiment_id": "EXP-20261117-mixup-m1-ce-strict",
+          "label": "Mixup M1：CE条件とピーク統合を統一",
+          "split_id": "saved-0477-family-80-proxy",
+          "submission_ref": "58438798"
         }
       ]
     },
@@ -633,6 +645,12 @@
           "label": "Mixup M3：同式の別構造50:50",
           "split_id": "natural-sources-5425-variable-candidates-posthoc-v1",
           "submission_ref": "58435174"
+        },
+        {
+          "experiment_id": "EXP-20261117-mixup-m1-ce-strict",
+          "label": "Mixup M1：CE条件とピーク統合を統一",
+          "split_id": "natural-sources-5425-variable-candidates-posthoc-v1",
+          "submission_ref": "58438798"
         }
       ]
     },

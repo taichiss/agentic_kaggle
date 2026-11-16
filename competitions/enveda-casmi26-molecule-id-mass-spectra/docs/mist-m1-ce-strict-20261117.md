@@ -47,4 +47,4 @@
 
 チェックポイント `data/derived/mist-mixup-20261116/M1-ce-strict-sharedmerge/final.pt` のSHA-256は `0fc77b4368cb6f43da6b4fec5bf12db0a7ce79afff089b8f587871dce3665343`、manifestは `f4c51346b629fe5a06335466f020fa76de106ebbeecad7de9f264a06718acbb2`。元M1 checkpoint SHA `b1708324…` は不変。固定1,000／親80のペア評価は同DIRの `comparison-report.json`、天然物4ソース評価は `natural-source-eval/report.json` と `per-molecule.jsonl`。3パネルを `EXP-20261117-mixup-m1-ce-strict` として `strategy/cv-results.jsonl` に入力SHA付きで一度だけ登録し、再実行では追加0行を確認した。
 
-400テスト分子のローカル推論は親・候補集合・1位を保持し、Aの保存CSVから10行の2位以下が変化した（CSV SHA-256 `cd7c12d04330b82f4264c28d785139346e9e0df78501cae773b9a2e761044ebe`）。これはローカル出力の監査で、Public LBの効果を示さない。競技提出はLB判断まで行わない。
+400テスト分子のローカル推論は親・候補集合・1位を保持し、Aの保存CSVから10行の2位以下が変化した（CSV SHA-256 `cd7c12d04330b82f4264c28d785139346e9e0df78501cae773b9a2e761044ebe`）。これはローカル出力の監査で、Public LBの効果を示さない。private Notebook v1の完了出力とローカルCSVのSHA一致・エラー0を照合後、4本目として提出ID **58438798** を受理。Public LBは採点待ち。5本目だけを初回3条件のLB結果に応じて選ぶ。
