@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "cycle_id": "CE-GEN-20261117",
+  "control_experiment_id": "EXP-0010-public-0477-control",
+  "control_public_lb": 0.477,
+  "control_notebook_sha256": "ef88fe151bf99fac82c8e3ad4b401d20aa0b6626880a7c3a8ed53a9022e0f938",
+  "control_frozen_sha256": "d1e757c2b71b46e6e8a5777f14302a4737d0fdbcd56d8365093c039b93c5fd88",
+  "first_condition": {
+    "experiment_id": "EXP-20261117-ce-gen-g1-each",
+    "kernel": "suzukitaichi/casmi26-ce-analog-each-20261117",
+    "analog_query": "each",
+    "variant_frozen_sha256": "85392e6dd8392912f3c362d391ecffa0ac2f785bbd7f118684e3f50daa886a28",
+    "changed_frozen_cells": [37],
+    "changes_candidate_set": true,
+    "also_changes_analog_rank_features": true
+  },
+  "validation": {
+    "external80_test_sha256": "40be4cbdbb532a72e2886dc1b12ba86edcca7a79808c2cdaf6c6d05e9e3d00a1",
+    "external80_labels_sha256": "315887026488ab08baeac84cba02792a15ebb636cc82951e262706439c1a7996",
+    "enveda_view_split": "existing molecule-disjoint Saner split",
+    "metric": "MRR@25",
+    "candidate_coverage": "official tautomer-canonical InChIKey14"
+  },
+  "maximum_new_competition_submissions": 5,
+  "decision_rule": "inspect local candidate coverage and each Public LB before choosing the next competition submission"
+}

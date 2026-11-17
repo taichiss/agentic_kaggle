@@ -28,7 +28,7 @@ external_data = "publicly available external data allowed"
 pretrained_models = "publicly available pretrained models allowed"
 internet = "disabled during submitted notebook execution"
 notebook_runtime = "CPU <= 9 hours; GPU <= 9 hours"
-submission_limit = "unknown"
+submission_limit = "5 per day (official rules checked 2026-11-17)"
 deadline_utc = "2026-12-14T23:59:00Z"
 
 [evaluation]

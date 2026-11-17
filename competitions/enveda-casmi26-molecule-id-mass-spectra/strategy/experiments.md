@@ -745,3 +745,9 @@ CE strict M1の提出58438798はPublic LB **0.479** で採点完了した。初�
 弱M1提出58442939もPublic LB **0.478** で完了した。5枠のPublic LB表示値は元M1 0.478、M2 0.479、M3 0.479、CE strict M1 0.479、弱M1 0.478。対照A 0.479を上回るMixup条件はなく、同点は効果ゼロの証明でも改善の証拠でもない。弱M1は固定1,000分子の単独MRR@25が0.396029で最も高かったが、LBではAを0.001下回った。次の実験は同装置・同分子の実測CE別スペクトルを使う多視点学習を、分子非重複・親順位付きで検証する。詳しい交絡、ハッシュ、図は `docs/mist-spectrum-mixup-results-20261116.md` を参照。
 
 M1とM3のNotebook v1もCOMPLETE。最終CSVはそれぞれ`5c49082b…`と`1c586f54…`で、リモート監査の親出力・候補集合・checkpoint・最終CSVがローカルと一致。いずれも400行・1位変更0・推論エラー0。M1提出58435231は0.478、M3提出58435174は0.479で採点完了した。M1が一度QUEUEDで固着したため、同じ保存済みソースを再pushしてversion 1で実行した。データ・モデル・推論条件は変更していない。
+
+## EXP-20261117-ce-gen-g1-each: CE別アナログ検索
+
+同一分子のCE別スペクトルを候補生成の手前で使う新サイクル。0.477親Notebookのアナログ検索のみ `merged` から `each` に変更する。検索したアナログは生成候補の親選択と順位用の特徴量に共用されるため、候補包含率と順位を分けて評価する。親ソースSHA-256 `ef88fe151bf99fac82c8e3ad4b401d20aa0b6626880a7c3a8ed53a9022e0f938`、変更後の埋め込みfrozen SHA-256 `85392e6dd8392912f3c362d391ecffa0ac2f785bbd7f118684e3f50daa886a28`、変更セル37のみ。private Notebook `suzukitaichi/casmi26-ce-analog-each-20261117` v1を2026-11-17 UTCにpushし、完了出力とローカル候補評価を確認してから提出する。計画は `docs/ce-multiview-generator-plan-20261117.md`、データ監査は `docs/ce-view-data-audit-20261117.md`。Public LBは未提出。
+
+最初の候補生成単体診断では、外部80分子・145スペクトルの正解構造は親Engineの参照libraryと710,701構造の候補poolにいずれも0件。`merged`→`each`で生成元アナログ上位6件は31/80分子、規則生成候補集合は6/80分子で変わったが、正解を規則生成できた件数は両条件0/80だった。生成数は404→354。この値は親Engineの候補生成前段だけで、PubChem・第2Engine・最終順位を含むRecall@25やMRRではない。機械可読レポートは `data/derived/ce-views-20261117/generator-external80/report.json`（SHA-256 `174e93939794ad2faa8450099dd9a096ecf0d8f51050973c257b8c7a01a53000`）。
