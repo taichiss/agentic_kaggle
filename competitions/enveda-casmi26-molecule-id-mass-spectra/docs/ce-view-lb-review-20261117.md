@@ -27,6 +27,8 @@ G2→G4のLB +0.005は、CE別検索を単純に流すより、元の最上位�
 
 テスト全400分子を正解ラベルなしで凍結済みEngine1のFPNet・V1FE・LightGBM順位まで通すと、G4はG0比で**113/400分子**、G5は**63/400分子**のEngine1 Top25構造集合を変え、両条件ともEngine1のTop1変更は0件だった。G5で生成追加した640候補のうち**352候補が58分子のEngine1 Top25へ入った**。候補追加が順位段階まで届くことを示すが、これはEngine1中間順位で、Engine2・PubChem・最終融合後の提出順位でも、正解を使った精度でもない。候補集合が変わらずTop25だけ動く例もあるため、差を候補追加だけに帰属しない。詳細は`docs/ce-union-full-test-engine1-rank-20261117.md`。
 
+CE条件が揃うEnveda-180の分子非重複200群では、正解の参照SIDとpool PIDを除外した凍結Engine1のTop25正解数がG0 **8/200**、G4 **8/200**、G5 **11/200**、MRR@25が順に**0.026667 / 0.032500 / 0.041667**だった。G5の3件の新しい正解候補はすべてEngine1の1位まで届いた。ただしG5はこのパネルの先行候補包含結果を参照して選んだため独立なモデル選択後検証ではなく、モデル学習元の構造重複も未監査である。正解pool PIDの除外により絶対MRRは競技条件とも違い、最終提出のEngine2・PubChem・融合・MIST Aを含まない。詳細は`docs/ce-matched-enveda200-engine1-rank-20261117.md`。
+
 ## この結果から選んだ5本目
 
 G5は元G0の生成候補を残してG4由来のCE別候補を追加する。テスト400分子のラベルなし監査ではG5の集合はG0∪G4と400/400で一致し、640候補追加・**削除0**、集合変更65/400。Enveda200群では正解生成候補がG0の8/200から11/200へ増え、救済3・喪失0。外部80分子ではG5親のMRRはG0と同じ0.353244、G5＋AはAより+0.000253だった。固定Aは過去にG0のPublic LBを0.477→0.479にし、今回G1を0.456→0.457にした。そこで5枠目は**G5＋固定A**を選び、提出ID`58461399`として受理された。現時点のPublic LBは**採点待ち**。G5単独をPublic LBへ提出していないため、この5本目の結果から候補和集合とMISTの効果を単独では分けられない。追加候補が誤候補として順位を下げる危険も残る。
@@ -38,4 +40,4 @@ G5は元G0の生成候補を残してG4由来のCE別候補を追加する。テ
 3. 分子非重複、真の参照SIDとpool PID除外、テストに近い20/40/60 eV組合せを満たす検証群で、候補包含率・候補内順位・最終Top25を同時に測る。Enveda200の候補生成だけ、外部80の最終順位だけを互いの代用にしない。
 4. G5の追加候補640件について、CE別アナログの確信度ごとに候補数・元順位への影響を観察する。閾値の学習や選択は新しい検証群で行い、今回のLBへ合わせ込まない。
 
-参照：`docs/ce-multiview-generator-plan-20261117.md`、`docs/ce-view-generator-holdout-20261117.md`、`docs/ce-analog-rank-only-external80-20261117.md`、`docs/ce-union-full-test-candidates-20261117.md`、`docs/ce-union-full-test-engine1-rank-20261117.md`、`docs/ce-union-test-eligibility-20261117.md`、`strategy/cv-results.jsonl`、`strategy/lb-submissions.jsonl`。
+参照：`docs/ce-multiview-generator-plan-20261117.md`、`docs/ce-view-generator-holdout-20261117.md`、`docs/ce-analog-rank-only-external80-20261117.md`、`docs/ce-union-full-test-candidates-20261117.md`、`docs/ce-union-full-test-engine1-rank-20261117.md`、`docs/ce-matched-enveda200-engine1-rank-20261117.md`、`docs/ce-union-test-eligibility-20261117.md`、`strategy/cv-results.jsonl`、`strategy/lb-submissions.jsonl`。
