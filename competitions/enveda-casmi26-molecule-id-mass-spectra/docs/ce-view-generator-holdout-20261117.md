@@ -46,3 +46,24 @@ uv run --offline --with torch==2.10.0+cu129 --with numpy --with pandas --with py
 - G4: `data/derived/ce-views-20261117/enveda-ce-diverse-holdout/report.json` (`6a64343f0839ef746e12ef95ef44d9b4080853ecbcc7982a35711fb79fc99dbf`)、`per-group.jsonl` (`868987af2b23faf1036c71edf512ccf10114d276b0259186853cb3b2b7a823d3`)
 
 各 `report.json` に入力データ、親エンジン、アダプター、プール、評価コードの SHA256 を記録した。`data/derived` の生成物はローカルの非追跡ファイルとして保持する。
+
+## 付録: G4 で正解候補が増減した 6 分子の構造確認
+
+保存した G0/G4 の生成候補キー集合を比較すると、救済 3 件では**正解キーそのものが G4 の追加集合**に、喪失 3 件では**正解キーそのものが G4 の削除集合**に入る。正解のプール PID と全参照 SID は前述のとおり除外済みで、生成候補数はこの 6 件で最大 15（生成上限 150）。したがって、同一候補の重複順序だけが変わった事例ではない。
+
+凍結した `train_structs.parquet` の親 SID と検証分子の SMILES/分子式を突き合わせ、入れ替わった親に対して凍結ルール生成器を最大 2 変換・親あたり最大 60 生成物で再実行した。構造の単一分子質量を用い、RDKit 2026.03.3 で標準化した score key が正解と一致する親を下表に示す。Morgan 類似度は半径 2・2048 bit の補助的な構造比較で、親の採択スコアではない。
+
+| 正解キー | G4 の変化 | 正解分子式 | 正解を生成できた入替親 SID（親分子式） | 親の出所 | 正解−親の質量差 | Morgan 類似度 | G0→G4 生成数 |
+| --- | --- | --- | --- | --- | ---: | ---: | ---: |
+| `CYPVYFAFHYNCSD` | 救済 | C16H12ClFN4O4S | 138363（C16H13FN4O4S） | 60 eV | +33.9610 Da（Cl−H） | 0.522 | 0→4 |
+| `FSKUOCYHKMUTRH` | 救済 | C16H30N4O3 | 21732（C17H32N4O3） | 40 eV | −14.0157 Da（−CH₂） | 0.766 | 2→3 |
+| `JPGAKPUBTNDAHE` | 救済 | C14H17N3O2 | 180622（C15H19N3O2） | 20 eV | −14.0157 Da（−CH₂） | 0.617 | 0→1 |
+| `HWYYLHXNJZJMOW` | 喪失 | C18H24N2O2S | 139850（C17H22N2O2S） | G0 のみ | +14.0157 Da（+CH₂） | 0.646 | 8→0 |
+| `GESVJUWNDSAYGD` | 喪失 | C21H24N4O | 8433（C20H22N4O） | G0 のみ | +14.0157 Da（+CH₂） | 0.754 | 15→8 |
+| `JRGITTKNEWLGFM` | 喪失 | C19H23N5O2 | 60134（C18H21N5O2） | G0 のみ | +14.0157 Da（+CH₂） | 0.821 | 14→0 |
+
+`GESVJUWNDSAYGD` では G0 のみの別親 SID 132994（C21H24N4O2）も酸素 1 個の除去で正解キーを生成できた。6 件すべてで G0 の最上位親 SID は G4 に保持され、正解を生成できる親の出入りは残り 5 枠で起きた。5 件が ±CH₂、1 件が Cl−H の近傍構造への変換で説明できる。救済は 20/40/60 eV に各 1 件ずつで、特定の CE に偏った証拠はない。G4 は構造的に近い生成親を新たに拾う一方、同じ種類の有効な親を押し出す。
+
+構造の例として、救済された `CYPVYFAFHYNCSD` の正解は `O=C(O)CCc1nc2c(=O)[nH]c(SCc3c(F)cccc3Cl)nc2[nH]c1=O`、60 eV から選ばれた親 SID 138363 は `O=C(O)CCc1nc2c(=O)[nH]c(SCc3ccccc3F)nc2nc1O`。喪失した `HWYYLHXNJZJMOW` の正解は `CN(C1CCN(Cc2cccc3ccccc23)CC1)S(C)(=O)=O`、G4 で外れた親 SID 139850 は `CS(=O)(=O)NC1CCN(Cc2cccc3ccccc23)CC1`。
+
+全 6 分子の SMILES、親 SID、分子式、候補キー照合、ルールの再実行結果は `data/derived/ce-views-20261117/g4-six-structure-audit.json`（SHA256 `2d1554fbeccc5d2cc7c333b8dccab8c52b8826ab35324b15ccdfa6c984`）に保存した。この再実行は構造の単一分子質量を使う親の可能性確認であり、実際の測定前駆体 m/z を使う全順位評価の代わりにはならない。実際の候補増減判定は保存済み G0/G4 の出力から取った。
