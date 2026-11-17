@@ -9,10 +9,10 @@
     "MS/MS Mixup 5提出のPublic LB: 対照A 0.479、元M1と弱M1 0.478、M2・M3・CE条件統一M1 0.479。表示値でA超えはない。"
   ],
   "common_panel": {
-    "name": "選択的既知構造パネル",
+    "name": "選択的な外部80分子代理パネル",
     "molecules": 80,
     "spectra": 145,
-    "limitation": "公式 train にない Zenodo 由来の80構造・145スペクトルで、同構造の別測定が参照にある選択的な既知構造検索。外部事前学習データとの重複未監査。positive precursor と fragment を共に -0.000548 Da 補正する模擬上の仮定。"
+    "limitation": "公式 train にない Zenodo 由来の80構造・145スペクトルを選んだ代理パネル。実験ごとに参照・候補条件が異なり、CEサイクルの凍結0.477親では正解構造がアナログ参照と候補poolにない。外部事前学習データとの重複は未監査。positive precursor と fragment を共に -0.000548 Da 補正する模擬上の仮定。"
   },
   "hypotheses": [
     {
@@ -136,6 +136,58 @@
       "submission_ref": "58029361",
       "limitation": "80分子で5改善・4悪化。選択的既知構造検索で、80分子とNP250分子を見た後に設定を選択。0.477全工程の再実行ではない。",
       "source": "src/fragment_formula/README.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-20261117-ce-gen-g1-each",
+      "title": "G1：CE別アナログ検索",
+      "local_cv_ref": {
+        "experiment_id": "EXP-20261117-ce-gen-g1-each",
+        "split_id": "selective-known-structures-v1",
+        "metric": "MRR@25"
+      },
+      "submission_ref": "58452590",
+      "limitation": "選択的な外部80分子の全工程MRR@25。正解候補Recall@25は54/80。ローカルとPublic LBは別集合で、Public LBは小数3桁表示。アナログ検索の結果を生成親と順位特徴量の両方に使用。G0との差を評価。",
+      "source": "strategy/experiments.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-20261117-ce-gen-g1-a-overlay",
+      "title": "G1＋固定A再順位付け",
+      "local_cv_ref": {
+        "experiment_id": "EXP-20261117-ce-gen-g1-a-overlay",
+        "split_id": "selective-known-structures-v1",
+        "metric": "MRR@25"
+      },
+      "submission_ref": "58452727",
+      "limitation": "選択的な外部80分子の全工程MRR@25。正解候補Recall@25は54/80。ローカルとPublic LBは別集合で、Public LBは小数3桁表示。固定A対照0.355765との差は−0.002050。表の基準比はG0との比較であり、A追加だけの効果ではない。",
+      "source": "strategy/experiments.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-20261117-ce-gen-g2-separate-only",
+      "title": "G2：生成親だけCE別検索",
+      "local_cv_ref": {
+        "experiment_id": "EXP-20261117-ce-gen-g2-separate-only",
+        "split_id": "selective-known-structures-v1",
+        "metric": "MRR@25"
+      },
+      "submission_ref": "58453235",
+      "limitation": "選択的な外部80分子の全工程MRR@25。正解候補Recall@25は54/80。ローカルとPublic LBは別集合で、Public LBは小数3桁表示。順位特徴量は元の統合検索に固定。G0との差を評価。",
+      "source": "strategy/experiments.md",
+      "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-20261117-ce-gen-g4-diverse",
+      "title": "G4：CE別の生成親を多様化",
+      "local_cv_ref": {
+        "experiment_id": "EXP-20261117-ce-gen-g4-diverse",
+        "split_id": "selective-known-structures-v1",
+        "metric": "MRR@25"
+      },
+      "submission_ref": "58453746",
+      "limitation": "選択的な外部80分子の全工程MRR@25。正解候補Recall@25は54/80。ローカルとPublic LBは別集合で、Public LBは小数3桁表示。最上位の統合検索親と元の順位特徴量を保持。G0との差を評価。",
+      "source": "strategy/experiments.md",
       "split_id": "selective-known-structures-v1"
     }
   ],
