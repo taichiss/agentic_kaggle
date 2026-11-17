@@ -5,7 +5,8 @@
   "notes": [
     "LB台帳の同一提出IDの timeout/PENDING と COMPLETE は同一提出として集約。",
     "複数のローカル検証はデータ・条件が異なるため値を直接比較できない。",
-    "評価なしと不明は null。LB表示は小数3桁。"
+    "評価なしと不明は null。LB表示は小数3桁。",
+    "MS/MS Mixup 5提出のPublic LB: 対照A 0.479、元M1と弱M1 0.478、M2・M3・CE条件統一M1 0.479。表示値でA超えはない。"
   ],
   "common_panel": {
     "name": "選択的既知構造パネル",
