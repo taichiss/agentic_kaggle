@@ -189,6 +189,19 @@
       "limitation": "選択的な外部80分子の全工程MRR@25。正解候補Recall@25は54/80。ローカルとPublic LBは別集合で、Public LBは小数3桁表示。最上位の統合検索親と元の順位特徴量を保持。G0との差を評価。",
       "source": "strategy/experiments.md",
       "split_id": "selective-known-structures-v1"
+    },
+    {
+      "experiment_id": "EXP-20261117-ce-gen-g5-a-overlay",
+      "title": "G5＋固定A再順位付け",
+      "local_cv_ref": {
+        "experiment_id": "EXP-20261117-ce-gen-g5-a-overlay",
+        "split_id": "selective-known-structures-v1",
+        "metric": "MRR@25"
+      },
+      "submission_ref": "58461399",
+      "limitation": "選択的な外部80分子の全工程MRR@25。G5が元候補を保持してCE別候補を追加し、固定Aが同分子式内を再順位付け。固定A対照0.355765との差は＋0.000253。表の基準比はG0との比較であり、A追加だけの効果ではない。Public LBは採点完了まで未確定。",
+      "source": "strategy/experiments.md",
+      "split_id": "selective-known-structures-v1"
     }
   ],
   "initial_metadata_experiments": [
